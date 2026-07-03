@@ -1,34 +1,16 @@
-const slides = Array.from(document.querySelectorAll(".slide"));
-const dots = Array.from(document.querySelectorAll(".dot"));
-let activeSlide = 0;
-let timer;
+const slides = Array.from(document.querySelectorAll(".hero-slide"));
+let active = 0;
 
 function showSlide(index) {
-  activeSlide = index;
-  slides.forEach((slide, slideIndex) => {
-    slide.classList.toggle("is-active", slideIndex === index);
-  });
-  dots.forEach((dot, dotIndex) => {
-    dot.classList.toggle("is-active", dotIndex === index);
-  });
+  slides[active].classList.remove("is-active");
+  active = index;
+  slides[active].classList.add("is-active");
 }
-
-function startSlider() {
-  window.clearInterval(timer);
-  timer = window.setInterval(() => {
-    showSlide((activeSlide + 1) % slides.length);
-  }, 5200);
-}
-
-dots.forEach((dot, index) => {
-  dot.addEventListener("click", () => {
-    showSlide(index);
-    startSlider();
-  });
-});
 
 if (window.lucide) {
   window.lucide.createIcons();
 }
 
-startSlider();
+window.setInterval(() => {
+  showSlide((active + 1) % slides.length);
+}, 5200);
