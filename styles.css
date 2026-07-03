@@ -162,7 +162,7 @@ button {
   opacity: 1;
 }
 
-.hero-slide img {
+.hero-slide > img:not(.woman-copy) {
   display: block;
   width: 100%;
   height: 100%;
@@ -170,54 +170,13 @@ button {
   object-position: center;
 }
 
-.hero-slide-man::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.98) 0%,
-    rgba(0, 0, 0, 0.98) 41%,
-    rgba(0, 0, 0, 0.2) 47%,
-    rgba(0, 0, 0, 0) 55%
-  );
-}
-
-.hero-copy {
+.woman-copy {
   position: absolute;
   z-index: 2;
-  left: clamp(82px, 8.8vw, 135px);
-  top: clamp(72px, 6.6vw, 102px);
-  width: min(37vw, 520px);
-}
-
-.hero-copy h1 {
-  margin: 0 0 21px;
-  color: var(--gold);
-  text-transform: uppercase;
-  font-size: clamp(30px, 2.65vw, 40px);
-  line-height: 1.13;
-  font-weight: 800;
-}
-
-.hero-copy p {
-  margin: 0 0 36px;
-  color: #f7f4ef;
-  font-size: clamp(24px, 2vw, 30px);
-  line-height: 1.46;
-  font-weight: 400;
-}
-
-.hero-copy a {
-  display: inline-grid;
-  min-width: 228px;
-  min-height: 52px;
-  place-items: center;
-  color: var(--gold);
-  border: 1px solid var(--gold);
-  text-transform: uppercase;
-  font-size: 20px;
-  font-weight: 700;
+  left: clamp(104px, 8.15vw, 125px);
+  top: clamp(50px, 5.85vw, 60px);
+  width: clamp(430px, 37.4vw, 575px);
+  height: auto;
 }
 
 .benefits {
@@ -372,11 +331,14 @@ button {
   stroke-width: 1.8;
 }
 
-.tiktok {
-  color: var(--gold);
-  font-size: 52px;
-  line-height: 1;
-  font-weight: 800;
+.brand-icon {
+  fill: currentColor;
+  stroke: none;
+}
+
+.telegram-icon {
+  width: 45px;
+  height: 45px;
 }
 
 .footer-center p {
@@ -468,7 +430,7 @@ button {
     height: 300px;
   }
 
-  .hero-slide img {
+  .hero-slide > img:not(.woman-copy) {
     object-position: center;
   }
 
@@ -491,8 +453,18 @@ button {
     font-size: 18px;
   }
 
-  .footer-logo {
-    font-size: 43px;
+  .logo img {
+    width: min(72vw, 380px);
+  }
+
+  .footer-logo img {
+    width: min(100%, 360px);
+  }
+
+  .woman-copy {
+    left: 28px;
+    top: 72px;
+    width: min(calc(100vw - 56px), 390px);
   }
 
   .footer-center p {
