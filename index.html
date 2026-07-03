@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Haller Boutique</title>
-    <meta name="description" content="Haller Boutique: lusso, qualita e stile con spedizione rapida in tutta Italia.">
+    <meta name="description" content="Haller Boutique: lusso, qualita e stile.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -12,98 +12,92 @@
   </head>
   <body>
     <header class="site-header">
-      <div class="header-top">
-        <button class="icon-button" aria-label="Cerca" data-lucide="search"></button>
-        <a class="brand" href="#">Haller Boutique</a>
+      <div class="header-bar">
+        <button class="icon-button search-button" aria-label="Cerca">
+          <i data-lucide="search"></i>
+        </button>
+
+        <a class="logo" href="#" aria-label="Haller Boutique home">Haller Boutique</a>
+
         <div class="header-actions">
-          <button class="icon-button" aria-label="Account" data-lucide="user-round"></button>
-          <button class="icon-button cart-button" aria-label="Carrello" data-lucide="shopping-bag">
+          <button class="icon-button" aria-label="Account">
+            <i data-lucide="user-round"></i>
+          </button>
+          <button class="icon-button cart-button" aria-label="Carrello">
+            <i data-lucide="shopping-bag"></i>
             <span>0</span>
           </button>
         </div>
       </div>
-      <nav class="main-nav" aria-label="Navigazione principale">
+
+      <nav class="main-nav" aria-label="Menu principale">
         <a class="active" href="#">Home</a>
         <a href="#arrivi">Nuovi arrivi</a>
-        <a href="#uomo">Uomo <span data-lucide="chevron-down"></span></a>
-        <a href="#donna">Donna <span data-lucide="chevron-down"></span></a>
+        <a href="#uomo">Uomo <i data-lucide="chevron-down"></i></a>
+        <a href="#donna">Donna <i data-lucide="chevron-down"></i></a>
         <a href="#contatti">Contatti</a>
       </nav>
     </header>
 
     <main>
-      <section class="hero" aria-label="Promozioni principali">
-        <article class="slide is-active">
-          <div class="slide-bg slide-bg-street" aria-hidden="true"></div>
-          <div class="slide-content">
-            <p class="kicker">Lusso. Qualita. Stile.</p>
-            <h1>Scopri le ultime novita delle migliori marche.</h1>
-            <a class="outline-cta" href="#arrivi">Scopri ora</a>
-          </div>
+      <section class="hero-slider" aria-label="Diapositive promozionali">
+        <article class="hero-slide is-active" aria-label="Lusso, qualita, stile">
+          <img src="assets/hero-man.png" alt="Haller Boutique, lusso qualita stile">
         </article>
-        <article class="slide">
-          <img class="slide-image" src="assets/hero-woman.jpg" alt="Modella con cappello e occhiali da sole">
-          <div class="slide-content">
-            <p class="kicker">Lusso. Qualita. Stile.</p>
-            <h2>La nuova selezione donna e online.</h2>
-            <a class="outline-cta" href="#donna">Scopri ora</a>
-          </div>
+        <article class="hero-slide" aria-label="Nuova selezione donna">
+          <img src="assets/hero-woman.jpg" alt="Modella Haller Boutique con cappello e occhiali">
         </article>
-        <div class="slide-dots" aria-label="Seleziona diapositiva">
-          <button class="dot is-active" type="button" aria-label="Mostra diapositiva 1"></button>
-          <button class="dot" type="button" aria-label="Mostra diapositiva 2"></button>
-        </div>
       </section>
 
-      <section class="benefits primary-benefits" aria-label="Vantaggi">
+      <section class="benefits benefits-main" aria-label="Servizi Haller Boutique">
         <article>
           <i data-lucide="truck"></i>
           <div>
-            <h3>Spedizione rapida</h3>
-            <p>Consegna in 18H in tutta Italia</p>
+            <h2>Spedizione rapida</h2>
+            <p>Consegna in 18H<br>in tutta Italia</p>
           </div>
         </article>
         <article>
           <i data-lucide="hand-coins"></i>
           <div>
-            <h3>Pagamento alla consegna</h3>
-            <p>Paga comodamente alla consegna</p>
+            <h2>Pagamento alla consegna</h2>
+            <p>Paga comodamente<br>alla consegna</p>
           </div>
         </article>
         <article>
           <i data-lucide="shield-check"></i>
           <div>
-            <h3>Prodotti selezionati</h3>
-            <p>Solo brand selezionati</p>
+            <h2>Prodotti selezionati</h2>
+            <p>Solo brand<br>selezionati</p>
           </div>
         </article>
         <article>
           <i data-lucide="headphones"></i>
           <div>
-            <h3>Assistenza H24</h3>
-            <p>Siamo sempre disponibili</p>
+            <h2>Assistenza H24</h2>
+            <p>Siamo sempre<br>disponibili</p>
           </div>
         </article>
       </section>
 
-      <section class="benefits secondary-benefits" id="arrivi" aria-label="Garanzie">
+      <section class="benefits benefits-secondary" id="arrivi" aria-label="Garanzie">
         <article>
           <i data-lucide="sun"></i>
-          <h3>Nuovi arrivi<br>ogni settimana</h3>
+          <h2>Nuovi arrivi<br>ogni settimana</h2>
         </article>
         <article>
           <i data-lucide="badge-check"></i>
-          <h3>Qualita che<br>si distingue</h3>
+          <h2>Qualit&agrave; che<br>si distingue</h2>
         </article>
         <article>
           <i data-lucide="shopping-bag"></i>
-          <h3>Soddisfatto o<br>rimborsato</h3>
+          <h2>Soddisfatto o<br>rimborsato</h2>
         </article>
       </section>
     </main>
 
     <footer class="site-footer" id="contatti">
-      <section>
+      <section class="footer-links">
         <h2>Info</h2>
         <a href="#">Chi siamo</a>
         <a href="#">Spedizioni</a>
@@ -111,16 +105,24 @@
         <a href="#">Termini e condizioni</a>
         <a href="#">Privacy Policy</a>
       </section>
-      <section class="footer-brand">
-        <a class="brand" href="#">Haller Boutique</a>
-        <div class="socials" aria-label="Social">
-          <a href="#" aria-label="Instagram" data-lucide="instagram"></a>
-          <a href="#" aria-label="TikTok" class="tiktok">♪</a>
-          <a href="#" aria-label="WhatsApp" data-lucide="message-circle"></a>
+
+      <section class="footer-center">
+        <a class="logo footer-logo" href="#">Haller Boutique</a>
+        <div class="social-links" aria-label="Social">
+          <a href="#" aria-label="Instagram">
+            <svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="3" width="18" height="18" rx="5"></rect>
+              <circle cx="12" cy="12" r="4"></circle>
+              <circle cx="17.5" cy="6.5" r="1"></circle>
+            </svg>
+          </a>
+          <a class="tiktok" href="#" aria-label="TikTok">♪</a>
+          <a href="#" aria-label="WhatsApp"><i data-lucide="message-circle"></i></a>
         </div>
-        <p>© 2017 Haller Boutique. Tutti i diritti riservati.</p>
+        <p>&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
       </section>
-      <section>
+
+      <section class="footer-links footer-assistance">
         <h2>Assistenza</h2>
         <a href="#">Contattaci</a>
         <a href="#">FAQ</a>
