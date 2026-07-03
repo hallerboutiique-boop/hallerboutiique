@@ -8,5 +8,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Logo originale estratto dal riferimento
 - Palette oro allineata alla scritta della slide donna
 - Footer con icone Instagram, TikTok e Telegram
-- Slide uomo ripristinata con le scritte originali integrate
-- Slide donna con blocco scritte tratto dalla seconda immagine
+- Slide uomo e donna con testo `LUSSO QUALITÀ STILE` senza punti
