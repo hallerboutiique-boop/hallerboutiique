@@ -1,7 +1,7 @@
 # Haller Boutique
 
-Sito statico per Haller Boutique.
+Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 
-- Slider hero con seconda diapositiva basata su `assets/hero-woman.jpg`
+- Prima diapositiva ricavata dal mockup originale
+- Seconda diapositiva con la foto della modella caricata
 - Consegna rapida aggiornata a `18H`
-- Layout responsive per desktop e mobile
