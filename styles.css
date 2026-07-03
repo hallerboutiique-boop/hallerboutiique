@@ -1,6 +1,7 @@
 :root {
-  --gold: #f2b700;
-  --gold-hot: #ffb000;
+  --gold: #d49a63;
+  --gold-hot: #e0a56b;
+  --gold-rgb: 212, 154, 99;
   --black: #000;
   --panel: rgba(5, 5, 5, 0.92);
   --panel-line: rgba(255, 255, 255, 0.13);
@@ -50,18 +51,16 @@ button {
 }
 
 .logo {
-  display: inline-block;
-  color: #fff7d2;
-  font-family: "Great Vibes", cursive;
-  font-size: clamp(48px, 4.45vw, 72px);
-  line-height: 1;
-  text-align: center;
-  text-shadow:
-    0 0 2px #fff9c9,
-    0 0 7px #ffcd42,
-    0 0 15px #f29a00,
-    0 0 24px #bf6400;
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.logo img {
+  display: block;
+  width: clamp(390px, 33.9vw, 520px);
+  height: auto;
 }
 
 .icon-button {
@@ -130,6 +129,7 @@ button {
 
 .main-nav .active {
   color: var(--gold);
+  font-weight: 800;
 }
 
 .main-nav .active::after {
@@ -140,7 +140,7 @@ button {
   bottom: -12px;
   height: 3px;
   background: var(--gold);
-  box-shadow: 0 0 9px rgba(242, 183, 0, 0.7);
+  box-shadow: 0 0 9px rgba(var(--gold-rgb), 0.7);
 }
 
 .hero-slider {
@@ -168,6 +168,56 @@ button {
   height: 100%;
   object-fit: cover;
   object-position: center;
+}
+
+.hero-slide-man::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.98) 0%,
+    rgba(0, 0, 0, 0.98) 41%,
+    rgba(0, 0, 0, 0.2) 47%,
+    rgba(0, 0, 0, 0) 55%
+  );
+}
+
+.hero-copy {
+  position: absolute;
+  z-index: 2;
+  left: clamp(82px, 8.8vw, 135px);
+  top: clamp(72px, 6.6vw, 102px);
+  width: min(37vw, 520px);
+}
+
+.hero-copy h1 {
+  margin: 0 0 21px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: clamp(30px, 2.65vw, 40px);
+  line-height: 1.13;
+  font-weight: 800;
+}
+
+.hero-copy p {
+  margin: 0 0 36px;
+  color: #f7f4ef;
+  font-size: clamp(24px, 2vw, 30px);
+  line-height: 1.46;
+  font-weight: 400;
+}
+
+.hero-copy a {
+  display: inline-grid;
+  min-width: 228px;
+  min-height: 52px;
+  place-items: center;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  text-transform: uppercase;
+  font-size: 20px;
+  font-weight: 700;
 }
 
 .benefits {
@@ -217,7 +267,7 @@ button {
   text-transform: uppercase;
   font-size: 15px;
   line-height: 1.25;
-  font-weight: 600;
+  font-weight: 800;
 }
 
 .benefits-main h2 {
@@ -270,7 +320,7 @@ button {
   text-transform: uppercase;
   font-size: 20px;
   line-height: 1;
-  font-weight: 500;
+  font-weight: 800;
 }
 
 .footer-links a {
@@ -290,9 +340,12 @@ button {
 
 .footer-logo {
   width: 100%;
-  padding-bottom: 21px;
-  border-bottom: 2px solid rgba(242, 183, 0, 0.9);
-  font-size: clamp(52px, 4.5vw, 70px);
+  padding-bottom: 17px;
+  border-bottom: 2px solid rgba(var(--gold-rgb), 0.9);
+}
+
+.footer-logo img {
+  width: min(100%, 560px);
 }
 
 .social-links {
@@ -330,6 +383,7 @@ button {
   margin: 21px 0 0;
   color: var(--gold);
   font-size: 20px;
+  font-weight: 500;
 }
 
 .footer-assistance {
