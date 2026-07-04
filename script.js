@@ -19,3 +19,17 @@ if (slides.length > 0) {
     showSlide((active + 1) % slides.length);
   }, 5200);
 }
+
+const discountButton = document.querySelector("[data-discount-apply]");
+const discountInput = document.querySelector("input[name='discount-code']");
+const discountMessage = document.querySelector(".discount-message");
+
+if (discountButton && discountInput && discountMessage) {
+  discountButton.addEventListener("click", () => {
+    const code = discountInput.value.trim();
+
+    discountMessage.textContent = code
+      ? "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine."
+      : "Inserisci un codice sconto prima di applicarlo.";
+  });
+}
