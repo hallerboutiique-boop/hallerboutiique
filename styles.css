@@ -506,6 +506,35 @@ button {
   gap: 16px;
 }
 
+.discount-code {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 150px;
+  gap: 14px;
+  align-items: end;
+}
+
+.discount-code button {
+  min-height: 50px;
+  color: #050505;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: var(--gold);
+  text-transform: uppercase;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.discount-message {
+  min-height: 22px;
+  margin: -4px 0 0;
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
 .cod-only {
   padding: 18px;
   border: 1px solid rgba(var(--gold-rgb), 0.55);
@@ -869,6 +898,10 @@ button {
   }
 
   .checkout-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .discount-code {
     grid-template-columns: 1fr;
   }
 
