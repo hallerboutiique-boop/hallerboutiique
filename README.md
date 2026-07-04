@@ -12,3 +12,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Responsive mobile ottimizzato per viewport stretti
 - Pagina checkout con solo pagamento in contrassegno
 - Campo codice sconto nel checkout con pulsante rifinito
+- Label checkout allineate ai campi
