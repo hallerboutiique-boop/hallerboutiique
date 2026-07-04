@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Checkout - Haller Boutique</title>
+    <meta name="description" content="Checkout Haller Boutique con pagamento alla consegna.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-bar">
+        <a class="icon-button" href="index.html" aria-label="Torna alla home">
+          <i data-lucide="arrow-left"></i>
+        </a>
+
+        <a class="logo" href="index.html" aria-label="Haller Boutique home">
+          <img src="assets/logo-original.png" alt="Haller Boutique">
+        </a>
+
+        <div class="header-actions">
+          <button class="icon-button" aria-label="Account">
+            <i data-lucide="user-round"></i>
+          </button>
+          <a class="icon-button cart-button" href="checkout.html" aria-label="Checkout">
+            <i data-lucide="shopping-bag"></i>
+            <span>0</span>
+          </a>
+        </div>
+      </div>
+
+      <nav class="main-nav checkout-nav" aria-label="Menu checkout">
+        <a href="index.html">Home</a>
+        <a class="active" href="checkout.html">Checkout</a>
+        <a href="index.html#contatti">Contatti</a>
+      </nav>
+    </header>
+
+    <main class="checkout-page">
+      <section class="checkout-heading">
+        <p>Pagamento alla consegna</p>
+        <h1>Checkout</h1>
+      </section>
+
+      <section class="checkout-layout" aria-label="Checkout ordine">
+        <form class="checkout-form">
+          <fieldset>
+            <legend>Dati cliente</legend>
+            <label>
+              Nome e cognome
+              <input type="text" name="name" autocomplete="name" placeholder="Mario Rossi">
+            </label>
+            <label>
+              Telefono
+              <input type="tel" name="phone" autocomplete="tel" placeholder="+39 333 000 0000">
+            </label>
+            <label>
+              Email
+              <input type="email" name="email" autocomplete="email" placeholder="nome@email.it">
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>Indirizzo di consegna</legend>
+            <label>
+              Indirizzo
+              <input type="text" name="address" autocomplete="street-address" placeholder="Via Roma 10">
+            </label>
+            <div class="checkout-grid">
+              <label>
+                Citt&agrave;
+                <input type="text" name="city" autocomplete="address-level2" placeholder="Milano">
+              </label>
+              <label>
+                CAP
+                <input type="text" name="postal-code" autocomplete="postal-code" placeholder="20100">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Pagamento</legend>
+            <div class="cod-only">
+              <strong>Contrassegno</strong>
+              <p>Accettiamo solo pagamento alla consegna. Pagherai direttamente al corriere quando ricevi il pacco.</p>
+            </div>
+          </fieldset>
+
+          <button class="checkout-submit" type="button">Conferma ordine</button>
+        </form>
+
+        <aside class="order-summary" aria-label="Riepilogo ordine">
+          <h2>Riepilogo</h2>
+          <div class="summary-empty">
+            <p>Il carrello &egrave; pronto per i tuoi articoli.</p>
+            <a href="index.html#arrivi">Continua lo shopping</a>
+          </div>
+          <div class="summary-row">
+            <span>Metodo di pagamento</span>
+            <strong>Contrassegno</strong>
+          </div>
+          <div class="summary-row">
+            <span>Consegna</span>
+            <strong>18H in Italia</strong>
+          </div>
+          <p class="checkout-note">Nessun pagamento online richiesto in questa fase.</p>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="checkout-footer">
+      <p>&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
