@@ -10,3 +10,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Footer con icone Instagram, TikTok e Telegram
 - Slide uomo e donna con testo `LUSSO QUALITÀ STILE` senza punti
 - Responsive mobile ottimizzato per viewport stretti
+- Pagina checkout con solo pagamento in contrassegno
