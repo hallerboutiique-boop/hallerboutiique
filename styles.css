@@ -568,11 +568,37 @@ button {
   line-height: 1.45;
 }
 
+.payment-fieldset > legend {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .cod-only {
   padding: 18px;
   border: 1px solid rgba(var(--gold-rgb), 0.55);
   border-radius: 8px;
   background: rgba(var(--gold-rgb), 0.08);
+}
+
+.payment-box-title {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 13px;
+  padding: 8px 12px;
+  color: var(--gold);
+  border: 1px solid rgba(var(--gold-rgb), 0.65);
+  border-radius: 6px;
+  background: rgba(var(--gold-rgb), 0.1);
+  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .cod-only strong {
