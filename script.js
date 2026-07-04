@@ -5,7 +5,7 @@ const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 const cartKey = "hallerBoutiqueCartCount";
 
-const euro = (value) => `\u20ac${value}`;
+const euro = (value) => `${value}\u20ac`;
 
 function item(name, original, finalPrice, discount, sizeType) {
   return {
