@@ -514,16 +514,37 @@ button {
 }
 
 .discount-code button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 50px;
-  color: #050505;
+  padding: 0 16px;
+  color: var(--gold);
   border: 1px solid var(--gold);
   border-radius: 8px;
-  background: var(--gold);
+  background: rgba(var(--gold-rgb), 0.1);
   text-transform: uppercase;
   font: inherit;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 800;
+  line-height: 1;
   cursor: pointer;
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.discount-code button:hover,
+.discount-code button:focus-visible {
+  color: #050505;
+  background: var(--gold);
+  box-shadow: 0 0 20px rgba(var(--gold-rgb), 0.24);
+  outline: none;
+}
+
+.discount-code button svg {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
 }
 
 .discount-message {
