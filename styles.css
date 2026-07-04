@@ -234,30 +234,21 @@ button {
 
 .benefits-main {
   grid-template-columns: repeat(4, 1fr);
-  min-height: 154px;
+  height: 120px;
 }
 
 .benefits-secondary {
   grid-template-columns: repeat(3, 1fr);
-  min-height: 122px;
+  min-height: 106px;
   margin-top: 10px;
 }
 
 .benefits article {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  gap: 22px;
   min-width: 0;
-  padding: 20px 26px;
-  text-align: center;
-}
-
-.benefits article > div {
-  display: grid;
-  justify-items: center;
-  gap: 8px;
+  padding: 18px 30px;
 }
 
 .benefits article + article {
@@ -266,8 +257,8 @@ button {
 
 .benefits svg {
   flex: 0 0 auto;
-  width: 48px;
-  height: 48px;
+  width: 52px;
+  height: 52px;
   color: var(--gold);
   stroke-width: 1.5;
 }
@@ -275,22 +266,22 @@ button {
 .benefits h2 {
   margin: 0;
   text-transform: uppercase;
-  font-size: clamp(18px, 1.32vw, 21px);
-  line-height: 1.18;
+  font-size: 15px;
+  line-height: 1.25;
   font-weight: 800;
 }
 
 .benefits-main h2 {
   color: var(--gold);
-  margin-bottom: 0;
-  white-space: normal;
+  margin-bottom: 10px;
+  white-space: nowrap;
 }
 
 .benefits p {
   margin: 0;
   color: #fff;
-  font-size: clamp(14px, 1vw, 16px);
-  line-height: 1.45;
+  font-size: 17px;
+  line-height: 1.55;
   font-weight: 400;
 }
 
@@ -300,10 +291,10 @@ button {
 }
 
 .benefits-secondary h2 {
-  color: var(--gold);
-  font-size: clamp(20px, 1.62vw, 25px);
-  line-height: 1.28;
-  font-weight: 800;
+  color: #fff;
+  font-size: 21px;
+  line-height: 1.45;
+  font-weight: 500;
 }
 
 .site-footer {
@@ -320,24 +311,23 @@ button {
 
 .footer-links {
   display: flex;
-  align-items: center;
   flex-direction: column;
   gap: 11px;
-  text-align: center;
 }
 
 .footer-links h2 {
   margin: 0 0 4px;
   color: var(--gold);
   text-transform: uppercase;
-  font-size: 23px;
+  font-size: 20px;
   line-height: 1;
   font-weight: 800;
 }
 
 .footer-links a {
+  width: fit-content;
   color: #fff;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.05;
 }
 
@@ -401,7 +391,7 @@ button {
 }
 
 .footer-assistance {
-  padding-left: 0;
+  padding-left: 48px;
 }
 
 .checkout-nav {
@@ -415,13 +405,15 @@ button {
 
 .checkout-heading {
   margin-bottom: 24px;
+  text-align: center;
 }
 
 .checkout-heading p {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   color: var(--gold);
   text-transform: uppercase;
-  font-size: 16px;
+  font-size: clamp(30px, 3.7vw, 46px);
+  line-height: 1.08;
   font-weight: 800;
 }
 
@@ -429,8 +421,8 @@ button {
   margin: 0;
   color: #fff;
   text-transform: uppercase;
-  font-size: clamp(34px, 5vw, 64px);
-  line-height: 1;
+  font-size: clamp(22px, 2.3vw, 32px);
+  line-height: 1.15;
   font-weight: 800;
 }
 
@@ -453,10 +445,12 @@ button {
   display: grid;
   gap: 22px;
   padding: clamp(20px, 3vw, 34px);
+  text-align: center;
 }
 
 .checkout-form fieldset {
   display: grid;
+  justify-items: stretch;
   gap: 16px;
   min-width: 0;
   margin: 0;
@@ -474,16 +468,20 @@ button {
 .order-summary h2 {
   margin: 0 0 4px;
   color: var(--gold);
+  text-align: center;
   text-transform: uppercase;
-  font-size: 18px;
+  font-size: clamp(22px, 2vw, 28px);
+  line-height: 1.12;
   font-weight: 800;
+  width: 100%;
 }
 
 .checkout-form label {
   display: grid;
   gap: 8px;
   color: #fff;
-  font-size: 14px;
+  text-align: center;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -493,6 +491,7 @@ button {
   min-height: 50px;
   padding: 0 14px;
   color: #fff;
+  text-align: left;
   border: 1px solid rgba(var(--gold-rgb), 0.4);
   border-radius: 8px;
   outline: none;
@@ -561,6 +560,7 @@ button {
   min-height: 22px;
   margin: -4px 0 0;
   color: var(--gold);
+  text-align: center;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.45;
@@ -577,8 +577,10 @@ button {
   display: block;
   margin-bottom: 8px;
   color: var(--gold);
+  text-align: center;
   text-transform: uppercase;
-  font-size: 18px;
+  font-size: 24px;
+  line-height: 1.14;
   font-weight: 800;
 }
 
@@ -587,7 +589,8 @@ button {
 .summary-empty p {
   margin: 0;
   color: #f4f0ea;
-  font-size: 15px;
+  text-align: center;
+  font-size: 14px;
   line-height: 1.55;
 }
 
@@ -609,12 +612,15 @@ button {
   position: sticky;
   top: 18px;
   display: grid;
+  justify-items: stretch;
   gap: 18px;
   padding: clamp(20px, 3vw, 30px);
+  text-align: center;
 }
 
 .summary-empty {
   display: grid;
+  justify-items: center;
   gap: 12px;
   padding-bottom: 18px;
   border-bottom: 1px solid var(--panel-line);
@@ -629,13 +635,14 @@ button {
 }
 
 .summary-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
   padding-bottom: 16px;
   border-bottom: 1px solid var(--panel-line);
+  text-align: center;
   color: #fff;
-  font-size: 15px;
+  font-size: 14px;
 }
 
 .summary-row span {
@@ -644,8 +651,10 @@ button {
 
 .summary-row strong {
   color: var(--gold);
-  text-align: right;
+  text-align: center;
   text-transform: uppercase;
+  font-size: 20px;
+  line-height: 1.15;
 }
 
 .checkout-footer {
@@ -750,7 +759,7 @@ button {
   }
 
   .benefits-secondary article {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .site-footer {
@@ -835,37 +844,30 @@ button {
 
   .benefits article {
     gap: 18px;
-    min-height: 132px;
+    min-height: 94px;
     padding: 17px 18px;
   }
 
   .benefits svg {
-    width: 42px;
-    height: 42px;
+    width: 44px;
+    height: 44px;
   }
 
   .benefits h2 {
-    font-size: 19px;
+    font-size: 14px;
   }
 
   .benefits-main h2 {
     white-space: normal;
   }
 
-  .benefits p {
-    font-size: 14px;
+  .benefits p,
+  .footer-links a {
+    font-size: 16px;
   }
 
   .benefits-secondary h2 {
-    font-size: 20px;
-  }
-
-  .footer-links h2 {
-    font-size: 22px;
-  }
-
-  .footer-links a {
-    font-size: 15px;
+    font-size: 18px;
   }
 
   .logo img {
@@ -907,8 +909,8 @@ button {
   }
 
   .footer-center {
-    align-items: center;
-    text-align: center;
+    align-items: flex-start;
+    text-align: left;
   }
 
   .social-links {
@@ -926,8 +928,21 @@ button {
     margin-top: 28px;
   }
 
+  .checkout-heading p {
+    font-size: 31px;
+  }
+
   .checkout-heading h1 {
-    font-size: 38px;
+    font-size: 23px;
+  }
+
+  .checkout-form legend,
+  .order-summary h2 {
+    font-size: 24px;
+  }
+
+  .cod-only strong {
+    font-size: 22px;
   }
 
   .checkout-form,
@@ -948,7 +963,7 @@ button {
   }
 
   .summary-row strong {
-    text-align: left;
+    text-align: center;
   }
 
   .checkout-footer {
