@@ -4,6 +4,38 @@ let active = 0;
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 const cartKey = "hallerBoutiqueCartCount";
+const cartItemsKey = "hallerBoutiqueCartItems";
+const checkoutItemKey = "hallerBoutiqueCheckoutItem";
+const orderCodeKey = "hallerBoutiqueOrderCode";
+
+const cryptoWallets = {
+  btc: {
+    title: "BTC",
+    network: "Bitcoin",
+    address: "bc1pp5x4xdu8m9mxhpuvntp69p7u0dl726h8ex8sjv577ffuwr32d2vsgyp0jm",
+    qrData: (orderCode) =>
+      `bitcoin:bc1pp5x4xdu8m9mxhpuvntp69p7u0dl726h8ex8sjv577ffuwr32d2vsgyp0jm?message=${encodeURIComponent(orderCode)}`,
+  },
+  usdc: {
+    title: "USDC",
+    network: "EVM",
+    address: "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
+    qrData: () => "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
+  },
+  usdt: {
+    title: "USDT",
+    network: "EVM",
+    address: "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
+    qrData: () => "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
+  },
+  sol: {
+    title: "SOL",
+    network: "Solana",
+    address: "9R1DW4VswpiJ5KxmfqGVsrH5o4QRKi9yBBh3LBPkRMmz",
+    qrData: (orderCode) =>
+      `solana:9R1DW4VswpiJ5KxmfqGVsrH5o4QRKi9yBBh3LBPkRMmz?label=${encodeURIComponent("Haller Boutique")}&message=${encodeURIComponent(orderCode)}&memo=${encodeURIComponent(orderCode)}`,
+  },
+};
 
 const euro = (value) => `${value}\u20ac`;
 
@@ -249,6 +281,34 @@ function createProductCard(product) {
   `;
 }
 
+function getAllProducts() {
+  return catalogSections.flatMap((section) =>
+    section.categories.flatMap((category) => category.products)
+  );
+}
+
+function findProduct(productName) {
+  return getAllProducts().find((product) => product.name === productName);
+}
+
+function saveCheckoutItem(productName) {
+  const product = findProduct(productName);
+
+  if (!product) {
+    return null;
+  }
+
+  const item = {
+    name: product.name,
+    price: product.finalPrice,
+    original: product.original,
+    savedAt: new Date().toISOString(),
+  };
+
+  window.localStorage.setItem(checkoutItemKey, JSON.stringify(item));
+  return item;
+}
+
 function renderCatalog() {
   const catalogRoot = document.querySelector("[data-catalog]");
 
@@ -288,8 +348,36 @@ function renderCatalog() {
 }
 
 function readCartCount() {
+  const cartItems = readCartItems();
+  if (cartItems.length > 0) {
+    return cartItems.length;
+  }
+
   const count = Number.parseInt(window.localStorage.getItem(cartKey), 10);
   return Number.isFinite(count) ? count : 0;
+}
+
+function readCartItems() {
+  try {
+    const items = JSON.parse(window.localStorage.getItem(cartItemsKey));
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
+function addCheckoutItem(productName) {
+  const item = saveCheckoutItem(productName);
+
+  if (!item) {
+    return readCartItems();
+  }
+
+  const cartItems = readCartItems();
+  cartItems.push(item);
+  window.localStorage.setItem(cartItemsKey, JSON.stringify(cartItems));
+
+  return cartItems;
 }
 
 function updateCartCount(count = readCartCount()) {
@@ -299,7 +387,9 @@ function updateCartCount(count = readCartCount()) {
 }
 
 function addToCart(button) {
-  const count = readCartCount() + 1;
+  const productName = button ? button.dataset.addToCart || button.dataset.buyNow : "";
+  const cartItems = productName ? addCheckoutItem(productName) : [];
+  const count = cartItems.length > 0 ? cartItems.length : readCartCount() + 1;
   window.localStorage.setItem(cartKey, String(count));
   updateCartCount(count);
 
@@ -312,6 +402,232 @@ function addToCart(button) {
   window.setTimeout(() => {
     button.textContent = originalText;
   }, 1200);
+}
+
+function createOrderCode() {
+  const now = new Date();
+  const date = [
+    String(now.getFullYear()).slice(-2),
+    String(now.getMonth() + 1).padStart(2, "0"),
+    String(now.getDate()).padStart(2, "0"),
+  ].join("");
+  const random =
+    window.crypto && window.crypto.getRandomValues
+      ? Array.from(window.crypto.getRandomValues(new Uint8Array(3)))
+          .map((value) => value.toString(16).padStart(2, "0"))
+          .join("")
+          .toUpperCase()
+      : Math.random().toString(16).slice(2, 8).toUpperCase();
+
+  return `HB-${date}-${random}`;
+}
+
+function readOrderCode() {
+  let orderCode = window.localStorage.getItem(orderCodeKey);
+
+  if (!orderCode) {
+    orderCode = createOrderCode();
+    window.localStorage.setItem(orderCodeKey, orderCode);
+  }
+
+  return orderCode;
+}
+
+function readCheckoutItem() {
+  try {
+    return JSON.parse(window.localStorage.getItem(checkoutItemKey));
+  } catch {
+    return null;
+  }
+}
+
+function getCheckoutProductText() {
+  const cartItems = readCartItems();
+
+  if (cartItems.length > 0) {
+    return cartItems.map((item) => `${item.name} - ${item.price}`).join("; ");
+  }
+
+  const item = readCheckoutItem();
+
+  if (!item || !item.name) {
+    return "Da confermare";
+  }
+
+  return item.price ? `${item.name} - ${item.price}` : item.name;
+}
+
+function getFieldValue(name) {
+  const field = document.querySelector(`[name="${name}"]`);
+  return field && field.value.trim() ? field.value.trim() : "Da compilare";
+}
+
+function copyText(text, button) {
+  if (!text) {
+    return;
+  }
+
+  const setCopied = () => {
+    if (!button) {
+      return;
+    }
+    const label = button.querySelector("span") || button;
+    const originalText = label.textContent;
+    label.textContent = "Copiato";
+    window.setTimeout(() => {
+      label.textContent = originalText;
+    }, 1200);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(setCopied).catch(() => {});
+    return;
+  }
+
+  window.prompt("Copia questo testo", text);
+  setCopied();
+}
+
+function buildPaymentPacket(orderCode, wallet) {
+  return [
+    `Codice ordine: ${orderCode}`,
+    `Prodotto: ${getCheckoutProductText()}`,
+    `Cliente: ${getFieldValue("name")}`,
+    `Telefono: ${getFieldValue("phone")}`,
+    `Email: ${getFieldValue("email")}`,
+    `Pagamento: ${wallet.title} (${wallet.network})`,
+    `Wallet: ${wallet.address}`,
+    `TX hash: ${getFieldValue("tx-hash")}`,
+  ].join("\n");
+}
+
+function setupCheckoutPayments() {
+  const cryptoPanel = document.querySelector(".crypto-payment");
+  const codPanel = document.querySelector(".cod-only");
+  const paymentInputs = Array.from(document.querySelectorAll('input[name="payment-method"]'));
+  const paymentOptions = Array.from(document.querySelectorAll(".payment-option"));
+  const paymentSummary = document.querySelector("[data-payment-method-summary]");
+  const checkoutNote = document.querySelector("[data-checkout-note]");
+  const orderCode = readOrderCode();
+  const orderProduct = document.querySelector("[data-order-product]");
+  const qrImage = document.querySelector("[data-crypto-qr]");
+  const cryptoTitle = document.querySelector("[data-crypto-title]");
+  const cryptoNetwork = document.querySelector("[data-crypto-network]");
+  const cryptoAddress = document.querySelector("[data-crypto-address]");
+  const paymentPacket = document.querySelector("[data-payment-packet]");
+  const cryptoButtons = Array.from(document.querySelectorAll("[data-crypto-option]"));
+  let selectedCrypto = "btc";
+
+  if (paymentInputs.length === 0 && !cryptoPanel) {
+    return;
+  }
+
+  if (orderProduct) {
+    orderProduct.textContent = getCheckoutProductText();
+  }
+
+  document.querySelectorAll("[data-order-code]").forEach((element) => {
+    element.textContent = orderCode;
+  });
+
+  function updatePaymentPacket() {
+    const wallet = cryptoWallets[selectedCrypto];
+    if (paymentPacket && wallet) {
+      paymentPacket.value = buildPaymentPacket(orderCode, wallet);
+    }
+  }
+
+  function setCryptoOption(option) {
+    const wallet = cryptoWallets[option] || cryptoWallets.btc;
+    selectedCrypto = option in cryptoWallets ? option : "btc";
+
+    cryptoButtons.forEach((button) => {
+      button.classList.toggle("is-active", button.dataset.cryptoOption === selectedCrypto);
+    });
+
+    if (cryptoTitle) {
+      cryptoTitle.textContent = wallet.title;
+    }
+    if (cryptoNetwork) {
+      cryptoNetwork.textContent = wallet.network;
+    }
+    if (cryptoAddress) {
+      cryptoAddress.textContent = wallet.address;
+    }
+    if (qrImage) {
+      const qrData = wallet.qrData(orderCode);
+      qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(qrData)}`;
+    }
+
+    updatePaymentPacket();
+  }
+
+  function setPaymentMethod(method) {
+    const isCrypto = method === "crypto";
+
+    paymentInputs.forEach((input) => {
+      input.checked = input.value === method;
+    });
+
+    paymentOptions.forEach((option) => {
+      const input = option.querySelector("input");
+      option.classList.toggle("is-active", Boolean(input && input.value === method));
+    });
+
+    if (cryptoPanel) {
+      cryptoPanel.hidden = !isCrypto;
+    }
+    if (codPanel) {
+      codPanel.hidden = isCrypto;
+    }
+    if (paymentSummary) {
+      paymentSummary.textContent = isCrypto ? `Crypto ${cryptoWallets[selectedCrypto].title}` : "Contrassegno";
+    }
+    if (checkoutNote) {
+      checkoutNote.textContent = isCrypto
+        ? "Invia pagamento crypto e poi manda TX hash con codice ordine."
+        : "Nessun pagamento online richiesto in questa fase.";
+    }
+
+    updatePaymentPacket();
+  }
+
+  paymentInputs.forEach((input) => {
+    input.addEventListener("change", () => setPaymentMethod(input.value));
+  });
+
+  cryptoButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      setCryptoOption(button.dataset.cryptoOption);
+      setPaymentMethod("crypto");
+    });
+  });
+
+  document.querySelectorAll(".checkout-form input").forEach((input) => {
+    input.addEventListener("input", updatePaymentPacket);
+  });
+
+  const copyOrderButton = document.querySelector("[data-copy-order-code]");
+  if (copyOrderButton) {
+    copyOrderButton.addEventListener("click", () => copyText(orderCode, copyOrderButton));
+  }
+
+  const copyWalletButton = document.querySelector("[data-copy-wallet]");
+  if (copyWalletButton) {
+    copyWalletButton.addEventListener("click", () => {
+      copyText(cryptoWallets[selectedCrypto].address, copyWalletButton);
+    });
+  }
+
+  const copyPacketButton = document.querySelector("[data-copy-payment-packet]");
+  if (copyPacketButton) {
+    copyPacketButton.addEventListener("click", () => {
+      copyText(paymentPacket ? paymentPacket.value : "", copyPacketButton);
+    });
+  }
+
+  setCryptoOption(selectedCrypto);
+  setPaymentMethod(paymentInputs.find((input) => input.checked)?.value || "cod");
 }
 
 renderCatalog();
@@ -336,7 +652,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (buyButton) {
-    addToCart();
+    addToCart(buyButton);
     window.location.href = "checkout.html";
   }
 });
@@ -354,3 +670,5 @@ if (discountButton && discountInput && discountMessage) {
       : "Inserisci un codice sconto prima di applicarlo.";
   });
 }
+
+setupCheckoutPayments();
