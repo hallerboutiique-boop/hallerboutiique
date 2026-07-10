@@ -18,19 +18,21 @@ const cryptoWallets = {
   },
   usdc: {
     title: "USDC",
-    network: "EVM",
+    network: "Base",
     address: "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
     qrData: () => "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
   },
   usdt: {
     title: "USDT",
-    network: "EVM",
-    address: "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
-    qrData: () => "0xA6Bb39f60D5B5856334F6A49039a49070b0706BE",
+    network: "TRON",
+    address: "",
+    displayAddress: "Wallet TRON da configurare",
+    warning: "Manca il wallet TRON. Mandami un indirizzo TRON che inizia con T e attivo subito QR e copia.",
+    qrData: null,
   },
   sol: {
     title: "SOL",
-    network: "Solana",
+    network: "SOL",
     address: "9R1DW4VswpiJ5KxmfqGVsrH5o4QRKi9yBBh3LBPkRMmz",
     qrData: (orderCode) =>
       `solana:9R1DW4VswpiJ5KxmfqGVsrH5o4QRKi9yBBh3LBPkRMmz?label=${encodeURIComponent("Haller Boutique")}&message=${encodeURIComponent(orderCode)}&memo=${encodeURIComponent(orderCode)}`,
@@ -496,7 +498,7 @@ function buildPaymentPacket(orderCode, wallet) {
     `Telefono: ${getFieldValue("phone")}`,
     `Email: ${getFieldValue("email")}`,
     `Pagamento: ${wallet.title} (${wallet.network})`,
-    `Wallet: ${wallet.address}`,
+    `Wallet: ${wallet.address || wallet.displayAddress}`,
     `TX hash: ${getFieldValue("tx-hash")}`,
   ].join("\n");
 }
@@ -511,11 +513,14 @@ function setupCheckoutPayments() {
   const orderCode = readOrderCode();
   const orderProduct = document.querySelector("[data-order-product]");
   const qrImage = document.querySelector("[data-crypto-qr]");
+  const walletCard = document.querySelector(".crypto-wallet-card");
   const cryptoTitle = document.querySelector("[data-crypto-title]");
   const cryptoNetwork = document.querySelector("[data-crypto-network]");
   const cryptoAddress = document.querySelector("[data-crypto-address]");
+  const cryptoWarning = document.querySelector("[data-crypto-warning]");
   const paymentPacket = document.querySelector("[data-payment-packet]");
   const cryptoButtons = Array.from(document.querySelectorAll("[data-crypto-option]"));
+  const copyWalletButton = document.querySelector("[data-copy-wallet]");
   let selectedCrypto = "btc";
 
   if (paymentInputs.length === 0 && !cryptoPanel) {
@@ -552,11 +557,31 @@ function setupCheckoutPayments() {
       cryptoNetwork.textContent = wallet.network;
     }
     if (cryptoAddress) {
-      cryptoAddress.textContent = wallet.address;
+      cryptoAddress.textContent = wallet.address || wallet.displayAddress;
     }
     if (qrImage) {
-      const qrData = wallet.qrData(orderCode);
-      qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(qrData)}`;
+      if (wallet.address && wallet.qrData) {
+        const qrData = wallet.qrData(orderCode);
+        qrImage.hidden = false;
+        qrImage.src = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(qrData)}`;
+      } else {
+        qrImage.hidden = true;
+        qrImage.removeAttribute("src");
+      }
+    }
+    if (walletCard) {
+      walletCard.classList.toggle("is-missing-wallet", !wallet.address);
+    }
+    if (cryptoWarning) {
+      cryptoWarning.hidden = !wallet.warning;
+      cryptoWarning.textContent = wallet.warning || "";
+    }
+    if (copyWalletButton) {
+      copyWalletButton.disabled = !wallet.address;
+      const label = copyWalletButton.querySelector("span");
+      if (label) {
+        label.textContent = wallet.address ? "Copia indirizzo" : "Wallet mancante";
+      }
     }
 
     updatePaymentPacket();
@@ -612,10 +637,14 @@ function setupCheckoutPayments() {
     copyOrderButton.addEventListener("click", () => copyText(orderCode, copyOrderButton));
   }
 
-  const copyWalletButton = document.querySelector("[data-copy-wallet]");
   if (copyWalletButton) {
     copyWalletButton.addEventListener("click", () => {
-      copyText(cryptoWallets[selectedCrypto].address, copyWalletButton);
+      const wallet = cryptoWallets[selectedCrypto];
+      if (!wallet.address) {
+        return;
+      }
+
+      copyText(wallet.address, copyWalletButton);
     });
   }
 
