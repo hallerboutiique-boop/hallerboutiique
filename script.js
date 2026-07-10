@@ -25,10 +25,8 @@ const cryptoWallets = {
   usdt: {
     title: "USDT",
     network: "TRON",
-    address: "",
-    displayAddress: "Wallet TRON da configurare",
-    warning: "Manca il wallet TRON. Mandami un indirizzo TRON che inizia con T e attivo subito QR e copia.",
-    qrData: null,
+    address: "TXSJ3Jw2Nbv8mYAzJN9DBrspvZGEv2QQJi",
+    qrData: () => "TXSJ3Jw2Nbv8mYAzJN9DBrspvZGEv2QQJi",
   },
   sol: {
     title: "SOL",
