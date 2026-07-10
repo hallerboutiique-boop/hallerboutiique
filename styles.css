@@ -989,12 +989,14 @@ button {
   fill: #26a17b;
 }
 
-.crypto-icon-sol rect {
-  fill: #111;
+.crypto-icon-sol svg {
+  padding: 9px;
+  border-radius: 50%;
+  background: #111;
 }
 
 .crypto-icon-sol path {
-  fill: url("#sol-gradient");
+  fill: url("#solana-gradient");
 }
 
 .crypto-options button {
