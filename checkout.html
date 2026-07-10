@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Checkout - Haller Boutique</title>
-    <meta name="description" content="Checkout Haller Boutique con pagamento alla consegna.">
+    <meta name="description" content="Checkout Haller Boutique con pagamento alla consegna o crypto.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=white-text-1">
+    <link rel="stylesheet" href="styles.css?v=crypto-checkout-1">
   </head>
   <body>
     <header class="site-header">
@@ -41,7 +41,7 @@
 
     <main class="checkout-page">
       <section class="checkout-heading">
-        <p>Pagamento alla consegna</p>
+        <p>Pagamento alla consegna o crypto</p>
         <h1>Checkout</h1>
       </section>
 
@@ -98,12 +98,76 @@
 
           <fieldset class="payment-fieldset">
             <legend>Pagamento</legend>
+            <div class="payment-methods" aria-label="Scegli metodo di pagamento">
+              <label class="payment-option is-active">
+                <input type="radio" name="payment-method" value="cod" checked>
+                <span>Pagamento</span>
+                <strong>Contrassegno</strong>
+              </label>
+              <label class="payment-option">
+                <input type="radio" name="payment-method" value="crypto">
+                <span>Pagamento</span>
+                <strong>Crypto</strong>
+              </label>
+            </div>
+
             <div class="cod-only">
               <div class="payment-title-row">
                 <span>Pagamento</span>
                 <strong>Contrassegno</strong>
               </div>
-              <p>Accettiamo solo pagamento alla consegna. Pagherai direttamente al corriere quando ricevi il pacco.</p>
+              <p>Puoi pagare direttamente al corriere quando ricevi il pacco.</p>
+            </div>
+
+            <div class="crypto-payment" hidden>
+              <div class="crypto-order-code">
+                <span>Codice ordine</span>
+                <strong data-order-code>HB-000000</strong>
+                <button type="button" data-copy-order-code>Copia</button>
+              </div>
+
+              <p class="crypto-intro">Usa sempre questo codice ordine quando invii conferma, TX hash o screenshot. Serve per collegare pagamento, cliente e prodotti.</p>
+
+              <div class="crypto-icons" aria-label="Crypto accettate">
+                <span>BTC</span>
+                <span>USDC</span>
+                <span>USDT</span>
+                <span>SOL</span>
+              </div>
+
+              <div class="crypto-options" aria-label="Seleziona crypto">
+                <button class="is-active" type="button" data-crypto-option="btc">BTC</button>
+                <button type="button" data-crypto-option="usdc">USDC</button>
+                <button type="button" data-crypto-option="usdt">USDT</button>
+                <button type="button" data-crypto-option="sol">Solana</button>
+              </div>
+
+              <div class="crypto-wallet-card">
+                <img data-crypto-qr src="" alt="QR wallet crypto">
+                <div>
+                  <span data-crypto-network>Bitcoin</span>
+                  <h2 data-crypto-title>BTC</h2>
+                  <code data-crypto-address>bc1pp5x4xdu8m9mxhpuvntp69p7u0dl726h8ex8sjv577ffuwr32d2vsgyp0jm</code>
+                  <button type="button" data-copy-wallet>
+                    <i data-lucide="copy"></i>
+                    <span>Copia indirizzo</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="crypto-tracking">
+                <h3>Tracciamento pagamento</h3>
+                <p>Per riconoscere il pagamento, invia sempre codice ordine e TX hash. Per EVM il wallet non supporta una causale visibile on-chain, quindi il TX hash con codice ordine &egrave; obbligatorio.</p>
+                <label class="crypto-tx-field">
+                  <span>TX hash pagamento</span>
+                  <input type="text" name="tx-hash" autocomplete="off" placeholder="Incolla qui hash o ID transazione">
+                </label>
+                <textarea data-payment-packet readonly></textarea>
+                <button type="button" data-copy-payment-packet>
+                  <i data-lucide="clipboard-check"></i>
+                  <span>Copia dati pagamento</span>
+                </button>
+              </div>
             </div>
           </fieldset>
 
@@ -117,14 +181,22 @@
             <a href="index.html#arrivi">Continua lo shopping</a>
           </div>
           <div class="summary-row">
+            <span>Codice ordine</span>
+            <strong data-order-code>HB-000000</strong>
+          </div>
+          <div class="summary-row">
+            <span>Prodotto</span>
+            <strong data-order-product>Da confermare</strong>
+          </div>
+          <div class="summary-row">
             <span>Metodo di pagamento</span>
-            <strong>Contrassegno</strong>
+            <strong data-payment-method-summary>Contrassegno</strong>
           </div>
           <div class="summary-row">
             <span>Consegna</span>
             <strong>18H in Italia</strong>
           </div>
-          <p class="checkout-note">Nessun pagamento online richiesto in questa fase.</p>
+          <p class="checkout-note" data-checkout-note>Nessun pagamento online richiesto in questa fase.</p>
         </aside>
       </section>
     </main>
@@ -134,6 +206,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="script.js?v=euro-right-1"></script>
+    <script src="script.js?v=crypto-checkout-1"></script>
   </body>
 </html>
