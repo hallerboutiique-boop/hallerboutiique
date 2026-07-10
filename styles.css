@@ -949,20 +949,59 @@ button {
   gap: 8px;
 }
 
-.crypto-icons span {
+.crypto-icon {
   display: inline-grid;
   width: 54px;
   height: 54px;
   place-items: center;
-  color: #050505;
   border-radius: 50%;
-  background: var(--gold);
-  font-size: 12px;
-  font-weight: 900;
   box-shadow: 0 0 18px rgba(var(--gold-rgb), 0.2);
 }
 
+.crypto-icon svg {
+  display: block;
+  width: 54px;
+  height: 54px;
+}
+
+.crypto-icon-btc circle {
+  fill: #f7931a;
+}
+
+.crypto-icon-btc path,
+.crypto-icon-usdt path {
+  fill: #fff;
+}
+
+.crypto-icon-usdc circle {
+  fill: #2775ca;
+}
+
+.crypto-icon-usdc path {
+  fill: none;
+  stroke: #fff;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 4.2;
+}
+
+.crypto-icon-usdt circle {
+  fill: #26a17b;
+}
+
+.crypto-icon-sol rect {
+  fill: #111;
+}
+
+.crypto-icon-sol path {
+  fill: url("#sol-gradient");
+}
+
 .crypto-options button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-height: 38px;
   padding: 0 16px;
   color: var(--gold);
@@ -975,10 +1014,40 @@ button {
   cursor: pointer;
 }
 
+.crypto-options button:disabled,
+.crypto-wallet-card button:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .crypto-options button.is-active {
   color: #050505;
   border-color: var(--gold);
   background: var(--gold);
+}
+
+.crypto-dot {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12);
+}
+
+.crypto-dot-btc {
+  background: #f7931a;
+}
+
+.crypto-dot-usdc {
+  background: #2775ca;
+}
+
+.crypto-dot-usdt {
+  background: #26a17b;
+}
+
+.crypto-dot-sol {
+  background: linear-gradient(135deg, #00ffa3, #dc1fff 56%, #03e1ff);
 }
 
 .crypto-wallet-card {
@@ -1000,6 +1069,14 @@ button {
   border: 8px solid #fff;
   border-radius: 8px;
   background: #fff;
+}
+
+.crypto-wallet-card img[hidden] {
+  display: none;
+}
+
+.crypto-wallet-card.is-missing-wallet {
+  grid-template-columns: 1fr;
 }
 
 .crypto-wallet-card h2 {
@@ -1024,6 +1101,14 @@ button {
   font-size: 13px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.crypto-wallet-warning {
+  margin: -4px 0 14px;
+  color: var(--gold);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 700;
 }
 
 .crypto-tracking {
@@ -1514,10 +1599,10 @@ button {
     font-size: 24px;
   }
 
-  .crypto-icons span {
+  .crypto-icon,
+  .crypto-icon svg {
     width: 50px;
     height: 50px;
-    font-size: 11px;
   }
 
   .summary-row {
