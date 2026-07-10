@@ -822,11 +822,245 @@ button {
   white-space: nowrap;
 }
 
+.payment-methods {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.payment-option {
+  display: grid;
+  gap: 5px;
+  min-height: 78px;
+  padding: 16px;
+  color: var(--text);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  cursor: pointer;
+}
+
+.payment-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.payment-option span {
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.payment-option strong {
+  color: var(--text-strong);
+  text-transform: uppercase;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.payment-option.is-active {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--gold-rgb), 0.09);
+}
+
 .cod-only {
   padding: 18px;
   border: 1px solid rgba(var(--gold-rgb), 0.55);
   border-radius: 8px;
   background: rgba(var(--gold-rgb), 0.08);
+}
+
+.crypto-payment {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.crypto-payment[hidden],
+.cod-only[hidden] {
+  display: none;
+}
+
+.crypto-order-code {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 16px;
+  border: 1px solid rgba(var(--gold-rgb), 0.55);
+  border-radius: 8px;
+  background: rgba(var(--gold-rgb), 0.08);
+}
+
+.crypto-order-code span,
+.crypto-wallet-card span {
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.crypto-order-code strong {
+  color: var(--text-strong);
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.crypto-order-code button,
+.crypto-wallet-card button,
+.crypto-tracking button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  color: var(--gold);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: rgba(var(--gold-rgb), 0.08);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.crypto-order-code button:hover,
+.crypto-wallet-card button:hover,
+.crypto-tracking button:hover {
+  color: #050505;
+  background: var(--gold);
+}
+
+.crypto-intro {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.crypto-icons,
+.crypto-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.crypto-icons span {
+  display: inline-grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  color: #050505;
+  border-radius: 50%;
+  background: var(--gold);
+  font-size: 12px;
+  font-weight: 900;
+  box-shadow: 0 0 18px rgba(var(--gold-rgb), 0.2);
+}
+
+.crypto-options button {
+  min-height: 38px;
+  padding: 0 16px;
+  color: var(--gold);
+  border: 1px solid rgba(var(--gold-rgb), 0.48);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.44);
+  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.crypto-options button.is-active {
+  color: #050505;
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.crypto-wallet-card {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.crypto-wallet-card img {
+  display: block;
+  width: 180px;
+  height: 180px;
+  border: 8px solid #fff;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.crypto-wallet-card h2 {
+  margin: 4px 0 10px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 900;
+}
+
+.crypto-wallet-card code {
+  display: block;
+  width: 100%;
+  margin-bottom: 14px;
+  padding: 12px;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.34);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.58);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.crypto-tracking {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(var(--gold-rgb), 0.34);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.crypto-tracking h3 {
+  margin: 0;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.crypto-tracking p {
+  margin: 0;
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.crypto-tracking textarea {
+  width: 100%;
+  min-height: 172px;
+  resize: vertical;
+  padding: 12px;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.4);
+  border-radius: 8px;
+  outline: none;
+  background: rgba(0, 0, 0, 0.58);
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .payment-title-row {
@@ -1040,6 +1274,15 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .crypto-wallet-card {
+    grid-template-columns: 160px minmax(0, 1fr);
+  }
+
+  .crypto-wallet-card img {
+    width: 160px;
+    height: 160px;
+  }
+
   .order-summary {
     position: static;
   }
@@ -1249,6 +1492,32 @@ button {
 
   .discount-code {
     grid-template-columns: 1fr;
+  }
+
+  .payment-methods,
+  .crypto-order-code,
+  .crypto-wallet-card {
+    grid-template-columns: 1fr;
+  }
+
+  .crypto-order-code {
+    align-items: start;
+  }
+
+  .crypto-wallet-card img {
+    width: min(100%, 220px);
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .crypto-wallet-card h2 {
+    font-size: 24px;
+  }
+
+  .crypto-icons span {
+    width: 50px;
+    height: 50px;
+    font-size: 11px;
   }
 
   .summary-row {
