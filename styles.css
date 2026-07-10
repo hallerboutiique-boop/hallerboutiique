@@ -5,10 +5,10 @@
   --black: #000;
   --panel: rgba(5, 5, 5, 0.92);
   --panel-line: rgba(255, 255, 255, 0.13);
-  --text: #9f9f9f;
-  --text-strong: #b5b5b5;
-  --text-soft: #858585;
-  --text-muted: #6f6f6f;
+  --text: #ffffff;
+  --text-strong: #ffffff;
+  --text-soft: #ffffff;
+  --text-muted: #ffffff;
 }
 
 * {
