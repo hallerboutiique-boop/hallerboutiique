@@ -7,6 +7,81 @@ const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
 const orderCodeKey = "hallerBoutiqueOrderCode";
+const visitorIdKey = "hallerBoutiqueVisitorId";
+const analyticsSessionKey = "hallerBoutiqueSessionId";
+const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
+
+function randomId(prefix) {
+  const bytes =
+    window.crypto && window.crypto.getRandomValues
+      ? Array.from(window.crypto.getRandomValues(new Uint8Array(10)))
+      : Array.from({ length: 10 }, () => Math.floor(Math.random() * 256));
+  return `${prefix}_${bytes.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function getVisitorId() {
+  let id = window.localStorage.getItem(visitorIdKey);
+  if (!id) {
+    id = randomId("vis");
+    window.localStorage.setItem(visitorIdKey, id);
+  }
+  return id;
+}
+
+function getAnalyticsSessionId() {
+  let id = window.sessionStorage.getItem(analyticsSessionKey);
+  if (!id) {
+    id = randomId("ses");
+    window.sessionStorage.setItem(analyticsSessionKey, id);
+    window.sessionStorage.setItem(analyticsSessionStartedKey, String(Date.now()));
+  }
+  return id;
+}
+
+const analyticsState = {
+  visitorId: getVisitorId(),
+  sessionId: getAnalyticsSessionId(),
+  startedAt: Number(window.sessionStorage.getItem(analyticsSessionStartedKey) || Date.now()),
+  maxScroll: 0,
+};
+
+function sessionDurationMs() {
+  return Date.now() - analyticsState.startedAt;
+}
+
+function currentScrollDepth() {
+  const scrollable = Math.max(1, document.documentElement.scrollHeight - window.innerHeight);
+  const depth = Math.round((window.scrollY / scrollable) * 100);
+  analyticsState.maxScroll = Math.max(analyticsState.maxScroll, Math.min(100, Math.max(0, depth)));
+  return analyticsState.maxScroll;
+}
+
+function sendTrack(type, extra = {}) {
+  const payload = {
+    type,
+    visitorId: analyticsState.visitorId,
+    sessionId: analyticsState.sessionId,
+    path: window.location.pathname,
+    title: document.title,
+    referrer: document.referrer,
+    durationMs: sessionDurationMs(),
+    scrollDepth: currentScrollDepth(),
+    ...extra,
+  };
+  const body = JSON.stringify(payload);
+
+  if (navigator.sendBeacon) {
+    const sent = navigator.sendBeacon("/api/track", new Blob([body], { type: "application/json" }));
+    if (sent) return;
+  }
+
+  fetch("/api/track", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+    keepalive: true,
+  }).catch(() => {});
+}
 
 const cryptoWallets = {
   btc: {
@@ -393,6 +468,10 @@ function addToCart(button) {
   window.localStorage.setItem(cartKey, String(count));
   updateCartCount(count);
 
+  if (productName) {
+    sendTrack(button && button.dataset.buyNow ? "buy_now" : "add_to_cart", { product: productName });
+  }
+
   if (!button) {
     return;
   }
@@ -657,8 +736,107 @@ function setupCheckoutPayments() {
   setPaymentMethod(paymentInputs.find((input) => input.checked)?.value || "cod");
 }
 
+function collectCheckoutProducts() {
+  const cartItems = readCartItems();
+  if (cartItems.length > 0) {
+    return cartItems.map((item) => ({
+      name: item.name,
+      price: item.price,
+      size: item.size || "",
+      quantity: 1,
+    }));
+  }
+
+  const item = readCheckoutItem();
+  return item && item.name ? [{ name: item.name, price: item.price, size: item.size || "", quantity: 1 }] : [];
+}
+
+function checkoutField(name) {
+  const field = document.querySelector(`[name="${name}"]`);
+  return field ? field.value.trim() : "";
+}
+
+function selectedPaymentLabel() {
+  const selected = document.querySelector('input[name="payment-method"]:checked');
+  if (!selected || selected.value === "cod") return "Contrassegno";
+  const selectedCrypto = document.querySelector("[data-crypto-option].is-active span:last-child");
+  return selectedCrypto ? `Crypto ${selectedCrypto.textContent.trim()}` : "Crypto";
+}
+
+async function confirmCheckoutOrder(button) {
+  if (!button) return;
+  const originalText = button.textContent;
+  button.disabled = true;
+  button.textContent = "Conferma in corso";
+
+  const payload = {
+    visitorId: analyticsState.visitorId,
+    sessionId: analyticsState.sessionId,
+    orderCode: readOrderCode(),
+    customer: {
+      name: checkoutField("name"),
+      phone: checkoutField("phone"),
+      email: checkoutField("email"),
+      address: checkoutField("address"),
+      city: checkoutField("city"),
+      postalCode: checkoutField("postal-code"),
+    },
+    paymentMethod: selectedPaymentLabel(),
+    txHash: checkoutField("tx-hash"),
+    discountCode: checkoutField("discount-code"),
+    products: collectCheckoutProducts(),
+  };
+
+  try {
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || "Ordine non salvato.");
+
+    sendTrack("order_confirmed", {
+      method: payload.paymentMethod,
+      product: payload.products.map((product) => product.name).join("; "),
+    });
+
+    window.localStorage.removeItem(cartItemsKey);
+    window.localStorage.removeItem(cartKey);
+    updateCartCount(0);
+
+    const note = document.querySelector("[data-checkout-note]");
+    if (note) {
+      note.textContent = `Ordine ${data.order.orderCode} confermato. Totale ${data.order.total}.`;
+    }
+    button.textContent = "Ordine confermato";
+  } catch (error) {
+    const note = document.querySelector("[data-checkout-note]");
+    if (note) {
+      note.textContent = error.message || "Non siamo riusciti a salvare l'ordine.";
+    }
+    button.disabled = false;
+    button.textContent = originalText;
+  }
+}
+
 renderCatalog();
 updateCartCount();
+
+sendTrack("pageview");
+
+if (document.querySelector(".checkout-page")) {
+  sendTrack("checkout_start", { product: getCheckoutProductText() });
+}
+
+window.addEventListener("scroll", currentScrollDepth, { passive: true });
+window.setInterval(() => {
+  sendTrack("heartbeat");
+}, 30000);
+
+window.addEventListener("pagehide", () => {
+  sendTrack("page_exit");
+});
 
 if (window.lucide) {
   window.lucide.createIcons();
@@ -683,6 +861,11 @@ document.addEventListener("click", (event) => {
     window.location.href = "checkout.html";
   }
 });
+
+const checkoutSubmitButton = document.querySelector(".checkout-submit");
+if (checkoutSubmitButton) {
+  checkoutSubmitButton.addEventListener("click", () => confirmCheckoutOrder(checkoutSubmitButton));
+}
 
 const discountButton = document.querySelector("[data-discount-apply]");
 const discountInput = document.querySelector("input[name='discount-code']");
