@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Account - Haller Boutique</title>
+    <meta name="description" content="Registrazione e accesso Haller Boutique.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=auth-1">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-bar">
+        <a class="icon-button" href="index.html" aria-label="Torna alla home">
+          <i data-lucide="arrow-left"></i>
+        </a>
+
+        <a class="logo" href="index.html" aria-label="Haller Boutique home">
+          <img src="assets/logo-original.png" alt="Haller Boutique">
+        </a>
+
+        <div class="header-actions">
+          <a class="icon-button is-current" href="account.html" aria-label="Account">
+            <i data-lucide="user-round"></i>
+          </a>
+          <a class="icon-button cart-button" href="checkout.html" aria-label="Checkout">
+            <i data-lucide="shopping-bag"></i>
+            <span>0</span>
+          </a>
+        </div>
+      </div>
+
+      <nav class="main-nav checkout-nav" aria-label="Menu account">
+        <a href="index.html">Home</a>
+        <a class="active" href="account.html">Account</a>
+        <a href="checkout.html">Checkout</a>
+      </nav>
+    </header>
+
+    <main class="auth-page">
+      <section class="auth-heading">
+        <p>Area clienti</p>
+        <h1>Accedi o registrati</h1>
+      </section>
+
+      <section class="auth-layout" aria-label="Accesso e registrazione">
+        <article class="auth-card auth-profile" data-auth-profile hidden>
+          <span>Account attivo</span>
+          <h2 data-profile-name>Cliente</h2>
+          <p data-profile-email></p>
+          <p data-profile-phone></p>
+          <button type="button" data-logout>
+            <i data-lucide="log-out"></i>
+            <span>Esci</span>
+          </button>
+        </article>
+
+        <article class="auth-card" data-auth-forms>
+          <div class="auth-tabs" role="tablist" aria-label="Account">
+            <button class="is-active" type="button" data-auth-tab="login">Accedi</button>
+            <button type="button" data-auth-tab="register">Registrati</button>
+          </div>
+
+          <form class="auth-form is-active" data-auth-form="login">
+            <label>
+              <span>Email</span>
+              <input type="email" name="email" autocomplete="email" placeholder="nome@email.it" required>
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="password" name="password" autocomplete="current-password" placeholder="Minimo 8 caratteri" required>
+            </label>
+            <button type="submit">Accedi</button>
+          </form>
+
+          <form class="auth-form" data-auth-form="register">
+            <label>
+              <span>Nome e cognome</span>
+              <input type="text" name="name" autocomplete="name" placeholder="Mario Rossi" required>
+            </label>
+            <label>
+              <span>Email</span>
+              <input type="email" name="email" autocomplete="email" placeholder="nome@email.it" required>
+            </label>
+            <label>
+              <span>Cellulare <em>facoltativo</em></span>
+              <input type="tel" name="phone" autocomplete="tel" placeholder="+39 333 000 0000">
+            </label>
+            <label>
+              <span>Password</span>
+              <input type="password" name="password" autocomplete="new-password" placeholder="Minimo 8 caratteri" required>
+            </label>
+            <button type="submit">Crea account</button>
+          </form>
+
+          <p class="auth-message" data-auth-message aria-live="polite"></p>
+        </article>
+
+        <aside class="auth-card oauth-card" data-auth-forms>
+          <span>Accesso rapido</span>
+          <h2>Continua con</h2>
+          <div class="oauth-buttons">
+            <a class="oauth-button" href="/auth/google/start" data-oauth-provider="google">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#4285F4" d="M22.6 12.2c0-.8-.1-1.5-.2-2.2H12v4.2h6c-.3 1.4-1.1 2.6-2.3 3.4v2.8h3.7c2.1-2 3.2-4.8 3.2-8.2Z"></path>
+                <path fill="#34A853" d="M12 23c3 0 5.5-1 7.4-2.7l-3.7-2.8c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.1v2.9C4 20.5 7.7 23 12 23Z"></path>
+                <path fill="#FBBC05" d="M5.9 14c-.2-.7-.4-1.3-.4-2s.1-1.4.4-2V7.1H2.1A11 11 0 0 0 1 12c0 1.8.4 3.5 1.1 4.9L5.9 14Z"></path>
+                <path fill="#EA4335" d="M12 5.5c1.6 0 3.1.6 4.2 1.7l3.2-3.2C17.5 2.1 15 1 12 1 7.7 1 4 3.5 2.1 7.1L5.9 10c.9-2.6 3.3-4.5 6.1-4.5Z"></path>
+              </svg>
+              <span>Google</span>
+            </a>
+            <a class="oauth-button" href="/auth/apple/start" data-oauth-provider="apple">
+              <i data-lucide="apple"></i>
+              <span>Apple</span>
+            </a>
+            <a class="oauth-button" href="/auth/microsoft/start" data-oauth-provider="microsoft">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path fill="#F25022" d="M2 2h9.5v9.5H2V2Z"></path>
+                <path fill="#7FBA00" d="M12.5 2H22v9.5h-9.5V2Z"></path>
+                <path fill="#00A4EF" d="M2 12.5h9.5V22H2v-9.5Z"></path>
+                <path fill="#FFB900" d="M12.5 12.5H22V22h-9.5v-9.5Z"></path>
+              </svg>
+              <span>Microsoft</span>
+            </a>
+          </div>
+          <p class="oauth-note" data-oauth-note></p>
+        </aside>
+      </section>
+    </main>
+
+    <footer class="checkout-footer">
+      <p>&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="account.js?v=auth-1"></script>
+  </body>
+</html>
