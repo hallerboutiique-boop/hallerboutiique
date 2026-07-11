@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, scryptSync, timingSafeEqual, createSign } from "node:crypto";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual, createSign } from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -143,6 +143,10 @@ function clearCookie(name) {
 function sessionCookie(userId) {
   const thirtyDays = 30 * 24 * 60 * 60 * 1000;
   return cookie("hb_session", signPayload({ sub: userId, exp: Date.now() + thirtyDays }), thirtyDays / 1000);
+}
+
+function pkceVerifierCookie(verifier) {
+  return cookie("hb_oauth_verifier", verifier, 600);
 }
 
 function adminCookie() {
@@ -330,6 +334,8 @@ function startOauth(req, res, providerKey) {
     return redirect(res, `/account.html?oauth=${providerKey}&error=not_configured`);
   }
   const state = randomBytes(18).toString("base64url");
+  const verifier = randomBytes(48).toString("base64url");
+  const challenge = createHash("sha256").update(verifier).digest("base64url");
   const redirectUri = `${origin(req)}/auth/${providerKey}/callback`;
   const params = new URLSearchParams({
     client_id: process.env[provider.env[0]],
@@ -339,9 +345,15 @@ function startOauth(req, res, providerKey) {
     state,
   });
   if (providerKey === "google") params.set("prompt", "select_account");
-  if (providerKey === "microsoft") params.set("response_mode", "query");
+  if (providerKey === "microsoft") {
+    params.set("response_mode", "query");
+    params.set("code_challenge", challenge);
+    params.set("code_challenge_method", "S256");
+  }
   if (providerKey === "apple") params.set("response_mode", "query");
-  redirect(res, `${provider.authUrl}?${params.toString()}`, { "Set-Cookie": cookie("hb_oauth_state", state, 600) });
+  const cookies = [cookie("hb_oauth_state", state, 600)];
+  if (providerKey === "microsoft") cookies.push(pkceVerifierCookie(verifier));
+  redirect(res, `${provider.authUrl}?${params.toString()}`, { "Set-Cookie": cookies });
 }
 
 function appleClientSecret() {
@@ -403,13 +415,20 @@ async function oauthCallback(req, res, providerKey, url) {
   if (!code) return oauthError(res, providerKey, "oauth_code");
 
   const redirectUri = `${origin(req)}/auth/${providerKey}/callback`;
+  const cookies = parseCookies(req);
   const tokenBody = new URLSearchParams({
     grant_type: "authorization_code",
     code,
     redirect_uri: redirectUri,
     client_id: process.env[provider.env[0]],
-    client_secret: providerKey === "apple" ? appleClientSecret() : process.env[provider.env[1]],
   });
+  if (providerKey === "apple") {
+    tokenBody.set("client_secret", appleClientSecret());
+  } else if (providerKey === "microsoft") {
+    tokenBody.set("code_verifier", cookies.hb_oauth_verifier || "");
+  } else {
+    tokenBody.set("client_secret", process.env[provider.env[1]]);
+  }
   const tokenResponse = await fetch(provider.tokenUrl, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -420,7 +439,7 @@ async function oauthCallback(req, res, providerKey, url) {
     let tokenDetail = "";
     try {
       const parsedError = JSON.parse(tokenError);
-      tokenDetail = String(parsedError.error_codes?.[0] || parsedError.error || parsedError.error_description || "");
+      tokenDetail = String(parsedError.error_description || parsedError.error_codes?.[0] || parsedError.error || "");
     } catch {
       tokenDetail = tokenError;
     }
@@ -461,7 +480,7 @@ async function oauthCallback(req, res, providerKey, url) {
   });
 
   redirect(res, "/account.html?login=ok", {
-    "Set-Cookie": [sessionCookie(user.id), clearCookie("hb_oauth_state")],
+    "Set-Cookie": [sessionCookie(user.id), clearCookie("hb_oauth_state"), clearCookie("hb_oauth_verifier")],
   });
 }
 
