@@ -426,6 +426,7 @@ async function oauthCallback(req, res, providerKey, url) {
     tokenBody.set("client_secret", appleClientSecret());
   } else if (providerKey === "microsoft") {
     tokenBody.set("code_verifier", cookies.hb_oauth_verifier || "");
+    tokenBody.set("client_secret", process.env[provider.env[1]]);
   } else {
     tokenBody.set("client_secret", process.env[provider.env[1]]);
   }
