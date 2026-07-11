@@ -3,12 +3,12 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Admin Utenti - Haller Boutique</title>
-    <meta name="description" content="Pannello admin utenti Haller Boutique.">
+    <title>Admin Dashboard - Haller Boutique</title>
+    <meta name="description" content="Dashboard admin Haller Boutique con utenti, ordini e metriche sito.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=auth-1">
+    <link rel="stylesheet" href="styles.css?v=dashboard-1">
   </head>
   <body>
     <header class="site-header">
@@ -42,7 +42,7 @@
     <main class="admin-page">
       <section class="auth-heading">
         <p>Pannello riservato</p>
-        <h1>Utenti registrati</h1>
+        <h1>Dashboard admin</h1>
       </section>
 
       <section class="admin-layout">
@@ -55,32 +55,117 @@
           <p class="auth-message" data-admin-message aria-live="polite"></p>
         </form>
 
-        <article class="auth-card admin-users" data-admin-panel hidden>
+        <article class="auth-card admin-users admin-dashboard" data-admin-panel hidden>
           <div class="admin-toolbar">
             <div>
-              <span>Totale utenti</span>
-              <strong data-admin-total>0</strong>
+              <span>Haller Boutique</span>
+              <strong data-admin-total>Dashboard</strong>
             </div>
             <button type="button" data-admin-refresh>
               <i data-lucide="refresh-cw"></i>
               <span>Aggiorna</span>
             </button>
           </div>
-          <div class="users-table-wrap">
-            <table class="users-table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Email</th>
-                  <th>Cellulare</th>
-                  <th>Accesso</th>
-                  <th>Registrato</th>
-                  <th>Ultimo login</th>
-                </tr>
-              </thead>
-              <tbody data-users-table></tbody>
-            </table>
+
+          <div class="admin-tabs" role="tablist" aria-label="Sezioni dashboard">
+            <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
+            <button type="button" data-admin-tab="orders">Ordini</button>
+            <button type="button" data-admin-tab="users">Utenti</button>
+            <button type="button" data-admin-tab="activity">Attivit&agrave;</button>
           </div>
+
+          <section class="admin-tab-panel is-active" data-admin-panel-tab="overview">
+            <div class="metric-grid" data-metric-grid></div>
+
+            <div class="dashboard-grid">
+              <section class="dashboard-card">
+                <h2>Visite live</h2>
+                <div class="live-list" data-live-sessions></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Funnel checkout</h2>
+                <div class="funnel-list" data-funnel></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Dispositivi</h2>
+                <div class="chart-list" data-devices></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Browser</h2>
+                <div class="chart-list" data-browsers></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Pagine viste</h2>
+                <div class="chart-list" data-pages></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Sorgenti traffico</h2>
+                <div class="chart-list" data-referrers></div>
+              </section>
+              <section class="dashboard-card dashboard-card-wide">
+                <h2>Articoli pi&ugrave; venduti</h2>
+                <div class="products-list" data-top-products></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Note dati</h2>
+                <div class="privacy-list" data-segments></div>
+              </section>
+            </div>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="orders">
+            <div class="users-table-wrap">
+              <table class="users-table">
+                <thead>
+                  <tr>
+                    <th>Codice</th>
+                    <th>Cliente</th>
+                    <th>Prodotti</th>
+                    <th>Pagamento</th>
+                    <th>Totale</th>
+                    <th>Stato</th>
+                    <th>Data</th>
+                  </tr>
+                </thead>
+                <tbody data-orders-table></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="users">
+            <div class="users-table-wrap">
+              <table class="users-table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Email</th>
+                    <th>Cellulare</th>
+                    <th>Accesso</th>
+                    <th>Registrato</th>
+                    <th>Ultimo login</th>
+                  </tr>
+                </thead>
+                <tbody data-users-table></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="activity">
+            <div class="dashboard-grid">
+              <section class="dashboard-card dashboard-card-wide">
+                <h2>Timeline attivit&agrave; utenti</h2>
+                <div class="activity-list" data-activity-list></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Pagamenti</h2>
+                <div class="chart-list" data-payments></div>
+              </section>
+              <section class="dashboard-card">
+                <h2>Sistemi operativi</h2>
+                <div class="chart-list" data-os></div>
+              </section>
+            </div>
+          </section>
         </article>
       </section>
     </main>
@@ -90,6 +175,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=auth-1"></script>
+    <script src="admin.js?v=dashboard-1"></script>
   </body>
 </html>
