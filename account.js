@@ -104,9 +104,11 @@ if (params.get("error") || params.get("oauth")) {
     id_token_audience: "client ID Microsoft non coerente con il token.",
     id_token_expired: "token Microsoft scaduto, riprova.",
     not_configured: "provider non configurato.",
+    unauthorized_client: "app Microsoft non abilitata per questo tipo di account.",
   };
   const providerName = names[provider] || "Social";
-  setMessage(`${providerName}: ${messages[error] || "accesso non completato."}`, "error");
+  const detail = params.get("detail");
+  setMessage(`${providerName}: ${messages[error] || "accesso non completato."}${detail ? ` (${detail})` : ""}`, "error");
 }
 
 loadProviders().catch(() => {});
