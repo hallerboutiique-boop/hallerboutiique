@@ -93,7 +93,7 @@ const params = new URLSearchParams(window.location.search);
 if (params.get("error") || params.get("oauth")) {
   const provider = params.get("oauth");
   const error = params.get("error");
-  const names = { google: "Google", microsoft: "Microsoft", apple: "Apple" };
+  const names = { google: "Google", microsoft: "Microsoft" };
   const messages = {
     token: "credenziali, secret o redirect URI non accettati dal provider.",
     userinfo: "il provider non ha restituito il profilo utente.",
