@@ -8,9 +8,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = __dirname;
 const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
 const usersFile = path.join(dataDir, "users.json");
+const analyticsFile = path.join(dataDir, "analytics.json");
+const ordersFile = path.join(dataDir, "orders.json");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
+const analyticsRetentionMs = 30 * 24 * 60 * 60 * 1000;
+const liveWindowMs = 2 * 60 * 1000;
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -46,24 +50,72 @@ const oauthProviders = {
 
 async function ensureStorage() {
   await fs.mkdir(dataDir, { recursive: true });
+  await ensureJsonFile(usersFile, []);
+  await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
+  await ensureJsonFile(ordersFile, []);
+}
+
+async function ensureJsonFile(filePath, fallback) {
   try {
-    await fs.access(usersFile);
+    await fs.access(filePath);
   } catch {
-    await fs.writeFile(usersFile, "[]\n", "utf8");
+    await fs.writeFile(filePath, `${JSON.stringify(fallback, null, 2)}\n`, "utf8");
   }
 }
 
-async function readUsers() {
+async function readJson(filePath, fallback) {
   await ensureStorage();
-  const raw = await fs.readFile(usersFile, "utf8");
-  return JSON.parse(raw || "[]");
+  try {
+    const raw = await fs.readFile(filePath, "utf8");
+    return JSON.parse(raw || JSON.stringify(fallback));
+  } catch {
+    return fallback;
+  }
+}
+
+async function writeJson(filePath, data) {
+  await ensureStorage();
+  const tmp = `${filePath}.${Date.now()}.tmp`;
+  await fs.writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+  await fs.rename(tmp, filePath);
+}
+
+async function readUsers() {
+  return readJson(usersFile, []);
 }
 
 async function writeUsers(users) {
-  await ensureStorage();
-  const tmp = `${usersFile}.${Date.now()}.tmp`;
-  await fs.writeFile(tmp, `${JSON.stringify(users, null, 2)}\n`, "utf8");
-  await fs.rename(tmp, usersFile);
+  return writeJson(usersFile, users);
+}
+
+async function readOrders() {
+  return readJson(ordersFile, []);
+}
+
+async function writeOrders(orders) {
+  return writeJson(ordersFile, orders);
+}
+
+async function readAnalytics() {
+  const data = await readJson(analyticsFile, { sessions: {}, events: [] });
+  data.sessions = data.sessions && typeof data.sessions === "object" ? data.sessions : {};
+  data.events = Array.isArray(data.events) ? data.events : [];
+  return data;
+}
+
+async function writeAnalytics(data) {
+  const cutoff = Date.now() - analyticsRetentionMs;
+  data.events = data.events
+    .filter((event) => new Date(event.at).getTime() >= cutoff)
+    .slice(-8000);
+
+  Object.entries(data.sessions).forEach(([id, session]) => {
+    if (new Date(session.lastSeenAt || session.startedAt).getTime() < cutoff) {
+      delete data.sessions[id];
+    }
+  });
+
+  return writeJson(analyticsFile, data);
 }
 
 function json(res, status, body, headers = {}) {
@@ -102,6 +154,88 @@ function parseCookies(req) {
         return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
       })
   );
+}
+
+function clientIp(req) {
+  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  return forwarded || String(req.headers["fly-client-ip"] || req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+}
+
+function maskIp(ip) {
+  if (!ip) return "";
+  if (ip.includes(":")) {
+    return `${ip.split(":").slice(0, 4).join(":")}::`;
+  }
+  const parts = ip.split(".");
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.${parts[2]}.0`;
+  }
+  return "";
+}
+
+function hashIp(ip) {
+  return ip ? createHash("sha256").update(`${sessionSecret}:${ip}`).digest("hex").slice(0, 16) : "";
+}
+
+function parseUserAgent(userAgent = "") {
+  const ua = String(userAgent);
+  const mobile = /Mobile|Android|iPhone|iPod/i.test(ua);
+  const tablet = /iPad|Tablet/i.test(ua);
+  const device = tablet ? "Tablet" : mobile ? "Mobile" : "Desktop";
+  const os = /Windows/i.test(ua)
+    ? "Windows"
+    : /Mac OS|Macintosh/i.test(ua)
+      ? "macOS"
+      : /Android/i.test(ua)
+        ? "Android"
+        : /iPhone|iPad|iOS/i.test(ua)
+          ? "iOS"
+          : /Linux/i.test(ua)
+            ? "Linux"
+            : "Altro";
+  const browser = /Edg\//i.test(ua)
+    ? "Edge"
+    : /OPR\//i.test(ua)
+      ? "Opera"
+      : /Chrome\//i.test(ua) && !/Edg\//i.test(ua)
+        ? "Chrome"
+        : /Safari\//i.test(ua) && !/Chrome\//i.test(ua)
+          ? "Safari"
+          : /Firefox\//i.test(ua)
+            ? "Firefox"
+            : "Altro";
+
+  return { device, os, browser };
+}
+
+function parseEuro(value) {
+  const normalized = String(value || "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(".", "")
+    .replace(",", ".");
+  const number = Number.parseFloat(normalized);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatEuroValue(value) {
+  return Math.round(value * 100) / 100;
+}
+
+function countBy(items, getKey) {
+  const counts = {};
+  items.forEach((item) => {
+    const key = getKey(item) || "Altro";
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .map(([label, value]) => ({ label, value }))
+    .sort((a, b) => b.value - a.value);
+}
+
+function productRowsFromOrder(order) {
+  return Array.isArray(order.products) && order.products.length > 0
+    ? order.products
+    : [{ name: order.product || "Da confermare", price: order.total || "0€", quantity: 1 }];
 }
 
 function signPayload(payload) {
@@ -321,6 +455,233 @@ async function handleAdminUsers(req, res) {
   });
 }
 
+function cleanTrackingString(value, max = 160) {
+  return String(value || "").trim().slice(0, max);
+}
+
+function cleanSessionId(value) {
+  const id = cleanTrackingString(value, 80);
+  return /^[a-zA-Z0-9_-]{8,80}$/.test(id) ? id : `srv_${randomBytes(12).toString("hex")}`;
+}
+
+async function handleTrack(req, res) {
+  const body = await parseBody(req);
+  const now = new Date().toISOString();
+  const type = cleanTrackingString(body.type, 40) || "event";
+  const sessionId = cleanSessionId(body.sessionId);
+  const visitorId = cleanTrackingString(body.visitorId, 80) || sessionId;
+  const pathName = cleanTrackingString(body.path, 220) || "/";
+  const ip = clientIp(req);
+  const ua = parseUserAgent(req.headers["user-agent"] || "");
+  const analytics = await readAnalytics();
+  const existing = analytics.sessions[sessionId] || {};
+
+  const session = {
+    ...existing,
+    id: sessionId,
+    visitorId,
+    startedAt: existing.startedAt || now,
+    lastSeenAt: now,
+    path: pathName,
+    referrer: existing.referrer || cleanTrackingString(body.referrer, 240),
+    landingPage: existing.landingPage || pathName,
+    ipMasked: existing.ipMasked || maskIp(ip),
+    ipHash: existing.ipHash || hashIp(ip),
+    device: ua.device,
+    browser: ua.browser,
+    os: ua.os,
+    pageviews: (existing.pageviews || 0) + (type === "pageview" ? 1 : 0),
+    eventsCount: (existing.eventsCount || 0) + 1,
+    durationMs: Math.max(Number(existing.durationMs || 0), Number(body.durationMs || 0)),
+    maxScroll: Math.max(Number(existing.maxScroll || 0), Number(body.scrollDepth || 0)),
+    checkoutStarted: Boolean(existing.checkoutStarted || type === "checkout_start"),
+    checkoutAt: existing.checkoutAt || (type === "checkout_start" ? now : undefined),
+    orderPlaced: Boolean(existing.orderPlaced || type === "order_confirmed"),
+    orderAt: existing.orderAt || (type === "order_confirmed" ? now : undefined),
+    lastEvent: type,
+  };
+
+  analytics.sessions[sessionId] = session;
+  analytics.events.push({
+    id: `evt_${randomBytes(8).toString("hex")}`,
+    at: now,
+    type,
+    sessionId,
+    visitorId,
+    path: pathName,
+    title: cleanTrackingString(body.title, 120),
+    product: cleanTrackingString(body.product, 160),
+    method: cleanTrackingString(body.method, 80),
+    scrollDepth: Number(body.scrollDepth || 0),
+    durationMs: Number(body.durationMs || 0),
+  });
+
+  await writeAnalytics(analytics);
+  json(res, 200, { ok: true, sessionId });
+}
+
+function cleanProducts(products) {
+  if (!Array.isArray(products)) return [];
+  return products.slice(0, 20).map((product) => {
+    const price = cleanTrackingString(product.price, 40);
+    const quantity = Math.max(1, Math.min(99, Number.parseInt(product.quantity || 1, 10) || 1));
+    return {
+      name: cleanTrackingString(product.name, 180) || "Prodotto",
+      price,
+      size: cleanTrackingString(product.size || product.variant, 40),
+      quantity,
+      value: parseEuro(price) * quantity,
+    };
+  });
+}
+
+async function handleCreateOrder(req, res) {
+  const body = await parseBody(req);
+  const now = new Date().toISOString();
+  const sessionId = cleanSessionId(body.sessionId);
+  const products = cleanProducts(body.products || body.items);
+  const productsTotal = products.reduce((sum, product) => sum + product.value, 0);
+  const totalValue = productsTotal || parseEuro(body.total);
+  const order = {
+    id: `ord_${randomBytes(10).toString("hex")}`,
+    orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
+    createdAt: now,
+    status: "Nuovo",
+    sessionId,
+    visitorId: cleanTrackingString(body.visitorId, 80),
+    customer: {
+      name: cleanTrackingString(body.customer?.name, 120),
+      email: cleanEmail(body.customer?.email),
+      phone: cleanTrackingString(body.customer?.phone, 60),
+      city: cleanTrackingString(body.customer?.city, 80),
+      postalCode: cleanTrackingString(body.customer?.postalCode, 20),
+      address: cleanTrackingString(body.customer?.address, 180),
+    },
+    paymentMethod: cleanTrackingString(body.paymentMethod, 80) || "Contrassegno",
+    txHash: cleanTrackingString(body.txHash, 180),
+    discountCode: cleanTrackingString(body.discountCode, 60),
+    products,
+    totalValue: formatEuroValue(totalValue),
+    total: `${formatEuroValue(totalValue).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`,
+    ipMasked: maskIp(clientIp(req)),
+    ipHash: hashIp(clientIp(req)),
+    userAgent: parseUserAgent(req.headers["user-agent"] || ""),
+  };
+
+  const orders = await readOrders();
+  orders.push(order);
+  await writeOrders(orders.slice(-2000));
+
+  const analytics = await readAnalytics();
+  const session = analytics.sessions[sessionId];
+  if (session) {
+    session.orderPlaced = true;
+    session.orderAt = now;
+    session.lastSeenAt = now;
+  }
+  analytics.events.push({
+    id: `evt_${randomBytes(8).toString("hex")}`,
+    at: now,
+    type: "order_confirmed",
+    sessionId,
+    visitorId: order.visitorId,
+    path: "/checkout.html",
+    product: products.map((product) => product.name).join("; ").slice(0, 180),
+    method: order.paymentMethod,
+  });
+  await writeAnalytics(analytics);
+
+  json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total } });
+}
+
+function buildMetrics(users, analytics, orders) {
+  const now = Date.now();
+  const dayAgo = now - 24 * 60 * 60 * 1000;
+  const sessions = Object.values(analytics.sessions);
+  const events = analytics.events;
+  const recentEvents = events.filter((event) => new Date(event.at).getTime() >= dayAgo);
+  const uniqueVisitors = new Set(sessions.map((session) => session.visitorId)).size;
+  const visitors24h = new Set(
+    sessions
+      .filter((session) => new Date(session.lastSeenAt).getTime() >= dayAgo)
+      .map((session) => session.visitorId)
+  ).size;
+  const liveSessions = sessions
+    .filter((session) => now - new Date(session.lastSeenAt).getTime() <= liveWindowMs)
+    .sort((a, b) => String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
+  const pageviews = events.filter((event) => event.type === "pageview").length;
+  const pageviews24h = recentEvents.filter((event) => event.type === "pageview").length;
+  const checkoutStarts = sessions.filter((session) => session.checkoutStarted).length;
+  const abandonedCheckouts = sessions.filter((session) => {
+    const lastSeen = new Date(session.lastSeenAt).getTime();
+    return session.checkoutStarted && !session.orderPlaced && now - lastSeen > 10 * 60 * 1000;
+  }).length;
+  const revenue = orders.reduce((sum, order) => sum + Number(order.totalValue || 0), 0);
+  const averageDurationMs = sessions.length
+    ? sessions.reduce((sum, session) => sum + Number(session.durationMs || 0), 0) / sessions.length
+    : 0;
+
+  const productMap = {};
+  orders.forEach((order) => {
+    productRowsFromOrder(order).forEach((product) => {
+      const name = product.name || "Prodotto";
+      productMap[name] = productMap[name] || { name, quantity: 0, revenue: 0 };
+      productMap[name].quantity += Number(product.quantity || 1);
+      productMap[name].revenue += Number(product.value || parseEuro(product.price));
+    });
+  });
+
+  return {
+    generatedAt: new Date().toISOString(),
+    kpis: {
+      users: users.length,
+      visitors: uniqueVisitors,
+      visitors24h,
+      liveVisitors: liveSessions.length,
+      pageviews,
+      pageviews24h,
+      checkoutStarts,
+      abandonedCheckouts,
+      orders: orders.length,
+      conversionRate: uniqueVisitors ? orders.length / uniqueVisitors : 0,
+      revenue: formatEuroValue(revenue),
+      averageOrderValue: orders.length ? formatEuroValue(revenue / orders.length) : 0,
+      averageDurationMs: Math.round(averageDurationMs),
+    },
+    liveSessions: liveSessions.slice(0, 30),
+    recentOrders: orders.slice(-60).reverse(),
+    recentEvents: events.slice(-120).reverse(),
+    topProducts: Object.values(productMap)
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 20)
+      .map((product) => ({ ...product, revenue: formatEuroValue(product.revenue) })),
+    devices: countBy(sessions, (session) => session.device),
+    browsers: countBy(sessions, (session) => session.browser),
+    os: countBy(sessions, (session) => session.os),
+    referrers: countBy(sessions, (session) => {
+      if (!session.referrer) return "Diretto";
+      try {
+        return new URL(session.referrer).hostname.replace(/^www\./, "");
+      } catch {
+        return "Altro";
+      }
+    }).slice(0, 12),
+    payments: countBy(orders, (order) => order.paymentMethod || "Non definito"),
+    pages: countBy(events.filter((event) => event.type === "pageview"), (event) => event.path).slice(0, 15),
+    segments: {
+      gender: "Non rilevato: serve dato dichiarato dall'utente, non lo inferisco automaticamente.",
+      ipMode: "IP mascherato + hash per conteggio visite.",
+      replayMode: "Timeline eventi, non video dello schermo.",
+    },
+  };
+}
+
+async function handleAdminMetrics(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  const [users, analytics, orders] = await Promise.all([readUsers(), readAnalytics(), readOrders()]);
+  json(res, 200, { ok: true, metrics: buildMetrics(users, analytics, orders) });
+}
+
 function startOauth(req, res, providerKey) {
   const provider = oauthProviders[providerKey];
   if (!provider || !providerConfigured(providerKey)) {
@@ -457,6 +818,8 @@ async function oauthCallback(req, res, providerKey, url) {
 }
 
 async function handleApi(req, res, url) {
+  if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
+  if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/login") return handleLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {
@@ -469,6 +832,7 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true }, { "Set-Cookie": clearCookie("hb_admin") });
   }
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
+  if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   return notFound(res);
 }
 
