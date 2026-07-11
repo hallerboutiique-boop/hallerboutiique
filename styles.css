@@ -299,6 +299,179 @@
   border-bottom: 0;
 }
 
+.admin-dashboard {
+  min-height: 620px;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 16px 20px 0;
+  overflow-x: auto;
+}
+
+.admin-tabs button {
+  min-height: 42px;
+  padding: 0 16px;
+  color: var(--text-strong);
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.45);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-tabs button.is-active {
+  color: #050505;
+  border-color: var(--gold);
+  background: var(--gold);
+}
+
+.admin-tab-panel {
+  display: none;
+  padding: 20px;
+}
+
+.admin-tab-panel.is-active {
+  display: block;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.metric-card {
+  min-height: 128px;
+  padding: 18px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.metric-card span,
+.dashboard-card h2 {
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.metric-card strong {
+  display: block;
+  margin: 12px 0 8px;
+  color: var(--text-strong);
+  font-size: clamp(24px, 3vw, 38px);
+  line-height: 1;
+  font-weight: 800;
+}
+
+.metric-card p {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.dashboard-card {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid var(--panel-line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.dashboard-card-wide {
+  grid-column: 1 / -1;
+}
+
+.dashboard-card h2 {
+  margin: 0 0 14px;
+}
+
+.chart-row,
+.funnel-row,
+.live-session,
+.product-row-admin,
+.activity-row,
+.privacy-list p {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+.chart-row:last-child,
+.funnel-row:last-child,
+.live-session:last-child,
+.product-row-admin:last-child,
+.activity-row:last-child,
+.privacy-list p:last-child {
+  border-bottom: 0;
+}
+
+.chart-row div,
+.funnel-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.chart-row span,
+.funnel-row span,
+.live-session span,
+.product-row-admin span,
+.activity-row span,
+.activity-row p,
+.privacy-list p {
+  color: var(--text-strong);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.chart-row strong,
+.funnel-row strong,
+.live-session strong,
+.product-row-admin strong,
+.activity-row strong,
+.privacy-list strong {
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
+.chart-row i {
+  display: block;
+  width: var(--bar);
+  height: 5px;
+  margin-top: 8px;
+  border-radius: 999px;
+  background: var(--gold);
+  box-shadow: 0 0 12px rgba(var(--gold-rgb), 0.35);
+}
+
+.live-session small {
+  display: block;
+  margin-top: 6px;
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.admin-empty {
+  margin: 0;
+  color: var(--text-strong);
+  font-size: 14px;
+}
+
 @media (max-width: 860px) {
   .auth-page,
   .admin-page {
@@ -322,6 +495,19 @@
 
   .admin-toolbar button {
     width: 100%;
+  }
+
+  .metric-grid,
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-tab-panel {
+    padding: 14px;
+  }
+
+  .metric-card {
+    min-height: 104px;
   }
 }
 
