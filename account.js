@@ -106,6 +106,7 @@ if (params.get("error") || params.get("oauth")) {
     not_configured: "provider non configurato.",
     unauthorized_client: "app Microsoft non abilitata per questo tipo di account.",
     invalid_request: "richiesta Microsoft non accettata.",
+    "70002": "Microsoft richiede il client secret per questa app.",
   };
   const providerName = names[provider] || "Social";
   const detail = params.get("detail");
