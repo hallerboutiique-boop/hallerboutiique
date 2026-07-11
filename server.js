@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual, createSign } from "node:crypto";
+import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
 import http from "node:http";
 import path from "node:path";
@@ -41,13 +41,6 @@ const oauthProviders = {
     tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
     scope: "openid email profile",
     useIdToken: true,
-  },
-  apple: {
-    label: "Apple",
-    env: ["APPLE_CLIENT_ID", "APPLE_TEAM_ID", "APPLE_KEY_ID", "APPLE_PRIVATE_KEY"],
-    authUrl: "https://appleid.apple.com/auth/authorize",
-    tokenUrl: "https://appleid.apple.com/auth/token",
-    scope: "name email",
   },
 };
 
@@ -350,29 +343,9 @@ function startOauth(req, res, providerKey) {
     params.set("code_challenge", challenge);
     params.set("code_challenge_method", "S256");
   }
-  if (providerKey === "apple") params.set("response_mode", "query");
   const cookies = [cookie("hb_oauth_state", state, 600)];
   if (providerKey === "microsoft") cookies.push(pkceVerifierCookie(verifier));
   redirect(res, `${provider.authUrl}?${params.toString()}`, { "Set-Cookie": cookies });
-}
-
-function appleClientSecret() {
-  const privateKey = String(process.env.APPLE_PRIVATE_KEY || "").replace(/\\n/g, "\n");
-  const header = Buffer.from(JSON.stringify({ alg: "ES256", kid: process.env.APPLE_KEY_ID })).toString("base64url");
-  const now = Math.floor(Date.now() / 1000);
-  const payload = Buffer.from(
-    JSON.stringify({
-      iss: process.env.APPLE_TEAM_ID,
-      iat: now,
-      exp: now + 86400 * 30,
-      aud: "https://appleid.apple.com",
-      sub: process.env.APPLE_CLIENT_ID,
-    })
-  ).toString("base64url");
-  const sign = createSign("SHA256");
-  sign.update(`${header}.${payload}`);
-  sign.end();
-  return `${header}.${payload}.${sign.sign({ key: privateKey, dsaEncoding: "ieee-p1363" }).toString("base64url")}`;
 }
 
 function decodeJwtPayload(token) {
@@ -422,9 +395,7 @@ async function oauthCallback(req, res, providerKey, url) {
     redirect_uri: redirectUri,
     client_id: process.env[provider.env[0]],
   });
-  if (providerKey === "apple") {
-    tokenBody.set("client_secret", appleClientSecret());
-  } else if (providerKey === "microsoft") {
+  if (providerKey === "microsoft") {
     tokenBody.set("code_verifier", cookies.hb_oauth_verifier || "");
     tokenBody.set("client_secret", process.env[provider.env[1]]);
   } else {
@@ -533,9 +504,9 @@ http
   .createServer(async (req, res) => {
     try {
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
-      const oauthStart = url.pathname.match(/^\/auth\/(google|microsoft|apple)\/start$/);
+      const oauthStart = url.pathname.match(/^\/auth\/(google|microsoft)\/start$/);
       if (oauthStart) return startOauth(req, res, oauthStart[1]);
-      const oauthEnd = url.pathname.match(/^\/auth\/(google|microsoft|apple)\/callback$/);
+      const oauthEnd = url.pathname.match(/^\/auth\/(google|microsoft)\/callback$/);
       if (oauthEnd) return oauthCallback(req, res, oauthEnd[1], url);
       if (url.pathname.startsWith("/api/")) return handleApi(req, res, url);
       return serveStatic(req, res, url);
