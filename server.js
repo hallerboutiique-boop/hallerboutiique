@@ -388,6 +388,14 @@ function oauthError(res, providerKey, error, detail = "") {
 async function oauthCallback(req, res, providerKey, url) {
   const provider = oauthProviders[providerKey];
   const state = url.searchParams.get("state");
+  if (url.searchParams.get("error")) {
+    return oauthError(
+      res,
+      providerKey,
+      url.searchParams.get("error"),
+      url.searchParams.get("error_description") || ""
+    );
+  }
   if (!state || parseCookies(req).hb_oauth_state !== state) {
     return oauthError(res, providerKey, "oauth_state");
   }
@@ -409,8 +417,15 @@ async function oauthCallback(req, res, providerKey, url) {
   });
   if (!tokenResponse.ok) {
     const tokenError = await tokenResponse.text();
+    let tokenDetail = "";
+    try {
+      const parsedError = JSON.parse(tokenError);
+      tokenDetail = String(parsedError.error_codes?.[0] || parsedError.error || parsedError.error_description || "");
+    } catch {
+      tokenDetail = tokenError;
+    }
     console.error(`OAuth token error ${providerKey}: ${tokenResponse.status} ${tokenError.slice(0, 500)}`);
-    return oauthError(res, providerKey, "token");
+    return oauthError(res, providerKey, "token", tokenDetail);
   }
   const token = await tokenResponse.json();
 
@@ -509,6 +524,6 @@ http
       json(res, 500, { ok: false, message: "Errore server." });
     }
   })
-  .listen(port, () => {
+  .listen(port, "0.0.0.0", () => {
     console.log(`Haller Boutique listening on ${port}`);
   });
