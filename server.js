@@ -39,8 +39,8 @@ const oauthProviders = {
     env: ["MICROSOFT_CLIENT_ID", "MICROSOFT_CLIENT_SECRET"],
     authUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/authorize",
     tokenUrl: "https://login.microsoftonline.com/common/oauth2/v2.0/token",
-    userInfoUrl: "https://graph.microsoft.com/oidc/userinfo",
     scope: "openid email profile",
+    useIdToken: true,
   },
   apple: {
     label: "Apple",
@@ -369,14 +369,30 @@ function decodeJwtPayload(token) {
   return JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
 }
 
+function tokenProfile(providerKey, token) {
+  const profile = decodeJwtPayload(token.id_token);
+  const clientId = process.env[oauthProviders[providerKey].env[0]];
+  const now = Math.floor(Date.now() / 1000);
+  if (!profile.sub) throw new Error("id_token_missing_subject");
+  if (profile.aud !== clientId) throw new Error("id_token_audience");
+  if (profile.exp && profile.exp < now) throw new Error("id_token_expired");
+  return profile;
+}
+
+function oauthError(res, providerKey, error, detail = "") {
+  const params = new URLSearchParams({ oauth: providerKey, error });
+  if (detail) params.set("detail", detail.slice(0, 80));
+  return redirect(res, `/account.html?${params.toString()}`);
+}
+
 async function oauthCallback(req, res, providerKey, url) {
   const provider = oauthProviders[providerKey];
   const state = url.searchParams.get("state");
   if (!state || parseCookies(req).hb_oauth_state !== state) {
-    return redirect(res, "/account.html?error=oauth_state");
+    return oauthError(res, providerKey, "oauth_state");
   }
   const code = url.searchParams.get("code");
-  if (!code) return redirect(res, "/account.html?error=oauth_code");
+  if (!code) return oauthError(res, providerKey, "oauth_code");
 
   const redirectUri = `${origin(req)}/auth/${providerKey}/callback`;
   const tokenBody = new URLSearchParams({
@@ -391,22 +407,36 @@ async function oauthCallback(req, res, providerKey, url) {
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
     body: tokenBody,
   });
-  if (!tokenResponse.ok) return redirect(res, `/account.html?oauth=${providerKey}&error=token`);
+  if (!tokenResponse.ok) {
+    const tokenError = await tokenResponse.text();
+    console.error(`OAuth token error ${providerKey}: ${tokenResponse.status} ${tokenError.slice(0, 500)}`);
+    return oauthError(res, providerKey, "token");
+  }
   const token = await tokenResponse.json();
 
   let profile = {};
-  if (provider.userInfoUrl) {
+  try {
+    profile = provider.useIdToken ? tokenProfile(providerKey, token) : {};
+  } catch (error) {
+    console.error(`OAuth id_token error ${providerKey}: ${error.message}`);
+    return oauthError(res, providerKey, error.message);
+  }
+
+  if (!provider.useIdToken && provider.userInfoUrl) {
     const userInfo = await fetch(provider.userInfoUrl, {
       headers: { Authorization: `Bearer ${token.access_token}` },
     });
-    if (!userInfo.ok) return redirect(res, `/account.html?oauth=${providerKey}&error=userinfo`);
+    if (!userInfo.ok) {
+      console.error(`OAuth userinfo error ${providerKey}: ${userInfo.status}`);
+      return oauthError(res, providerKey, "userinfo");
+    }
     profile = await userInfo.json();
-  } else {
+  } else if (!provider.useIdToken) {
     profile = decodeJwtPayload(token.id_token);
   }
 
-  const email = cleanEmail(profile.email || profile.upn || profile.preferred_username);
-  if (!email) return redirect(res, `/account.html?oauth=${providerKey}&error=email`);
+  const email = cleanEmail(profile.email || profile.upn || profile.preferred_username || profile.unique_name);
+  if (!email) return oauthError(res, providerKey, "email");
 
   const user = await upsertOauthUser({
     provider: providerKey,
