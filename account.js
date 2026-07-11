@@ -91,7 +91,22 @@ document.querySelector("[data-logout]")?.addEventListener("click", async () => {
 
 const params = new URLSearchParams(window.location.search);
 if (params.get("error") || params.get("oauth")) {
-  setMessage("Accesso social non ancora completato o non configurato.", "error");
+  const provider = params.get("oauth");
+  const error = params.get("error");
+  const names = { google: "Google", microsoft: "Microsoft", apple: "Apple" };
+  const messages = {
+    token: "credenziali, secret o redirect URI non accettati dal provider.",
+    userinfo: "il provider non ha restituito il profilo utente.",
+    email: "il provider non ha restituito una email utilizzabile.",
+    oauth_state: "sessione di accesso scaduta, riprova.",
+    oauth_code: "codice di accesso mancante, riprova.",
+    id_token_missing_subject: "token Microsoft senza identificativo utente.",
+    id_token_audience: "client ID Microsoft non coerente con il token.",
+    id_token_expired: "token Microsoft scaduto, riprova.",
+    not_configured: "provider non configurato.",
+  };
+  const providerName = names[provider] || "Social";
+  setMessage(`${providerName}: ${messages[error] || "accesso non completato."}`, "error");
 }
 
 loadProviders().catch(() => {});
