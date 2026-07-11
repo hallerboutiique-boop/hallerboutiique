@@ -1048,8 +1048,21 @@ button {
   background: #26a17b;
 }
 
-.crypto-dot-sol {
-  background: linear-gradient(135deg, #00ffa3, #dc1fff 56%, #03e1ff);
+.crypto-mini-sol {
+  display: inline-grid;
+  width: 24px;
+  height: 18px;
+  place-items: center;
+}
+
+.crypto-mini-sol svg {
+  display: block;
+  width: 24px;
+  height: 18px;
+}
+
+.crypto-mini-sol path {
+  fill: url("#solana-mini-gradient");
 }
 
 .crypto-wallet-card {
