@@ -105,6 +105,7 @@ if (params.get("error") || params.get("oauth")) {
     id_token_expired: "token Microsoft scaduto, riprova.",
     not_configured: "provider non configurato.",
     unauthorized_client: "app Microsoft non abilitata per questo tipo di account.",
+    invalid_request: "richiesta Microsoft non accettata.",
   };
   const providerName = names[provider] || "Social";
   const detail = params.get("detail");
