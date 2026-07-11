@@ -10,9 +10,10 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Footer con icone Instagram, TikTok e Telegram
 - Slide uomo e donna con testo `LUSSO QUALITÀ STILE` senza punti
 - Responsive mobile ottimizzato per viewport stretti
-- Pagina checkout con solo pagamento in contrassegno
+- Pagina checkout con contrassegno e pagamento crypto tracciabile
 - Campo codice sconto nel checkout con pulsante rifinito
 - Label checkout allineate ai campi
 - Catalogo completo Uomo e Donna con schede prodotto, sconti, taglie e placeholder immagini
 - Registrazione utenti con email/password, cellulare facoltativo e pannello admin utenti
-- Route pronte per login Google, Apple e Microsoft tramite credenziali OAuth
+- Route pronte per login Google e Microsoft tramite credenziali OAuth
+- Dashboard admin con visite live, IP mascherati, checkout abbandonati, conversione, ordini, incassi, dispositivi, browser, pagine, sorgenti e prodotti piu venduti
