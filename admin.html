@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin Utenti - Haller Boutique</title>
+    <meta name="description" content="Pannello admin utenti Haller Boutique.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css?v=auth-1">
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="header-bar">
+        <a class="icon-button" href="index.html" aria-label="Torna alla home">
+          <i data-lucide="arrow-left"></i>
+        </a>
+
+        <a class="logo" href="index.html" aria-label="Haller Boutique home">
+          <img src="assets/logo-original.png" alt="Haller Boutique">
+        </a>
+
+        <div class="header-actions">
+          <a class="icon-button" href="account.html" aria-label="Account">
+            <i data-lucide="user-round"></i>
+          </a>
+          <a class="icon-button cart-button" href="checkout.html" aria-label="Checkout">
+            <i data-lucide="shopping-bag"></i>
+            <span>0</span>
+          </a>
+        </div>
+      </div>
+
+      <nav class="main-nav checkout-nav" aria-label="Menu admin">
+        <a href="index.html">Home</a>
+        <a href="account.html">Account</a>
+        <a class="active" href="admin.html">Admin</a>
+      </nav>
+    </header>
+
+    <main class="admin-page">
+      <section class="auth-heading">
+        <p>Pannello riservato</p>
+        <h1>Utenti registrati</h1>
+      </section>
+
+      <section class="admin-layout">
+        <form class="auth-card admin-login" data-admin-login>
+          <label>
+            <span>Password admin</span>
+            <input type="password" name="password" autocomplete="current-password" placeholder="Password admin" required>
+          </label>
+          <button type="submit">Entra</button>
+          <p class="auth-message" data-admin-message aria-live="polite"></p>
+        </form>
+
+        <article class="auth-card admin-users" data-admin-panel hidden>
+          <div class="admin-toolbar">
+            <div>
+              <span>Totale utenti</span>
+              <strong data-admin-total>0</strong>
+            </div>
+            <button type="button" data-admin-refresh>
+              <i data-lucide="refresh-cw"></i>
+              <span>Aggiorna</span>
+            </button>
+          </div>
+          <div class="users-table-wrap">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Cellulare</th>
+                  <th>Accesso</th>
+                  <th>Registrato</th>
+                  <th>Ultimo login</th>
+                </tr>
+              </thead>
+              <tbody data-users-table></tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <footer class="checkout-footer">
+      <p>&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
+    </footer>
+
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="admin.js?v=auth-1"></script>
+  </body>
+</html>
