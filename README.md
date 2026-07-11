@@ -14,3 +14,5 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Campo codice sconto nel checkout con pulsante rifinito
 - Label checkout allineate ai campi
 - Catalogo completo Uomo e Donna con schede prodotto, sconti, taglie e placeholder immagini
+- Registrazione utenti con email/password, cellulare facoltativo e pannello admin utenti
+- Route pronte per login Google, Apple e Microsoft tramite credenziali OAuth
