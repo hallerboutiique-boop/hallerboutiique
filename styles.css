@@ -1297,6 +1297,8 @@ button {
 }
 
 .location-delivery-banner {
+  position: relative;
+  z-index: 35;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
