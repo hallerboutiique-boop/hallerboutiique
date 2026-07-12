@@ -1,4 +1,5 @@
 const slides = Array.from(document.querySelectorAll(".hero-slide"));
+const heroSlider = document.querySelector(".hero-slider");
 let active = 0;
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
@@ -915,6 +916,9 @@ function showSlide(index) {
   slides[active].classList.remove("is-active");
   active = index;
   slides[active].classList.add("is-active");
+  if (heroSlider) {
+    heroSlider.classList.toggle("is-woman-active", slides[active].classList.contains("hero-slide-woman"));
+  }
 }
 
 function getSizes(sizeType) {
