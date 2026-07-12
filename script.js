@@ -14,6 +14,7 @@ const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
 const consentKey = "hallerBoutiqueConsent";
 const consentVersion = 2;
 const isReplayView = new URLSearchParams(window.location.search).get("replay_view") === "1";
+let runtimeConsent = null;
 
 function randomId(prefix) {
   const bytes =
@@ -24,6 +25,14 @@ function randomId(prefix) {
 }
 
 function readConsent() {
+  if (runtimeConsent && runtimeConsent.version === consentVersion) {
+    return {
+      analytics: Boolean(runtimeConsent.analytics),
+      replay: Boolean(runtimeConsent.replay),
+      location: Boolean(runtimeConsent.location),
+      choice: runtimeConsent.choice || "custom",
+    };
+  }
   try {
     const consent = JSON.parse(window.localStorage.getItem(consentKey));
     return consent && consent.version === consentVersion
@@ -48,7 +57,12 @@ function saveConsent(consent) {
     choice: consent.choice || "custom",
     savedAt: new Date().toISOString(),
   };
-  window.localStorage.setItem(consentKey, JSON.stringify(nextConsent));
+  runtimeConsent = nextConsent;
+  try {
+    window.localStorage.setItem(consentKey, JSON.stringify(nextConsent));
+  } catch {
+    // Some embedded/live browser previews block storage; keep this consent for the current page session.
+  }
   if (!nextConsent.replay) {
     analyticsState.replayBuffer = [];
   }
@@ -208,6 +222,14 @@ function setLocationBannerStatus(text) {
   if (label && text) label.textContent = text;
 }
 
+function sendLocationTrack(type, extra = {}) {
+  try {
+    sendTrack(type, extra);
+  } catch {
+    // The location prompt must keep working even when analytics storage is unavailable.
+  }
+}
+
 function locationPermissionHelpMessage() {
   const appleDevice = /iPhone|iPad|Macintosh|Mac OS X/i.test(navigator.userAgent || "");
   if (appleDevice) {
@@ -224,21 +246,21 @@ function requestPreciseLocation(reason = "consent", options = {}) {
   analyticsState.locationRequestToken = requestToken;
 
   if (window.isSecureContext === false) {
-    sendTrack("precise_location_status", {
+    setLocationBannerStatus("Apri il sito in HTTPS per autorizzare la posizione.");
+    sendLocationTrack("precise_location_status", {
       preciseLocationStatus: "insecure_context",
       locationReason: reason,
     });
-    setLocationBannerStatus("Apri il sito in HTTPS per autorizzare la posizione.");
     analyticsState.locationRequested = false;
     return;
   }
 
   if (!navigator.geolocation) {
-    sendTrack("precise_location_status", {
+    setLocationBannerStatus("Questo browser non supporta la localizzazione. Apri il sito da Safari o Chrome.");
+    sendLocationTrack("precise_location_status", {
       preciseLocationStatus: "unsupported",
       locationReason: reason,
     });
-    setLocationBannerStatus("Localizzazione non supportata da questo browser.");
     analyticsState.locationRequested = false;
     return;
   }
@@ -264,30 +286,25 @@ function requestPreciseLocation(reason = "consent", options = {}) {
       finishLocationRequest();
       const preciseLocation = preciseLocationFromPosition(position);
       if (!preciseLocation) {
-        sendTrack("precise_location_status", {
+        setLocationBannerStatus("Posizione non disponibile. Riprova tra poco.");
+        sendLocationTrack("precise_location_status", {
           preciseLocationStatus: "unavailable",
           locationReason: reason,
         });
-        setLocationBannerStatus("Posizione non disponibile. Riprova tra poco.");
         return;
       }
       analyticsState.preciseLocation = preciseLocation;
-      sendTrack("precise_location", {
+      const accuracy = Number.isFinite(preciseLocation.accuracy) ? ` ±${preciseLocation.accuracy}m` : "";
+      setLocationBannerStatus(`Localizzazione attiva. Tempi di consegna in tempo reale${accuracy}.`);
+      sendLocationTrack("precise_location", {
         preciseLocation,
         preciseLocationStatus: "granted",
         locationReason: reason,
       });
-      const accuracy = Number.isFinite(preciseLocation.accuracy) ? ` ±${preciseLocation.accuracy}m` : "";
-      setLocationBannerStatus(`Localizzazione attiva. Tempi di consegna in tempo reale${accuracy}.`);
     },
     (error) => {
       finishLocationRequest();
       const status = locationErrorName(error);
-      sendTrack("precise_location_status", {
-        preciseLocationStatus: status,
-        locationError: error?.message || "",
-        locationReason: reason,
-      });
       const messages = {
         denied: "Permesso posizione negato. Clicca sul lucchetto del sito e imposta Posizione su Consenti.",
         timeout: locationPermissionHelpMessage(),
@@ -295,6 +312,11 @@ function requestPreciseLocation(reason = "consent", options = {}) {
         error: "Errore posizione. Tocca per riprovare.",
       };
       setLocationBannerStatus(messages[status] || "Posizione non disponibile. Tocca per riprovare.");
+      sendLocationTrack("precise_location_status", {
+        preciseLocationStatus: status,
+        locationError: error?.message || "",
+        locationReason: reason,
+      });
       analyticsState.locationRequested = false;
     },
     {
@@ -637,17 +659,29 @@ function renderConsentManager(forceBanner = false) {
   });
 }
 
-function setupLocationDeliveryBanner() {
-  document.querySelector("[data-location-delivery-banner]")?.addEventListener("click", () => {
-    const current = readConsent() || {};
-    saveConsent({
-      analytics: true,
-      replay: Boolean(current.replay),
-      location: true,
-      choice: "delivery_location",
-    });
-    requestPreciseLocation("delivery_banner", { force: true, userInitiated: true });
+function requestLocationFromBanner(event) {
+  event?.preventDefault?.();
+  const current = readConsent() || {};
+  setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
+  saveConsent({
+    analytics: true,
+    replay: Boolean(current.replay),
+    location: true,
+    choice: "delivery_location",
   });
+  requestPreciseLocation("delivery_banner", { force: true, userInitiated: true });
+}
+
+window.HallerLocation = {
+  requestFromBanner: requestLocationFromBanner,
+};
+
+function setupLocationDeliveryBanner() {
+  const banner = document.querySelector("[data-location-delivery-banner]");
+  if (banner && !banner.dataset.locationBound) {
+    banner.dataset.locationBound = "1";
+    banner.addEventListener("click", requestLocationFromBanner);
+  }
 }
 
 const cryptoWallets = {
