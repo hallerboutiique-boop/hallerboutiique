@@ -81,6 +81,32 @@ function displayIp(session) {
   return session.ipAddress || session.ip || session.ipMasked || "-";
 }
 
+function preciseLocationText(session) {
+  const location = session.preciseLocation;
+  if (!location || typeof location.latitude !== "number" || typeof location.longitude !== "number") {
+    const labels = {
+      denied: "GPS negato",
+      timeout: "GPS timeout",
+      unsupported: "GPS non supportato",
+      unavailable: "GPS non disponibile",
+      error: "GPS errore",
+    };
+    return labels[session.preciseLocationStatus] || "GPS non disponibile";
+  }
+  const accuracy = Number.isFinite(location.accuracy) ? ` ±${Math.round(location.accuracy)}m` : "";
+  return `GPS ${location.latitude}, ${location.longitude}${accuracy}`;
+}
+
+function preciseLocationHtml(session) {
+  const location = session.preciseLocation;
+  const text = preciseLocationText(session);
+  if (!location || typeof location.latitude !== "number" || typeof location.longitude !== "number") {
+    return `<span class="location-status">${escapeHtml(text)}</span>`;
+  }
+  const href = `https://www.google.com/maps?q=${encodeURIComponent(`${location.latitude},${location.longitude}`)}`;
+  return `<a class="location-map-link" href="${href}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
+}
+
 function renderMetrics(metrics) {
   const kpi = metrics.kpis;
   const cards = [
@@ -142,7 +168,7 @@ function renderLiveSessions(sessions) {
       (session) => `
         <article class="live-session">
           <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${escapeHtml(locationLine(session))}</span>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${preciseLocationHtml(session)} · IP geo ${escapeHtml(locationLine(session))}</span>
           <small>${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
         </article>
       `
@@ -162,7 +188,7 @@ function renderVisitHistory(sessions) {
       (session) => `
         <article class="history-session">
           <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${escapeHtml(locationLine(session))}</span>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${preciseLocationHtml(session)} · IP geo ${escapeHtml(locationLine(session))}</span>
           <small>Primo accesso ${formatDate(session.startedAt)} · Ultimo accesso ${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
         </article>
       `
@@ -326,7 +352,7 @@ function renderReplaySessions(sessions) {
         <article class="replay-session">
           <div>
             <strong>${escapeHtml(session.path || "/")}</strong>
-            <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${escapeHtml(locationLine(session))} · ${escapeHtml(session.events)} eventi</span>
+            <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${preciseLocationHtml(session)} · IP geo ${escapeHtml(locationLine(session))} · ${escapeHtml(session.events)} eventi</span>
             <span>${formatDate(session.replayLastAt || session.lastSeenAt)} · ${formatDuration(session.durationMs)}</span>
           </div>
           <button type="button" data-replay-session="${escapeHtml(session.id)}">Guarda video</button>
@@ -426,7 +452,8 @@ function renderReplayPlayer(replay) {
       <span>${escapeHtml(replay.path || "/")}</span>
       <span>${escapeHtml(deviceLine(replay))}</span>
       <span>IP ${escapeHtml(displayIp(replay))}</span>
-      <span>${escapeHtml(locationLine(replay))}</span>
+      <span>${preciseLocationHtml(replay)}</span>
+      <span>IP geo ${escapeHtml(locationLine(replay))}</span>
       <span>${escapeHtml(events.length)} eventi</span>
     </div>
     <div class="replay-controls">
