@@ -578,6 +578,19 @@ function renderConsentManager(forceBanner = false) {
   });
 }
 
+function setupLocationDeliveryBanner() {
+  document.querySelector("[data-location-delivery-banner]")?.addEventListener("click", () => {
+    const current = readConsent() || {};
+    saveConsent({
+      analytics: true,
+      replay: Boolean(current.replay),
+      location: true,
+      choice: "delivery_location",
+    });
+    requestPreciseLocation("delivery_banner");
+  });
+}
+
 const cryptoWallets = {
   btc: {
     title: "BTC",
@@ -1331,6 +1344,7 @@ async function confirmCheckoutOrder(button) {
 
 renderCatalog();
 updateCartCount();
+setupLocationDeliveryBanner();
 
 if (!isReplayView) {
   renderConsentManager();
