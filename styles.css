@@ -1181,6 +1181,11 @@ button {
   object-position: center;
 }
 
+.hero-slide-man > img,
+.hero-slide-woman > img {
+  object-position: right center;
+}
+
 .hero-slide.has-copy::after {
   content: "";
   position: absolute;
