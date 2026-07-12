@@ -12,6 +12,7 @@ const analyticsSessionKey = "hallerBoutiqueSessionId";
 const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
 const consentKey = "hallerBoutiqueConsent";
 const consentVersion = 1;
+const isReplayView = new URLSearchParams(window.location.search).get("replay_view") === "1";
 
 function randomId(prefix) {
   const bytes =
@@ -51,10 +52,12 @@ function saveConsent(consent) {
 }
 
 function hasAnalyticsConsent() {
+  if (isReplayView) return false;
   return Boolean(readConsent()?.analytics);
 }
 
 function hasReplayConsent() {
+  if (isReplayView) return false;
   return Boolean(readConsent()?.replay);
 }
 
@@ -1127,8 +1130,11 @@ async function confirmCheckoutOrder(button) {
 
 renderCatalog();
 updateCartCount();
-renderConsentManager();
-startConsentedTracking();
+
+if (!isReplayView) {
+  renderConsentManager();
+  startConsentedTracking();
+}
 
 window.addEventListener("scroll", currentScrollDepth, { passive: true });
 window.setInterval(() => {
