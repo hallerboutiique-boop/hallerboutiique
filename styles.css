@@ -1208,9 +1208,22 @@ button {
 .promo-copy {
   position: absolute;
   z-index: 2;
+  isolation: isolate;
   left: clamp(54px, 5.6vw, 86px);
   top: 39%;
   width: min(48vw, 690px);
+}
+
+.promo-copy::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: clamp(-34px, -2.8vw, -18px) clamp(-42px, -3.4vw, -22px);
+  background:
+    radial-gradient(ellipse at 28% 42%, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.62) 38%, rgba(0, 0, 0, 0.24) 67%, rgba(0, 0, 0, 0) 100%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.36) 58%, rgba(0, 0, 0, 0) 100%);
+  filter: blur(10px);
+  pointer-events: none;
 }
 
 .promo-copy h1 {
@@ -1220,6 +1233,7 @@ button {
   font-size: clamp(34px, 3.9vw, 60px);
   line-height: 1.12;
   font-weight: 800;
+  text-shadow: 0 4px 28px rgba(0, 0, 0, 0.94);
 }
 
 .promo-copy p {
@@ -1228,6 +1242,7 @@ button {
   font-size: clamp(25px, 2.8vw, 43px);
   line-height: 1.46;
   font-weight: 400;
+  text-shadow: 0 3px 24px rgba(0, 0, 0, 0.95);
 }
 
 .promo-copy a {
@@ -1240,6 +1255,7 @@ button {
   text-transform: uppercase;
   font-size: clamp(20px, 2.3vw, 34px);
   font-weight: 800;
+  text-shadow: 0 3px 18px rgba(0, 0, 0, 0.95);
 }
 
 .benefits {
