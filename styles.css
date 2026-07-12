@@ -1193,10 +1193,10 @@ button {
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 1) 0%,
-    rgba(0, 0, 0, 1) 44%,
-    rgba(0, 0, 0, 0.36) 51%,
-    rgba(0, 0, 0, 0) 58%
+    rgba(0, 0, 0, 0.32) 0%,
+    rgba(0, 0, 0, 0.2) 34%,
+    rgba(0, 0, 0, 0.06) 48%,
+    rgba(0, 0, 0, 0) 62%
   );
 }
 
@@ -2366,9 +2366,9 @@ button {
   .hero-slide.has-copy::after {
     background: linear-gradient(
       90deg,
-      rgba(0, 0, 0, 1) 0%,
-      rgba(0, 0, 0, 0.96) 58%,
-      rgba(0, 0, 0, 0.22) 78%,
+      rgba(0, 0, 0, 0.3) 0%,
+      rgba(0, 0, 0, 0.16) 52%,
+      rgba(0, 0, 0, 0.04) 74%,
       rgba(0, 0, 0, 0) 100%
     );
   }
