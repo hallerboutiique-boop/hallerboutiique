@@ -946,20 +946,15 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "product-mobile-2rows-1";
+const productImageVersion = "product-mobile-2x2-photos-1";
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.png",
     "assets/products/louis-vuitton-skate-beige-white-2.png",
-    "assets/products/louis-vuitton-skate-beige-white-3.png",
   ],
   "Nike Air Force Louis Vuitton Red": [
     "assets/products/nike-air-force-louis-vuitton-red-1.png",
     "assets/products/nike-air-force-louis-vuitton-red-2.png",
-    "assets/products/nike-air-force-louis-vuitton-red-3.png",
-    "assets/products/nike-air-force-louis-vuitton-red-4.png",
-    "assets/products/nike-air-force-louis-vuitton-red-5.png",
-    "assets/products/nike-air-force-louis-vuitton-red-6.png",
   ],
 };
 
@@ -1019,14 +1014,14 @@ function getAllProducts() {
 }
 
 const homeFeaturedProductNames = [
+  "Nike Air Force Louis Vuitton Red",
+  "Louis Vuitton Skate Beige/White",
   "T-Shirt Balenciaga",
   "Polo Gucci",
   "Tracksuit Nike Nocta",
   "Jacket Stone Island",
   "Crossbody Bag Louis Vuitton",
   "Bag Louis Vuitton",
-  "Nike Air Force Louis Vuitton Red",
-  "Louis Vuitton Skate Beige/White",
   "Nike Air Force White/Pink",
 ];
 
