@@ -156,6 +156,7 @@ function parseCookies(req) {
       .filter(Boolean)
       .map((part) => {
         const index = part.indexOf("=");
+        if (index === -1) return [part, ""];
         return [part.slice(0, index), decodeURIComponent(part.slice(index + 1))];
       })
   );
@@ -184,20 +185,23 @@ function hashIp(ip) {
 
 function parseUserAgent(userAgent = "") {
   const ua = String(userAgent);
+  const ipadDesktopMode = /Macintosh/i.test(ua) && /Mobile\/\w+ Safari/i.test(ua);
   const mobile = /Mobile|Android|iPhone|iPod/i.test(ua);
-  const tablet = /iPad|Tablet/i.test(ua);
+  const tablet = /iPad|Tablet/i.test(ua) || ipadDesktopMode;
   const device = tablet ? "Tablet" : mobile ? "Mobile" : "Desktop";
   const os = /Windows/i.test(ua)
     ? "Windows"
-    : /Mac OS|Macintosh/i.test(ua)
-      ? "macOS"
-      : /Android/i.test(ua)
-        ? "Android"
-        : /iPhone|iPad|iOS/i.test(ua)
-          ? "iOS"
-          : /Linux/i.test(ua)
-            ? "Linux"
-            : "Altro";
+    : /Android/i.test(ua)
+      ? "Android"
+      : /iPhone|iPod/i.test(ua)
+        ? "iOS"
+        : /iPad/i.test(ua) || ipadDesktopMode
+          ? "iPadOS"
+          : /Mac OS|Macintosh/i.test(ua)
+            ? "macOS"
+            : /Linux/i.test(ua)
+              ? "Linux"
+              : "Altro";
   const browser = /Edg\//i.test(ua)
     ? "Edge"
     : /OPR\//i.test(ua)
@@ -284,6 +288,16 @@ function pkceVerifierCookie(verifier) {
 function adminCookie() {
   const twelveHours = 12 * 60 * 60 * 1000;
   return cookie("hb_admin", signPayload({ role: "admin", exp: Date.now() + twelveHours }), twelveHours / 1000);
+}
+
+function anonCookie(visitorId) {
+  const sixMonths = 180 * 24 * 60 * 60;
+  return cookie("hb_anon", visitorId, sixMonths);
+}
+
+function cleanAnonId(value) {
+  const id = cleanTrackingString(value, 80);
+  return /^anon_[a-f0-9]{24}$/.test(id) ? id : "";
 }
 
 function getUserId(req) {
@@ -469,6 +483,27 @@ function cleanSessionId(value) {
   return /^[a-zA-Z0-9_-]{8,80}$/.test(id) ? id : `srv_${randomBytes(12).toString("hex")}`;
 }
 
+async function handleConsent(req, res) {
+  const body = await parseBody(req);
+  const accepted = Boolean(body.analytics || body.replay);
+  if (!accepted) {
+    return json(res, 200, { ok: true, visitorId: "" }, { "Set-Cookie": clearCookie("hb_anon") });
+  }
+
+  const existing = cleanAnonId(parseCookies(req).hb_anon);
+  const visitorId = existing || `anon_${randomBytes(12).toString("hex")}`;
+  json(
+    res,
+    200,
+    {
+      ok: true,
+      visitorId,
+      mode: "first-party-server-cookie",
+    },
+    { "Set-Cookie": anonCookie(visitorId) }
+  );
+}
+
 function cleanReplayEvents(events) {
   if (!Array.isArray(events)) return [];
   const allowedTypes = new Set(["page", "move", "click", "scroll", "resize", "input", "checkout", "order"]);
@@ -499,7 +534,8 @@ async function handleTrack(req, res) {
   const now = new Date().toISOString();
   const type = cleanTrackingString(body.type, 40) || "event";
   const sessionId = cleanSessionId(body.sessionId);
-  const visitorId = cleanTrackingString(body.visitorId, 80) || sessionId;
+  const cookieVisitorId = cleanAnonId(parseCookies(req).hb_anon);
+  const visitorId = cookieVisitorId || cleanTrackingString(body.visitorId, 80) || sessionId;
   const pathName = cleanTrackingString(body.path, 220) || "/";
   const ip = clientIp(req);
   const ua = parseUserAgent(req.headers["user-agent"] || "");
@@ -899,6 +935,7 @@ async function oauthCallback(req, res, providerKey, url) {
 }
 
 async function handleApi(req, res, url) {
+  if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
