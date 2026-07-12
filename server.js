@@ -13,7 +13,7 @@ const ordersFile = path.join(dataDir, "orders.json");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
-const analyticsRetentionMs = 30 * 24 * 60 * 60 * 1000;
+const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
 
@@ -773,6 +773,24 @@ function buildMetrics(users, analytics, orders) {
   const averageDurationMs = sessions.length
     ? sessions.reduce((sum, session) => sum + Number(session.durationMs || 0), 0) / sessions.length
     : 0;
+  const sessionSummary = (session) => ({
+    id: session.id,
+    path: session.path,
+    startedAt: session.startedAt,
+    lastSeenAt: session.lastSeenAt,
+    replayLastAt: session.replayLastAt,
+    durationMs: session.durationMs,
+    device: session.device,
+    deviceModel: session.deviceModel,
+    browser: session.browser,
+    os: session.os,
+    osVersion: session.osVersion,
+    screen: session.screen,
+    ipMasked: session.ipMasked,
+    checkoutStarted: Boolean(session.checkoutStarted),
+    orderPlaced: Boolean(session.orderPlaced),
+  });
+  const visitHistory = [...sessions].sort((a, b) => String(b.lastSeenAt).localeCompare(String(a.lastSeenAt)));
 
   const productMap = {};
   orders.forEach((order) => {
@@ -801,29 +819,13 @@ function buildMetrics(users, analytics, orders) {
       averageOrderValue: orders.length ? formatEuroValue(revenue / orders.length) : 0,
       averageDurationMs: Math.round(averageDurationMs),
     },
-    liveSessions: liveSessions.slice(0, 30),
+    liveSessions: liveSessions.slice(0, 30).map(sessionSummary),
+    visitHistory: visitHistory.slice(0, 200).map(sessionSummary),
     replaySessions: sessions
       .filter((session) => Array.isArray(session.replay) && session.replay.length > 0)
       .sort((a, b) => String(b.replayLastAt || b.lastSeenAt).localeCompare(String(a.replayLastAt || a.lastSeenAt)))
       .slice(0, 50)
-      .map((session) => ({
-        id: session.id,
-        path: session.path,
-        startedAt: session.startedAt,
-        lastSeenAt: session.lastSeenAt,
-        replayLastAt: session.replayLastAt,
-        durationMs: session.durationMs,
-        events: session.replay.length,
-        device: session.device,
-        deviceModel: session.deviceModel,
-        browser: session.browser,
-        os: session.os,
-        osVersion: session.osVersion,
-        screen: session.screen,
-        ipMasked: session.ipMasked,
-        checkoutStarted: Boolean(session.checkoutStarted),
-        orderPlaced: Boolean(session.orderPlaced),
-      })),
+      .map((session) => ({ ...sessionSummary(session), events: session.replay.length })),
     recentOrders: orders.slice(-60).reverse(),
     recentEvents: events.slice(-120).reverse(),
     topProducts: Object.values(productMap)
@@ -848,11 +850,6 @@ function buildMetrics(users, analytics, orders) {
     }).slice(0, 12),
     payments: countBy(orders, (order) => order.paymentMethod || "Non definito"),
     pages: countBy(events.filter((event) => event.type === "pageview"), (event) => event.path).slice(0, 15),
-    segments: {
-      gender: "Non rilevato: serve dato dichiarato dall'utente, non lo inferisco automaticamente.",
-      ipMode: "IP mascherato + hash per conteggio visite.",
-      replayMode: "Replay sessione attivo solo con consenso. Input e dati sensibili mascherati.",
-    },
   };
 }
 
