@@ -11,6 +11,9 @@ const adminProductsRoot = document.querySelector("[data-admin-products]");
 const productForm = document.querySelector("[data-product-form]");
 const productSearch = document.querySelector("[data-product-search]");
 const productMessage = document.querySelector("[data-product-message]");
+const productImageUpload = document.querySelector("[data-product-image-upload]");
+const productImageButton = document.querySelector("[data-product-image-button]");
+const productUploadStatus = document.querySelector("[data-product-upload-status]");
 let replayTimers = [];
 let adminProducts = [];
 let selectedProductId = "";
@@ -28,6 +31,13 @@ async function api(path, options = {}) {
   });
   const data = await response.json();
   if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione non riuscita.");
+  return data;
+}
+
+async function uploadApi(path, body) {
+  const response = await fetch(path, { method: "POST", body });
+  const data = await response.json();
+  if (!response.ok || data.ok === false) throw new Error(data.message || "Upload non riuscito.");
   return data;
 }
 
@@ -73,6 +83,11 @@ function setProductMessage(message, type = "") {
   if (!productMessage) return;
   productMessage.textContent = message || "";
   productMessage.dataset.type = type;
+}
+
+function setProductUploadStatus(message) {
+  if (!productUploadStatus) return;
+  productUploadStatus.textContent = message || "";
 }
 
 function formatAdminProductPrice(value) {
@@ -798,6 +813,49 @@ document.querySelector("[data-product-reset]")?.addEventListener("click", async 
     setProductMessage("Default ripristinato.", "success");
   } catch (error) {
     setProductMessage(error.message, "error");
+  }
+});
+
+productImageButton?.addEventListener("click", () => {
+  if (!productForm?.elements.id.value) {
+    setProductMessage("Seleziona prima un prodotto.", "error");
+    return;
+  }
+  productImageUpload?.click();
+});
+
+productImageUpload?.addEventListener("change", async () => {
+  const files = [...(productImageUpload.files || [])];
+  const productId = productForm?.elements.id.value;
+  if (!productId || files.length === 0) return;
+
+  const formData = new FormData();
+  formData.append("productId", productId);
+  files.forEach((file) => formData.append("images", file));
+
+  setProductUploadStatus(`Caricamento ${files.length} foto...`);
+  setProductMessage("");
+  productImageButton.disabled = true;
+
+  try {
+    const data = await uploadApi("/api/admin/product-images", formData);
+    const current = String(productForm.elements.images.value || "")
+      .split(/\r?\n/)
+      .map((image) => image.trim())
+      .filter(Boolean);
+    productForm.elements.images.value = [...current, ...(data.images || [])].join("\n");
+    selectedProductId = productId;
+    await loadProducts();
+    const product = adminProducts.find((entry) => entry.id === productId);
+    if (product) fillProductForm(product);
+    setProductUploadStatus(`${data.images.length} foto caricate e collegate al prodotto.`);
+    setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
+  } catch (error) {
+    setProductUploadStatus("Upload non riuscito.");
+    setProductMessage(error.message, "error");
+  } finally {
+    productImageButton.disabled = false;
+    productImageUpload.value = "";
   }
 });
 
