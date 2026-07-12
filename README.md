@@ -24,3 +24,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Rilevamento modello dispositivo, sistema operativo, versione OS, browser, schermo e viewport quando disponibili
 - Storico analytics conservato fino a 365 giorni con modello dispositivo, IP completo in area admin e localizzazione IP per citta/paese quando disponibile
 - Coordinate GPS e accuratezza in metri visibili in admin quando l'utente autorizza la posizione precisa
+- Storico visite admin diviso in categorie: sessione, dispositivo, rete, posizione e comportamento
