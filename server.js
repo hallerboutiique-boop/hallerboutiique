@@ -15,6 +15,7 @@ const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-m
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const analyticsRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
+const replayMaxEvents = 500;
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -112,6 +113,10 @@ async function writeAnalytics(data) {
   Object.entries(data.sessions).forEach(([id, session]) => {
     if (new Date(session.lastSeenAt || session.startedAt).getTime() < cutoff) {
       delete data.sessions[id];
+      return;
+    }
+    if (Array.isArray(session.replay)) {
+      session.replay = session.replay.slice(-replayMaxEvents);
     }
   });
 
@@ -464,6 +469,31 @@ function cleanSessionId(value) {
   return /^[a-zA-Z0-9_-]{8,80}$/.test(id) ? id : `srv_${randomBytes(12).toString("hex")}`;
 }
 
+function cleanReplayEvents(events) {
+  if (!Array.isArray(events)) return [];
+  const allowedTypes = new Set(["page", "move", "click", "scroll", "resize", "input", "checkout", "order"]);
+  return events
+    .slice(0, 80)
+    .map((event) => {
+      const type = cleanTrackingString(event.type, 24);
+      if (!allowedTypes.has(type)) return null;
+      return {
+        t: Math.max(0, Math.min(60 * 60 * 1000, Number(event.t || 0))),
+        type,
+        x: Math.max(0, Math.min(10000, Number(event.x || 0))),
+        y: Math.max(0, Math.min(10000, Number(event.y || 0))),
+        scrollY: Math.max(0, Math.min(200000, Number(event.scrollY || 0))),
+        depth: Math.max(0, Math.min(100, Number(event.depth || 0))),
+        w: Math.max(0, Math.min(10000, Number(event.w || 0))),
+        h: Math.max(0, Math.min(10000, Number(event.h || 0))),
+        target: cleanTrackingString(event.target, 120),
+        text: cleanTrackingString(event.text, 120),
+        field: cleanTrackingString(event.field, 80),
+      };
+    })
+    .filter(Boolean);
+}
+
 async function handleTrack(req, res) {
   const body = await parseBody(req);
   const now = new Date().toISOString();
@@ -475,6 +505,7 @@ async function handleTrack(req, res) {
   const ua = parseUserAgent(req.headers["user-agent"] || "");
   const analytics = await readAnalytics();
   const existing = analytics.sessions[sessionId] || {};
+  const replayEvents = body.replayConsent === true ? cleanReplayEvents(body.replay) : [];
 
   const session = {
     ...existing,
@@ -499,6 +530,10 @@ async function handleTrack(req, res) {
     orderPlaced: Boolean(existing.orderPlaced || type === "order_confirmed"),
     orderAt: existing.orderAt || (type === "order_confirmed" ? now : undefined),
     lastEvent: type,
+    replay: Array.isArray(existing.replay)
+      ? existing.replay.concat(replayEvents.map((event) => ({ ...event, at: now, path: pathName }))).slice(-replayMaxEvents)
+      : replayEvents.map((event) => ({ ...event, at: now, path: pathName })).slice(-replayMaxEvents),
+    replayLastAt: replayEvents.length > 0 ? now : existing.replayLastAt,
   };
 
   analytics.sessions[sessionId] = session;
@@ -514,6 +549,7 @@ async function handleTrack(req, res) {
     method: cleanTrackingString(body.method, 80),
     scrollDepth: Number(body.scrollDepth || 0),
     durationMs: Number(body.durationMs || 0),
+    replayCount: replayEvents.length,
   });
 
   await writeAnalytics(analytics);
@@ -649,6 +685,25 @@ function buildMetrics(users, analytics, orders) {
       averageDurationMs: Math.round(averageDurationMs),
     },
     liveSessions: liveSessions.slice(0, 30),
+    replaySessions: sessions
+      .filter((session) => Array.isArray(session.replay) && session.replay.length > 0)
+      .sort((a, b) => String(b.replayLastAt || b.lastSeenAt).localeCompare(String(a.replayLastAt || a.lastSeenAt)))
+      .slice(0, 50)
+      .map((session) => ({
+        id: session.id,
+        path: session.path,
+        startedAt: session.startedAt,
+        lastSeenAt: session.lastSeenAt,
+        replayLastAt: session.replayLastAt,
+        durationMs: session.durationMs,
+        events: session.replay.length,
+        device: session.device,
+        browser: session.browser,
+        os: session.os,
+        ipMasked: session.ipMasked,
+        checkoutStarted: Boolean(session.checkoutStarted),
+        orderPlaced: Boolean(session.orderPlaced),
+      })),
     recentOrders: orders.slice(-60).reverse(),
     recentEvents: events.slice(-120).reverse(),
     topProducts: Object.values(productMap)
@@ -671,7 +726,7 @@ function buildMetrics(users, analytics, orders) {
     segments: {
       gender: "Non rilevato: serve dato dichiarato dall'utente, non lo inferisco automaticamente.",
       ipMode: "IP mascherato + hash per conteggio visite.",
-      replayMode: "Timeline eventi, non video dello schermo.",
+      replayMode: "Replay sessione attivo solo con consenso. Input e dati sensibili mascherati.",
     },
   };
 }
@@ -680,6 +735,32 @@ async function handleAdminMetrics(req, res) {
   if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
   const [users, analytics, orders] = await Promise.all([readUsers(), readAnalytics(), readOrders()]);
   json(res, 200, { ok: true, metrics: buildMetrics(users, analytics, orders) });
+}
+
+async function handleAdminReplay(req, res, url) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  const sessionId = cleanTrackingString(url.searchParams.get("sessionId"), 80);
+  if (!/^[a-zA-Z0-9_-]{8,80}$/.test(sessionId)) return badRequest(res, "Sessione non valida.");
+  const analytics = await readAnalytics();
+  const session = analytics.sessions[sessionId];
+  if (!session || !Array.isArray(session.replay)) {
+    return json(res, 404, { ok: false, message: "Replay non trovato." });
+  }
+  json(res, 200, {
+    ok: true,
+    replay: {
+      id: session.id,
+      path: session.path,
+      startedAt: session.startedAt,
+      lastSeenAt: session.lastSeenAt,
+      durationMs: session.durationMs,
+      device: session.device,
+      browser: session.browser,
+      os: session.os,
+      ipMasked: session.ipMasked,
+      events: session.replay,
+    },
+  });
 }
 
 function startOauth(req, res, providerKey) {
@@ -833,6 +914,7 @@ async function handleApi(req, res, url) {
   }
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
+  if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
   return notFound(res);
 }
 
