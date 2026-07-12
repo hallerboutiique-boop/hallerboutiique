@@ -314,9 +314,30 @@ function eventPosition(event, screen) {
   };
 }
 
+function replaySource(path) {
+  try {
+    const safePath = String(path || "/").startsWith("/") && !String(path || "").startsWith("//") ? String(path || "/") : "/";
+    const url = new URL(safePath, window.location.origin);
+    if (url.origin !== window.location.origin || url.pathname.includes("admin")) return "/index.html?replay_view=1";
+    url.searchParams.set("replay_view", "1");
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch {
+    return "/index.html?replay_view=1";
+  }
+}
+
+function scrollReplayFrame(frame, scrollY) {
+  try {
+    frame?.contentWindow?.scrollTo({ top: Number(scrollY || 0), left: 0, behavior: "auto" });
+  } catch {
+    // Same-origin in normal use; if blocked, the cursor replay still works.
+  }
+}
+
 function playReplay(events) {
   clearReplayTimers();
   const screen = replayPlayer?.querySelector("[data-replay-screen]");
+  const frame = replayPlayer?.querySelector("[data-replay-frame]");
   const cursor = replayPlayer?.querySelector("[data-replay-cursor]");
   const ring = replayPlayer?.querySelector("[data-replay-click]");
   const progress = replayPlayer?.querySelector("[data-replay-progress]");
@@ -336,6 +357,9 @@ function playReplay(events) {
         progress.style.setProperty("--progress", `${Math.round(((index + 1) / events.length) * 100)}%`);
         if (current) current.textContent = replayEventLabel(event);
         screen.dataset.page = `${event.path || ""} · ${replayEventLabel(event)}`.slice(0, 120);
+        if (event.type === "page") {
+          scrollReplayFrame(frame, event.scrollY || 0);
+        }
         if (event.type === "move" || event.type === "click") {
           const position = eventPosition(event, screen);
           cursor.style.left = `${position.x}px`;
@@ -350,6 +374,7 @@ function playReplay(events) {
         }
         if (event.type === "scroll") {
           screen.dataset.page = `${event.path || ""} · scroll ${Math.round(Number(event.depth || 0))}%`;
+          scrollReplayFrame(frame, event.scrollY || 0);
         }
       }, delay)
     );
@@ -364,6 +389,7 @@ function renderReplayPlayer(replay) {
     replayPlayer.innerHTML = emptyState("Replay vuoto.");
     return;
   }
+  const firstPath = events.find((event) => event.path)?.path || replay.path || "/";
   replayPlayer.innerHTML = `
     <div class="replay-meta">
       <span>${escapeHtml(replay.path || "/")}</span>
@@ -375,7 +401,9 @@ function renderReplayPlayer(replay) {
       <button type="button" data-replay-play>Riproduci video</button>
       <div class="replay-progress" data-replay-progress><i></i></div>
     </div>
-    <div class="replay-screen" data-replay-screen data-page="${escapeHtml(replay.path || "/")}">
+    <div class="replay-screen" data-replay-screen data-page="${escapeHtml(firstPath)}">
+      <iframe class="replay-frame" data-replay-frame src="${escapeHtml(replaySource(firstPath))}" title="Pagina visitata dall'utente" tabindex="-1"></iframe>
+      <div class="replay-frame-shade"></div>
       <strong class="replay-current" data-replay-current>Pronto per riprodurre</strong>
       <span class="replay-cursor" data-replay-cursor style="left: 50%; top: 50%;"></span>
       <span class="replay-click-ring" data-replay-click></span>
