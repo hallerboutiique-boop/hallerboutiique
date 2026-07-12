@@ -107,6 +107,133 @@ function preciseLocationHtml(session) {
   return `<a class="location-map-link" href="${href}" target="_blank" rel="noopener">${escapeHtml(text)}</a>`;
 }
 
+function historyMetric(label, value) {
+  return `
+    <div class="history-metric">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(value)}</strong>
+    </div>
+  `;
+}
+
+function historyField(label, value) {
+  const normalized = value === 0 ? "0" : value || "-";
+  return `
+    <div class="history-field">
+      <span>${escapeHtml(label)}</span>
+      <strong>${escapeHtml(normalized)}</strong>
+    </div>
+  `;
+}
+
+function historyFieldHtml(label, html) {
+  return `
+    <div class="history-field">
+      <span>${escapeHtml(label)}</span>
+      <strong>${html}</strong>
+    </div>
+  `;
+}
+
+function historyBadge(label, tone = "") {
+  return `<span class="history-badge${tone ? ` history-badge-${tone}` : ""}">${escapeHtml(label)}</span>`;
+}
+
+function preciseLocationStatusLabel(session) {
+  if (session.preciseLocation) return "Autorizzata";
+  const labels = {
+    denied: "Negata",
+    timeout: "Timeout",
+    unsupported: "Non supportata",
+    unavailable: "Non disponibile",
+    error: "Errore",
+  };
+  return labels[session.preciseLocationStatus] || "";
+}
+
+function historyBadges(session) {
+  const badges = [];
+  if (session.isLive) badges.push(historyBadge("Live", "live"));
+  if (session.preciseLocation) badges.push(historyBadge("GPS preciso", "ok"));
+  else if (session.preciseLocationStatus) badges.push(historyBadge(preciseLocationText(session), "warn"));
+  if (session.checkoutStarted && !session.orderPlaced) badges.push(historyBadge("Checkout", "warn"));
+  if (session.orderPlaced) badges.push(historyBadge("Ordine", "ok"));
+  if (Number(session.replayEvents || 0) > 0) badges.push(historyBadge("Replay", "info"));
+  return badges.length ? badges.join("") : historyBadge("Visita", "info");
+}
+
+function referrerLabel(referrer) {
+  if (!referrer) return "Diretto";
+  try {
+    return new URL(referrer).hostname.replace(/^www\./, "");
+  } catch {
+    return referrer;
+  }
+}
+
+function renderHistoryCard(session) {
+  const gps = session.preciseLocation;
+  const gpsCaptured = gps?.capturedAt || session.preciseLocationAt;
+  const status = session.orderPlaced
+    ? "Ordine completato"
+    : session.checkoutStarted
+      ? "Checkout avviato"
+      : "Navigazione";
+  return `
+    <article class="history-session">
+      <header class="history-session-head">
+        <div>
+          <strong>${escapeHtml(session.path || "/")}</strong>
+          <small>Ultima attivita ${formatDate(session.lastSeenAt)}</small>
+        </div>
+        <div class="history-badges">${historyBadges(session)}</div>
+      </header>
+
+      <div class="history-category-grid">
+        <section class="history-category">
+          <h3>Sessione</h3>
+          ${historyField("Primo accesso", formatDate(session.startedAt))}
+          ${historyField("Ultimo accesso", formatDate(session.lastSeenAt))}
+          ${historyField("Durata", formatDuration(session.durationMs))}
+          ${historyField("Pagina ingresso", session.landingPage || session.path || "/")}
+        </section>
+
+        <section class="history-category">
+          <h3>Dispositivo</h3>
+          ${historyField("Modello", session.deviceModel || session.device || "Dispositivo")}
+          ${historyField("Sistema", [session.os, session.osVersion].filter(Boolean).join(" "))}
+          ${historyField("Browser", session.browser)}
+          ${historyField("Schermo", session.screen || session.viewport)}
+        </section>
+
+        <section class="history-category">
+          <h3>Rete</h3>
+          ${historyField("IP", displayIp(session))}
+          ${historyField("Localita IP", locationLine(session))}
+          ${historyField("Referrer", referrerLabel(session.referrer))}
+          ${historyField("Timezone", session.timezone)}
+        </section>
+
+        <section class="history-category">
+          <h3>Posizione</h3>
+          ${historyFieldHtml("GPS", preciseLocationHtml(session))}
+          ${historyField("Acquisita", gpsCaptured ? formatDate(gpsCaptured) : "")}
+          ${historyField("Accuratezza", Number.isFinite(gps?.accuracy) ? `${Math.round(gps.accuracy)}m` : "")}
+          ${historyField("Stato", preciseLocationStatusLabel(session))}
+        </section>
+
+        <section class="history-category">
+          <h3>Comportamento</h3>
+          ${historyField("Stato", status)}
+          ${historyField("Pageview", session.pageviews || 0)}
+          ${historyField("Eventi", session.eventsCount || 0)}
+          ${historyField("Scroll max", `${Math.round(Number(session.maxScroll || 0))}%`)}
+        </section>
+      </div>
+    </article>
+  `;
+}
+
 function renderMetrics(metrics) {
   const kpi = metrics.kpis;
   const cards = [
@@ -183,17 +310,22 @@ function renderVisitHistory(sessions) {
     root.innerHTML = emptyState("Nessuno storico visite ancora.");
     return;
   }
-  root.innerHTML = sessions
-    .map(
-      (session) => `
-        <article class="history-session">
-          <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(displayIp(session))} · ${preciseLocationHtml(session)} · IP geo ${escapeHtml(locationLine(session))}</span>
-          <small>Primo accesso ${formatDate(session.startedAt)} · Ultimo accesso ${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
-        </article>
-      `
-    )
-    .join("");
+  const stats = [
+    ["Totali", sessions.length],
+    ["Live", sessions.filter((session) => session.isLive).length],
+    ["GPS preciso", sessions.filter((session) => session.preciseLocation).length],
+    ["Checkout", sessions.filter((session) => session.checkoutStarted && !session.orderPlaced).length],
+    ["Ordini", sessions.filter((session) => session.orderPlaced).length],
+    ["Replay", sessions.filter((session) => Number(session.replayEvents || 0) > 0).length],
+  ];
+  root.innerHTML = `
+    <div class="history-summary">
+      ${stats.map(([label, value]) => historyMetric(label, value)).join("")}
+    </div>
+    <div class="history-list-group">
+      ${sessions.map(renderHistoryCard).join("")}
+    </div>
+  `;
 }
 
 function renderFunnel(metrics) {
