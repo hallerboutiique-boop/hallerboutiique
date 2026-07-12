@@ -1250,7 +1250,7 @@ button {
 }
 
 .benefits-main {
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   height: 120px;
 }
 
@@ -1484,6 +1484,10 @@ button {
   font-size: clamp(30px, 4vw, 54px);
   line-height: 1;
   font-weight: 800;
+}
+
+.catalog-intro h2 span {
+  display: inline;
 }
 
 .catalog-gender {
@@ -2838,5 +2842,20 @@ button {
 
   .catalog .product-grid.product-grid-featured .product-card:nth-child(n + 5) {
     display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .catalog-intro {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .catalog-intro h2 {
+    line-height: 1.08;
+  }
+
+  .catalog-intro h2 span {
+    display: block;
   }
 }
