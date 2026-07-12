@@ -1367,7 +1367,7 @@ button {
 
 .site-footer {
   display: grid;
-  grid-template-columns: 1fr minmax(440px, 1.78fr) 1fr;
+  grid-template-columns: 1fr minmax(440px, 1.78fr);
   width: min(88.3vw, 1357px);
   margin: 34px auto 0;
   padding-bottom: 22px;
@@ -1456,10 +1456,6 @@ button {
   color: var(--gold);
   font-size: 20px;
   font-weight: 500;
-}
-
-.footer-assistance {
-  padding-left: 48px;
 }
 
 .catalog {
@@ -2465,8 +2461,7 @@ button {
     padding-top: 24px;
   }
 
-  .footer-center,
-  .footer-assistance {
+  .footer-center {
     padding-left: 0;
     padding-right: 0;
   }
