@@ -12,6 +12,7 @@ const usersFile = path.join(dataDir, "users.json");
 const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
 const productsFile = path.join(dataDir, "products.json");
+const uploadsDir = path.join(dataDir, "uploads");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
@@ -70,6 +71,7 @@ async function ensureStorage() {
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
   await ensureJsonFile(productsFile, { items: {} });
+  await fs.mkdir(uploadsDir, { recursive: true });
 }
 
 async function ensureJsonFile(filePath, fallback) {
@@ -665,6 +667,52 @@ async function parseBody(req) {
   return Object.fromEntries(new URLSearchParams(raw));
 }
 
+async function readRequestBuffer(req, maxBytes = 35 * 1024 * 1024) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of req) {
+    size += chunk.length;
+    if (size > maxBytes) throw new Error("File troppo grande.");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
+}
+
+function parseMultipartBuffer(buffer, boundary) {
+  const marker = `--${boundary}`;
+  return buffer
+    .toString("latin1")
+    .split(marker)
+    .slice(1, -1)
+    .map((part) => {
+      const normalized = part.replace(/^\r\n/, "").replace(/\r\n$/, "");
+      const splitAt = normalized.indexOf("\r\n\r\n");
+      if (splitAt === -1) return null;
+      const rawHeaders = normalized.slice(0, splitAt);
+      const body = normalized.slice(splitAt + 4);
+      const disposition = rawHeaders.match(/content-disposition:\s*([^\r\n]+)/i)?.[1] || "";
+      return {
+        name: disposition.match(/name="([^"]+)"/i)?.[1] || "",
+        filename: disposition.match(/filename="([^"]*)"/i)?.[1] || "",
+        contentType: rawHeaders.match(/content-type:\s*([^\r\n]+)/i)?.[1]?.trim() || "",
+        data: Buffer.from(body, "latin1"),
+      };
+    })
+    .filter(Boolean);
+}
+
+function imageExtension(filename, contentType) {
+  const byType = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/svg+xml": ".svg",
+  };
+  const ext = path.extname(String(filename || "")).toLowerCase();
+  if (publicAssetExtensions.has(ext) && ext !== ".ico") return ext === ".jpeg" ? ".jpg" : ext;
+  return byType[String(contentType || "").toLowerCase()] || "";
+}
+
 function origin(req) {
   if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\/$/, "");
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -823,6 +871,55 @@ async function handleAdminProducts(req, res) {
   }
 
   return notFound(res);
+}
+
+async function handleAdminProductImages(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  if (req.method !== "POST") return notFound(res);
+
+  const contentType = String(req.headers["content-type"] || "");
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
+  if (!boundary) return badRequest(res, "Upload non valido.");
+
+  let parts;
+  try {
+    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+  } catch (error) {
+    return badRequest(res, error.message || "Upload non valido.");
+  }
+
+  const productId = cleanTrackingString(parts.find((part) => part.name === "productId")?.data.toString("utf8"), 120);
+  const defaults = await readDefaultProducts();
+  if (!defaults.some((product) => product.id === productId)) return badRequest(res, "Prodotto non valido.");
+
+  await fs.mkdir(uploadsDir, { recursive: true });
+  const saved = [];
+  for (const part of parts.filter((entry) => entry.name === "images" && entry.filename)) {
+    const ext = imageExtension(part.filename, part.contentType);
+    if (!ext || part.data.length === 0) continue;
+    const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
+    await fs.writeFile(path.join(uploadsDir, name), part.data);
+    saved.push(`/uploads/${name}`);
+  }
+
+  if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
+
+  const overrides = await readProductOverrides();
+  const existing = overrides.items[productId] || {};
+  const base = defaults.find((product) => product.id === productId);
+  overrides.items[productId] = {
+    ...base,
+    ...existing,
+    id: undefined,
+    baseName: undefined,
+    images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
+    updatedAt: new Date().toISOString(),
+  };
+  delete overrides.items[productId].id;
+  delete overrides.items[productId].baseName;
+  await writeProductOverrides(overrides);
+
+  json(res, 200, { ok: true, images: saved, product: mergeProduct(base, overrides.items) });
 }
 
 function cleanTrackingString(value, max = 160) {
@@ -1403,12 +1500,19 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
+  if (url.pathname === "/api/admin/product-images") return handleAdminProductImages(req, res);
   if (url.pathname === "/api/admin/products") return handleAdminProducts(req, res);
   return notFound(res);
 }
 
 function safeStaticPath(urlPathname) {
   const pathname = decodeURIComponent(urlPathname === "/" ? "/index.html" : urlPathname);
+  if (pathname.startsWith("/uploads/")) {
+    if (!publicAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
+    const filePath = path.normalize(path.join(uploadsDir, pathname.replace(/^\/uploads\//, "")));
+    if (!filePath.startsWith(uploadsDir)) return null;
+    return filePath;
+  }
   if (!publicFiles.has(pathname) && !pathname.startsWith("/assets/")) return null;
   if (pathname.startsWith("/assets/") && !publicAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
   const filePath = path.normalize(path.join(publicDir, pathname));
