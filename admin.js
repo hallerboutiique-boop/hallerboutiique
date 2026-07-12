@@ -5,6 +5,9 @@ const usersTable = document.querySelector("[data-users-table]");
 const ordersTable = document.querySelector("[data-orders-table]");
 const adminTotal = document.querySelector("[data-admin-total]");
 const metricGrid = document.querySelector("[data-metric-grid]");
+const replaySessionsRoot = document.querySelector("[data-replay-sessions]");
+const replayPlayer = document.querySelector("[data-replay-player]");
+let replayTimers = [];
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -255,6 +258,143 @@ function renderActivity(events) {
     .join("");
 }
 
+function replayEventLabel(event) {
+  const labels = {
+    page: "Pagina aperta",
+    move: "Movimento mouse",
+    click: "Click",
+    scroll: "Scroll",
+    resize: "Resize",
+    input: "Campo modificato",
+    checkout: "Checkout",
+    order: "Ordine",
+  };
+  const detail = [event.target, event.text, event.field ? `campo ${event.field}` : ""].filter(Boolean).join(" · ");
+  return `${labels[event.type] || event.type}${detail ? ` · ${detail}` : ""}`;
+}
+
+function clearReplayTimers() {
+  replayTimers.forEach((timer) => window.clearTimeout(timer));
+  replayTimers = [];
+}
+
+function renderReplaySessions(sessions) {
+  if (!replaySessionsRoot) return;
+  if (!sessions || sessions.length === 0) {
+    replaySessionsRoot.innerHTML = emptyState("Nessun replay registrato. Serve consenso replay dall'utente.");
+    return;
+  }
+  replaySessionsRoot.innerHTML = sessions
+    .map(
+      (session) => `
+        <article class="replay-session">
+          <div>
+            <strong>${escapeHtml(session.path || "/")}</strong>
+            <span>${escapeHtml(session.device)} · ${escapeHtml(session.browser)} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(session.events)} eventi</span>
+            <span>${formatDate(session.replayLastAt || session.lastSeenAt)} · ${formatDuration(session.durationMs)}</span>
+          </div>
+          <button type="button" data-replay-session="${escapeHtml(session.id)}">Riproduci</button>
+        </article>
+      `
+    )
+    .join("");
+}
+
+function eventPosition(event, screen) {
+  const sourceWidth = Number(event.w || window.innerWidth || 1);
+  const sourceHeight = Number(event.h || window.innerHeight || 1);
+  return {
+    x: Math.max(0, Math.min(screen.clientWidth, (Number(event.x || 0) / sourceWidth) * screen.clientWidth)),
+    y: Math.max(0, Math.min(screen.clientHeight, (Number(event.y || 0) / sourceHeight) * screen.clientHeight)),
+  };
+}
+
+function playReplay(events) {
+  clearReplayTimers();
+  const screen = replayPlayer?.querySelector("[data-replay-screen]");
+  const cursor = replayPlayer?.querySelector("[data-replay-cursor]");
+  const ring = replayPlayer?.querySelector("[data-replay-click]");
+  const progress = replayPlayer?.querySelector("[data-replay-progress]");
+  const rows = Array.from(replayPlayer?.querySelectorAll("[data-replay-event-row]") || []);
+  if (!screen || !cursor || !progress || events.length === 0) return;
+
+  const maxTime = Math.max(...events.map((event) => Number(event.t || 0)), 1);
+  events.forEach((event, index) => {
+    const delay = Math.min(16000, Math.round((Number(event.t || 0) / maxTime) * 16000));
+    replayTimers.push(
+      window.setTimeout(() => {
+        rows.forEach((row) => row.classList.remove("is-active"));
+        rows[index]?.classList.add("is-active");
+        progress.style.setProperty("--progress", `${Math.round(((index + 1) / events.length) * 100)}%`);
+        if (event.type === "move" || event.type === "click") {
+          const position = eventPosition(event, screen);
+          cursor.style.left = `${position.x}px`;
+          cursor.style.top = `${position.y}px`;
+          if (event.type === "click" && ring) {
+            ring.style.left = `${position.x}px`;
+            ring.style.top = `${position.y}px`;
+            ring.classList.remove("is-active");
+            void ring.offsetWidth;
+            ring.classList.add("is-active");
+          }
+        }
+        if (event.type === "scroll") {
+          screen.dataset.page = `${event.path || ""} · scroll ${Math.round(Number(event.depth || 0))}%`;
+        }
+      }, delay)
+    );
+  });
+}
+
+function renderReplayPlayer(replay) {
+  if (!replayPlayer) return;
+  clearReplayTimers();
+  const events = Array.isArray(replay.events) ? replay.events : [];
+  if (events.length === 0) {
+    replayPlayer.innerHTML = emptyState("Replay vuoto.");
+    return;
+  }
+  replayPlayer.innerHTML = `
+    <div class="replay-meta">
+      <span>${escapeHtml(replay.path || "/")}</span>
+      <span>${escapeHtml(replay.device)} · ${escapeHtml(replay.browser)} · ${escapeHtml(replay.os)}</span>
+      <span>IP ${escapeHtml(replay.ipMasked)}</span>
+      <span>${escapeHtml(events.length)} eventi</span>
+    </div>
+    <div class="replay-controls">
+      <button type="button" data-replay-play>Riproduci</button>
+      <div class="replay-progress" data-replay-progress><i></i></div>
+    </div>
+    <div class="replay-screen" data-replay-screen data-page="${escapeHtml(replay.path || "/")}">
+      <span class="replay-cursor" data-replay-cursor style="left: 50%; top: 50%;"></span>
+      <span class="replay-click-ring" data-replay-click></span>
+    </div>
+    <div class="replay-event-log">
+      ${events
+        .map(
+          (event, index) => `
+            <p data-replay-event-row="${index}">
+              <strong>${formatDuration(event.t)}</strong> · ${escapeHtml(replayEventLabel(event))}
+            </p>
+          `
+        )
+        .join("")}
+    </div>
+  `;
+  replayPlayer.querySelector("[data-replay-play]")?.addEventListener("click", () => playReplay(events));
+}
+
+async function loadReplay(sessionId) {
+  if (!replayPlayer) return;
+  replayPlayer.innerHTML = emptyState("Carico replay...");
+  try {
+    const data = await api(`/api/admin/replay?sessionId=${encodeURIComponent(sessionId)}`);
+    renderReplayPlayer(data.replay);
+  } catch (error) {
+    replayPlayer.innerHTML = emptyState(error.message);
+  }
+}
+
 function renderDashboard(metrics) {
   adminTotal.textContent = `${metrics.kpis.liveVisitors} live`;
   renderMetrics(metrics);
@@ -264,6 +404,7 @@ function renderDashboard(metrics) {
   renderSegments(metrics.segments);
   renderOrders(metrics.recentOrders);
   renderActivity(metrics.recentEvents);
+  renderReplaySessions(metrics.replaySessions);
   renderChart("[data-devices]", metrics.devices);
   renderChart("[data-browsers]", metrics.browsers);
   renderChart("[data-pages]", metrics.pages);
@@ -299,6 +440,13 @@ adminLogin?.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("[data-admin-refresh]")?.addEventListener("click", loadDashboard);
+
+document.addEventListener("click", (event) => {
+  const replayButton = event.target.closest("[data-replay-session]");
+  if (replayButton) {
+    loadReplay(replayButton.dataset.replaySession);
+  }
+});
 
 document.querySelectorAll("[data-admin-tab]").forEach((tab) => {
   tab.addEventListener("click", () => {
