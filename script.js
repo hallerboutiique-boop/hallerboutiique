@@ -12,7 +12,7 @@ const serverVisitorIdKey = "hallerBoutiqueServerVisitorId";
 const analyticsSessionKey = "hallerBoutiqueSessionId";
 const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
 const consentKey = "hallerBoutiqueConsent";
-const consentVersion = 1;
+const consentVersion = 2;
 const isReplayView = new URLSearchParams(window.location.search).get("replay_view") === "1";
 
 function randomId(prefix) {
@@ -27,7 +27,12 @@ function readConsent() {
   try {
     const consent = JSON.parse(window.localStorage.getItem(consentKey));
     return consent && consent.version === consentVersion
-      ? { analytics: Boolean(consent.analytics), replay: Boolean(consent.replay), choice: consent.choice || "custom" }
+      ? {
+          analytics: Boolean(consent.analytics),
+          replay: Boolean(consent.replay),
+          location: Boolean(consent.location),
+          choice: consent.choice || "custom",
+        }
       : null;
   } catch {
     return null;
@@ -37,14 +42,19 @@ function readConsent() {
 function saveConsent(consent) {
   const nextConsent = {
     version: consentVersion,
-    analytics: Boolean(consent.analytics || consent.replay),
+    analytics: Boolean(consent.analytics || consent.replay || consent.location),
     replay: Boolean(consent.replay),
+    location: Boolean(consent.location),
     choice: consent.choice || "custom",
     savedAt: new Date().toISOString(),
   };
   window.localStorage.setItem(consentKey, JSON.stringify(nextConsent));
   if (!nextConsent.replay) {
     analyticsState.replayBuffer = [];
+  }
+  if (!nextConsent.location) {
+    analyticsState.preciseLocation = null;
+    analyticsState.locationRequested = false;
   }
   renderConsentManager();
   syncConsentServer(nextConsent).finally(() => {
@@ -62,6 +72,12 @@ function hasAnalyticsConsent() {
 function hasReplayConsent() {
   if (isReplayView) return false;
   return Boolean(readConsent()?.replay);
+}
+
+function hasLocationConsent() {
+  if (isReplayView) return false;
+  const consent = readConsent();
+  return Boolean(consent?.analytics && consent?.location);
 }
 
 function getVisitorId() {
@@ -95,6 +111,8 @@ const analyticsState = {
   replayFlushTimer: 0,
   lastMoveAt: 0,
   lastScrollAt: 0,
+  preciseLocation: null,
+  locationRequested: false,
 };
 
 const deviceInfoState = {};
@@ -150,6 +168,83 @@ function currentDeviceInfo() {
   return { ...deviceInfoState };
 }
 
+function cleanCoordinate(value, min, max) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : null;
+}
+
+function preciseLocationFromPosition(position) {
+  const coords = position?.coords || {};
+  const latitude = cleanCoordinate(coords.latitude, -90, 90);
+  const longitude = cleanCoordinate(coords.longitude, -180, 180);
+  if (latitude === null || longitude === null) return null;
+  return {
+    latitude: Number(latitude.toFixed(7)),
+    longitude: Number(longitude.toFixed(7)),
+    accuracy: Math.max(0, Math.round(Number(coords.accuracy || 0))),
+    altitude: Number.isFinite(coords.altitude) ? Number(coords.altitude.toFixed(2)) : null,
+    altitudeAccuracy: Number.isFinite(coords.altitudeAccuracy) ? Math.max(0, Math.round(coords.altitudeAccuracy)) : null,
+    heading: Number.isFinite(coords.heading) ? Math.max(0, Math.min(360, Math.round(coords.heading))) : null,
+    speed: Number.isFinite(coords.speed) ? Math.max(0, Number(coords.speed.toFixed(2))) : null,
+    capturedAt: new Date(position.timestamp || Date.now()).toISOString(),
+  };
+}
+
+function currentPreciseLocation() {
+  return analyticsState.preciseLocation ? { ...analyticsState.preciseLocation } : null;
+}
+
+function locationErrorName(error) {
+  if (!error) return "unavailable";
+  if (error.code === 1) return "denied";
+  if (error.code === 2) return "unavailable";
+  if (error.code === 3) return "timeout";
+  return "error";
+}
+
+function requestPreciseLocation(reason = "consent") {
+  if (!hasLocationConsent() || analyticsState.locationRequested) return;
+  analyticsState.locationRequested = true;
+  if (!navigator.geolocation) {
+    sendTrack("precise_location_status", {
+      preciseLocationStatus: "unsupported",
+      locationReason: reason,
+    });
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      const preciseLocation = preciseLocationFromPosition(position);
+      if (!preciseLocation) {
+        sendTrack("precise_location_status", {
+          preciseLocationStatus: "unavailable",
+          locationReason: reason,
+        });
+        return;
+      }
+      analyticsState.preciseLocation = preciseLocation;
+      sendTrack("precise_location", {
+        preciseLocation,
+        preciseLocationStatus: "granted",
+        locationReason: reason,
+      });
+    },
+    (error) => {
+      sendTrack("precise_location_status", {
+        preciseLocationStatus: locationErrorName(error),
+        locationError: error?.message || "",
+        locationReason: reason,
+      });
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 18000,
+      maximumAge: 60000,
+    }
+  );
+}
+
 function initAnalyticsState() {
   if (!analyticsState.initialized) {
     analyticsState.visitorId = getVisitorId();
@@ -173,6 +268,7 @@ async function syncConsentServer(consent) {
       body: JSON.stringify({
         analytics: Boolean(consent?.analytics),
         replay: Boolean(consent?.replay),
+        location: Boolean(consent?.location),
         deviceInfo: currentDeviceInfo(),
       }),
       keepalive: true,
@@ -219,6 +315,7 @@ function sendTrack(type, extra = {}) {
     durationMs: sessionDurationMs(),
     scrollDepth: currentScrollDepth(),
     deviceInfo: currentDeviceInfo(),
+    preciseLocation: currentPreciseLocation(),
     ...extra,
   };
   const body = JSON.stringify(payload);
@@ -356,18 +453,20 @@ async function startConsentedTracking() {
       recordReplay("checkout", { target: getCheckoutProductText(), depth: currentScrollDepth() });
     }
   }
+  requestPreciseLocation("tracking_start");
   setupReplayRecorder();
 }
 
 function consentBannerMarkup(consent) {
   const analyticsChecked = consent?.analytics ? "checked" : "";
   const replayChecked = consent?.replay ? "checked" : "";
+  const locationChecked = consent?.location ? "checked" : "";
   return `
     <section class="cookie-banner" data-cookie-banner aria-label="Preferenze cookie">
       <div class="cookie-copy">
         <span>Privacy Haller Boutique</span>
-        <h2>Cookie e registrazione sessione</h2>
-        <p>Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche e replay sessione per capire visite, checkout abbandonati e problemi di navigazione. Password, pagamenti e valori dei campi non vengono registrati.</p>
+        <h2>Cookie, sessione e posizione</h2>
+        <p>Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche, replay sessione e posizione precisa del dispositivo per sicurezza, ordini e analisi visite. Password, pagamenti e valori dei campi non vengono registrati.</p>
       </div>
       <div class="cookie-options" data-cookie-options hidden>
         <label>
@@ -384,6 +483,11 @@ function consentBannerMarkup(consent) {
           <input type="checkbox" data-consent-replay ${replayChecked}>
           <span>Replay sessione</span>
           <small>Movimenti, click e scroll mascherando gli input.</small>
+        </label>
+        <label>
+          <input type="checkbox" data-consent-location ${locationChecked}>
+          <span>Posizione precisa</span>
+          <small>Coordinate GPS, accuratezza in metri e orario, solo se autorizzi il popup del browser.</small>
         </label>
       </div>
       <div class="cookie-actions">
@@ -421,24 +525,28 @@ function renderConsentManager(forceBanner = false) {
   const options = banner.querySelector("[data-cookie-options]");
   const analyticsToggle = banner.querySelector("[data-consent-analytics]");
   const replayToggle = banner.querySelector("[data-consent-replay]");
+  const locationToggle = banner.querySelector("[data-consent-location]");
   const saveButton = banner.querySelector("[data-consent-save]");
   const customButton = banner.querySelector("[data-consent-custom]");
 
   function closeWith(nextConsent) {
     saveConsent(nextConsent);
+    if (nextConsent.location) {
+      requestPreciseLocation("consent_choice");
+    }
     banner.remove();
   }
 
   banner.querySelector("[data-consent-reject]")?.addEventListener("click", () => {
-    closeWith({ analytics: false, replay: false, choice: "necessary" });
+    closeWith({ analytics: false, replay: false, location: false, choice: "necessary" });
   });
 
   banner.querySelector("[data-consent-metrics]")?.addEventListener("click", () => {
-    closeWith({ analytics: true, replay: false, choice: "analytics" });
+    closeWith({ analytics: true, replay: false, location: false, choice: "analytics" });
   });
 
   banner.querySelector("[data-consent-accept]")?.addEventListener("click", () => {
-    closeWith({ analytics: true, replay: true, choice: "all" });
+    closeWith({ analytics: true, replay: true, location: true, choice: "all" });
   });
 
   customButton?.addEventListener("click", () => {
@@ -453,12 +561,18 @@ function renderConsentManager(forceBanner = false) {
 
   analyticsToggle?.addEventListener("change", () => {
     if (!analyticsToggle.checked) replayToggle.checked = false;
+    if (!analyticsToggle.checked) locationToggle.checked = false;
+  });
+
+  locationToggle?.addEventListener("change", () => {
+    if (locationToggle.checked) analyticsToggle.checked = true;
   });
 
   saveButton?.addEventListener("click", () => {
     closeWith({
       analytics: analyticsToggle.checked,
       replay: replayToggle.checked,
+      location: locationToggle.checked,
       choice: "custom",
     });
   });
@@ -1173,6 +1287,7 @@ async function confirmCheckoutOrder(button) {
     discountCode: checkoutField("discount-code"),
     products: collectCheckoutProducts(),
     deviceInfo: currentDeviceInfo(),
+    preciseLocation: currentPreciseLocation(),
   };
 
   try {
