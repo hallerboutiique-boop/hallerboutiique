@@ -140,6 +140,26 @@ function renderLiveSessions(sessions) {
     .join("");
 }
 
+function renderVisitHistory(sessions) {
+  const root = document.querySelector("[data-visit-history]");
+  if (!root) return;
+  if (!sessions || sessions.length === 0) {
+    root.innerHTML = emptyState("Nessuno storico visite ancora.");
+    return;
+  }
+  root.innerHTML = sessions
+    .map(
+      (session) => `
+        <article class="history-session">
+          <strong>${escapeHtml(session.path || "/")}</strong>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked || "-")}</span>
+          <small>Primo accesso ${formatDate(session.startedAt)} · Ultimo accesso ${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderFunnel(metrics) {
   const root = document.querySelector("[data-funnel]");
   if (!root) return;
@@ -176,18 +196,6 @@ function renderTopProducts(products) {
           <strong>${escapeHtml(product.name)}</strong>
           <span>${escapeHtml(product.quantity)} venduti · ${formatMoney(product.revenue)}</span>
         </article>
-      `
-    )
-    .join("");
-}
-
-function renderSegments(segments) {
-  const root = document.querySelector("[data-segments]");
-  if (!root) return;
-  root.innerHTML = Object.entries(segments || {})
-    .map(
-      ([label, value]) => `
-        <p><strong>${escapeHtml(label)}</strong><br>${escapeHtml(value)}</p>
       `
     )
     .join("");
@@ -452,9 +460,9 @@ function renderDashboard(metrics) {
   adminTotal.textContent = `${metrics.kpis.liveVisitors} live`;
   renderMetrics(metrics);
   renderLiveSessions(metrics.liveSessions);
+  renderVisitHistory(metrics.visitHistory);
   renderFunnel(metrics);
   renderTopProducts(metrics.topProducts);
-  renderSegments(metrics.segments);
   renderOrders(metrics.recentOrders);
   renderActivity(metrics.recentEvents);
   renderReplaySessions(metrics.replaySessions);
