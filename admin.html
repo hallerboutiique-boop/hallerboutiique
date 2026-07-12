@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=admin-products-1">
+    <link rel="stylesheet" href="styles.css?v=admin-upload-1">
   </head>
   <body>
     <header class="site-header">
@@ -194,6 +194,14 @@
                     <span>Immagini</span>
                     <textarea name="images" rows="5" placeholder="assets/products/foto-1.png&#10;https://..."></textarea>
                   </label>
+                  <div class="product-upload-box">
+                    <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple data-product-image-upload>
+                    <button type="button" data-product-image-button>
+                      <i data-lucide="image-plus"></i>
+                      <span>Carica foto dal Finder</span>
+                    </button>
+                    <small data-product-upload-status>Puoi selezionare pi&ugrave; foto per lo stesso prodotto.</small>
+                  </div>
                   <div class="product-editor-actions">
                     <button type="submit">Salva prodotto</button>
                     <button type="button" data-product-reset>Ripristina default</button>
@@ -262,6 +270,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=admin-products-1"></script>
+    <script src="admin.js?v=admin-upload-1"></script>
   </body>
 </html>
