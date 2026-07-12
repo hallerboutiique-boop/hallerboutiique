@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=duomo-4">
+    <link rel="stylesheet" href="styles.css?v=admin-products-1">
   </head>
   <body>
     <header class="site-header">
@@ -70,6 +70,7 @@
           <div class="admin-tabs" role="tablist" aria-label="Sezioni dashboard">
             <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
             <button type="button" data-admin-tab="orders">Ordini</button>
+            <button type="button" data-admin-tab="products">Prodotti</button>
             <button type="button" data-admin-tab="users">Utenti</button>
             <button type="button" data-admin-tab="replay">Video</button>
             <button type="button" data-admin-tab="activity">Attivit&agrave;</button>
@@ -142,6 +143,67 @@
             </div>
           </section>
 
+          <section class="admin-tab-panel" data-admin-panel-tab="products">
+            <div class="product-admin-layout">
+              <section class="dashboard-card">
+                <h2>Catalogo prodotti</h2>
+                <label class="product-admin-search">
+                  <span>Cerca prodotto</span>
+                  <input type="search" data-product-search placeholder="Nome, collezione o categoria">
+                </label>
+                <div class="admin-product-list" data-admin-products></div>
+              </section>
+
+              <section class="dashboard-card dashboard-card-wide product-editor-card">
+                <h2>Modifica prodotto</h2>
+                <form class="product-editor-form" data-product-form>
+                  <input type="hidden" name="id">
+                  <label>
+                    <span>Titolo</span>
+                    <input name="name" placeholder="Nome prodotto" required>
+                  </label>
+                  <label>
+                    <span>Collezione</span>
+                    <input name="collection" placeholder="Catalogo Uomo">
+                  </label>
+                  <label>
+                    <span>Categoria</span>
+                    <input name="category" placeholder="Sneakers Uomo">
+                  </label>
+                  <label>
+                    <span>Prezzo originale</span>
+                    <input name="original" placeholder="254,53">
+                  </label>
+                  <label>
+                    <span>Prezzo finale</span>
+                    <input name="finalPrice" placeholder="139,99">
+                  </label>
+                  <label>
+                    <span>Sconto</span>
+                    <input name="discount" placeholder="-45%">
+                  </label>
+                  <label>
+                    <span>Taglie</span>
+                    <select name="sizeType">
+                      <option value="clothing">Abbigliamento S-XXL</option>
+                      <option value="sneakers">Sneakers 36-45</option>
+                      <option value="none">Nessuna taglia</option>
+                    </select>
+                  </label>
+                  <label class="product-editor-images">
+                    <span>Immagini</span>
+                    <textarea name="images" rows="5" placeholder="assets/products/foto-1.png&#10;https://..."></textarea>
+                  </label>
+                  <div class="product-editor-actions">
+                    <button type="submit">Salva prodotto</button>
+                    <button type="button" data-product-reset>Ripristina default</button>
+                  </div>
+                  <p class="auth-message" data-product-message aria-live="polite"></p>
+                </form>
+              </section>
+            </div>
+          </section>
+
           <section class="admin-tab-panel" data-admin-panel-tab="users">
             <div class="users-table-wrap">
               <table class="users-table">
@@ -200,6 +262,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=history-categories-1"></script>
+    <script src="admin.js?v=admin-products-1"></script>
   </body>
 </html>
