@@ -2835,4 +2835,8 @@ button {
   .catalog .product-grid.product-grid-featured {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+
+  .catalog .product-grid.product-grid-featured .product-card:nth-child(n + 7) {
+    display: none;
+  }
 }
