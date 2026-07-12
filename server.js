@@ -183,7 +183,71 @@ function hashIp(ip) {
   return ip ? createHash("sha256").update(`${sessionSecret}:${ip}`).digest("hex").slice(0, 16) : "";
 }
 
-function parseUserAgent(userAgent = "") {
+function cleanDeviceField(value, max = 120) {
+  return cleanTrackingString(value, max).replace(/[^\w .:/()+-]/g, "").slice(0, max);
+}
+
+function cleanVersion(value) {
+  return cleanDeviceField(String(value || "").replace(/_/g, "."), 50);
+}
+
+function compactScreen(width, height, ratio) {
+  const w = Math.max(0, Math.min(10000, Number.parseInt(width || 0, 10) || 0));
+  const h = Math.max(0, Math.min(10000, Number.parseInt(height || 0, 10) || 0));
+  const dpr = Math.max(0, Math.min(10, Number.parseFloat(ratio || 0) || 0));
+  if (!w || !h) return "";
+  return `${w}x${h}${dpr ? ` @${dpr}x` : ""}`;
+}
+
+function cleanClientDeviceInfo(info) {
+  const source = info && typeof info === "object" ? info : {};
+  return {
+    model: cleanDeviceField(source.model),
+    platform: cleanDeviceField(source.platform, 80),
+    platformVersion: cleanVersion(source.platformVersion),
+    architecture: cleanDeviceField(source.architecture, 40),
+    bitness: cleanDeviceField(source.bitness, 20),
+    mobile: Boolean(source.mobile),
+    language: cleanDeviceField(source.language, 40),
+    timezone: cleanDeviceField(source.timezone, 80),
+    screen: compactScreen(source.screenWidth, source.screenHeight, source.pixelRatio),
+    viewport: compactScreen(source.viewportWidth, source.viewportHeight, source.pixelRatio),
+    touchPoints: Math.max(0, Math.min(20, Number.parseInt(source.touchPoints || 0, 10) || 0)),
+  };
+}
+
+function detectAndroidModel(ua) {
+  const match = ua.match(/Android\s+[\d.]+;\s*([^;)]+?)(?:\s+Build|\)|;)/i);
+  if (!match) return "";
+  return cleanDeviceField(match[1].replace(/\bwv\b/gi, "").trim());
+}
+
+function detectOsVersion(ua, os, clientInfo) {
+  if (clientInfo.platformVersion && !/^0(?:\.0)*$/.test(clientInfo.platformVersion)) return clientInfo.platformVersion;
+  if (os === "Android") return cleanVersion(ua.match(/Android\s+([\d.]+)/i)?.[1]);
+  if (os === "iOS") return cleanVersion(ua.match(/(?:CPU iPhone OS|CPU OS)\s+([\d_]+)/i)?.[1]);
+  if (os === "iPadOS") {
+    return cleanVersion(ua.match(/CPU OS\s+([\d_]+)/i)?.[1] || ua.match(/Version\/([\d.]+)/i)?.[1]);
+  }
+  if (os === "macOS") return cleanVersion(ua.match(/Mac OS X\s+([\d_]+)/i)?.[1]);
+  if (os === "Windows") return cleanVersion(ua.match(/Windows NT\s+([\d.]+)/i)?.[1]);
+  return "";
+}
+
+function detectDeviceModel(ua, os, device, clientInfo) {
+  if (clientInfo.model && !/unknown/i.test(clientInfo.model)) return clientInfo.model;
+  if (/iPhone/i.test(ua)) return "iPhone";
+  if (/iPad/i.test(ua) || os === "iPadOS") return "iPad";
+  if (/iPod/i.test(ua)) return "iPod";
+  if (os === "Android") return detectAndroidModel(ua) || "Android";
+  if (os === "macOS") return "Mac";
+  if (os === "Windows") return "PC Windows";
+  if (device === "Tablet") return "Tablet";
+  if (device === "Mobile") return "Mobile";
+  return "Desktop";
+}
+
+function parseUserAgent(userAgent = "", clientInfo = {}) {
   const ua = String(userAgent);
   const ipadDesktopMode = /Macintosh/i.test(ua) && /Mobile\/\w+ Safari/i.test(ua);
   const mobile = /Mobile|Android|iPhone|iPod/i.test(ua);
@@ -213,8 +277,10 @@ function parseUserAgent(userAgent = "") {
           : /Firefox\//i.test(ua)
             ? "Firefox"
             : "Altro";
+  const osVersion = detectOsVersion(ua, os, clientInfo);
+  const deviceModel = detectDeviceModel(ua, os, device, clientInfo);
 
-  return { device, os, browser };
+  return { device, os, osVersion, browser, deviceModel };
 }
 
 function parseEuro(value) {
@@ -538,7 +604,8 @@ async function handleTrack(req, res) {
   const visitorId = cookieVisitorId || cleanTrackingString(body.visitorId, 80) || sessionId;
   const pathName = cleanTrackingString(body.path, 220) || "/";
   const ip = clientIp(req);
-  const ua = parseUserAgent(req.headers["user-agent"] || "");
+  const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
+  const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const analytics = await readAnalytics();
   const existing = analytics.sessions[sessionId] || {};
   const replayEvents = body.replayConsent === true ? cleanReplayEvents(body.replay) : [];
@@ -555,8 +622,19 @@ async function handleTrack(req, res) {
     ipMasked: existing.ipMasked || maskIp(ip),
     ipHash: existing.ipHash || hashIp(ip),
     device: ua.device,
+    deviceModel: ua.deviceModel || existing.deviceModel,
     browser: ua.browser,
     os: ua.os,
+    osVersion: ua.osVersion || existing.osVersion,
+    screen: clientInfo.screen || existing.screen,
+    viewport: clientInfo.viewport || existing.viewport,
+    language: clientInfo.language || existing.language,
+    timezone: clientInfo.timezone || existing.timezone,
+    platform: clientInfo.platform || existing.platform,
+    platformVersion: clientInfo.platformVersion || existing.platformVersion,
+    architecture: clientInfo.architecture || existing.architecture,
+    bitness: clientInfo.bitness || existing.bitness,
+    touchPoints: clientInfo.touchPoints || existing.touchPoints,
     pageviews: (existing.pageviews || 0) + (type === "pageview" ? 1 : 0),
     eventsCount: (existing.eventsCount || 0) + 1,
     durationMs: Math.max(Number(existing.durationMs || 0), Number(body.durationMs || 0)),
@@ -614,6 +692,8 @@ async function handleCreateOrder(req, res) {
   const products = cleanProducts(body.products || body.items);
   const productsTotal = products.reduce((sum, product) => sum + product.value, 0);
   const totalValue = productsTotal || parseEuro(body.total);
+  const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
+  const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const order = {
     id: `ord_${randomBytes(10).toString("hex")}`,
     orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
@@ -637,7 +717,8 @@ async function handleCreateOrder(req, res) {
     total: `${formatEuroValue(totalValue).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`,
     ipMasked: maskIp(clientIp(req)),
     ipHash: hashIp(clientIp(req)),
-    userAgent: parseUserAgent(req.headers["user-agent"] || ""),
+    userAgent: ua,
+    deviceInfo: clientInfo,
   };
 
   const orders = await readOrders();
@@ -734,8 +815,11 @@ function buildMetrics(users, analytics, orders) {
         durationMs: session.durationMs,
         events: session.replay.length,
         device: session.device,
+        deviceModel: session.deviceModel,
         browser: session.browser,
         os: session.os,
+        osVersion: session.osVersion,
+        screen: session.screen,
         ipMasked: session.ipMasked,
         checkoutStarted: Boolean(session.checkoutStarted),
         orderPlaced: Boolean(session.orderPlaced),
@@ -747,8 +831,13 @@ function buildMetrics(users, analytics, orders) {
       .slice(0, 20)
       .map((product) => ({ ...product, revenue: formatEuroValue(product.revenue) })),
     devices: countBy(sessions, (session) => session.device),
+    deviceModels: countBy(sessions, (session) => session.deviceModel || session.device),
     browsers: countBy(sessions, (session) => session.browser),
     os: countBy(sessions, (session) => session.os),
+    osVersions: countBy(sessions, (session) => {
+      const os = session.os || "Altro";
+      return session.osVersion ? `${os} ${session.osVersion}` : os;
+    }),
     referrers: countBy(sessions, (session) => {
       if (!session.referrer) return "Diretto";
       try {
@@ -791,8 +880,12 @@ async function handleAdminReplay(req, res, url) {
       lastSeenAt: session.lastSeenAt,
       durationMs: session.durationMs,
       device: session.device,
+      deviceModel: session.deviceModel,
       browser: session.browser,
       os: session.os,
+      osVersion: session.osVersion,
+      screen: session.screen,
+      viewport: session.viewport,
       ipMasked: session.ipMasked,
       events: session.replay,
     },
