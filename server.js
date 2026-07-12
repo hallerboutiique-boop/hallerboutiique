@@ -11,6 +11,7 @@ const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
 const usersFile = path.join(dataDir, "users.json");
 const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
+const productsFile = path.join(dataDir, "products.json");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
@@ -68,6 +69,7 @@ async function ensureStorage() {
   await ensureJsonFile(usersFile, []);
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
+  await ensureJsonFile(productsFile, { items: {} });
 }
 
 async function ensureJsonFile(filePath, fallback) {
@@ -109,6 +111,19 @@ async function readOrders() {
 
 async function writeOrders(orders) {
   return writeJson(ordersFile, orders);
+}
+
+async function readProductOverrides() {
+  const data = await readJson(productsFile, { items: {} });
+  data.items = data.items && typeof data.items === "object" ? data.items : {};
+  return data;
+}
+
+async function writeProductOverrides(data) {
+  return writeJson(productsFile, {
+    updatedAt: new Date().toISOString(),
+    items: data.items && typeof data.items === "object" ? data.items : {},
+  });
 }
 
 async function readAnalytics() {
@@ -438,6 +453,115 @@ function productRowsFromOrder(order) {
     : [{ name: order.product || "Da confermare", price: order.total || "0€", quantity: 1 }];
 }
 
+function slugifyProduct(value) {
+  return String(value || "prodotto")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "prodotto";
+}
+
+function productIdForName(name, counters) {
+  const slug = slugifyProduct(name);
+  counters[slug] = (counters[slug] || 0) + 1;
+  return counters[slug] === 1 ? slug : `${slug}-${counters[slug]}`;
+}
+
+function lastQuotedValue(source, pattern) {
+  let value = "";
+  let match;
+  pattern.lastIndex = 0;
+  while ((match = pattern.exec(source))) {
+    value = match[1];
+  }
+  return value;
+}
+
+async function readDefaultProducts() {
+  const source = await fs.readFile(path.join(publicDir, "script.js"), "utf8");
+  const matcher =
+    /item\("([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\)|bulk\(\s*\[([\s\S]*?)\]\s*,\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)",\s*"([^"]+)"\s*\)/g;
+  const counters = {};
+  const products = [];
+  let match;
+
+  while ((match = matcher.exec(source))) {
+    const before = source.slice(0, match.index);
+    const collection = lastQuotedValue(before, /title:\s*"([^"]+)"/g) || "Catalogo";
+    const category = lastQuotedValue(before, /name:\s*"([^"]+)"/g) || "Prodotti";
+
+    if (match[1]) {
+      const name = match[1];
+      products.push({
+        id: productIdForName(name, counters),
+        name,
+        original: match[2],
+        finalPrice: match[3],
+        discount: match[4],
+        sizeType: match[5],
+        collection,
+        category,
+        images: [],
+      });
+      continue;
+    }
+
+    const names = [...String(match[6] || "").matchAll(/"([^"]+)"/g)].map((nameMatch) => nameMatch[1]);
+    names.forEach((name) => {
+      products.push({
+        id: productIdForName(name, counters),
+        name,
+        original: match[7],
+        finalPrice: match[8],
+        discount: match[9],
+        sizeType: match[10],
+        collection,
+        category,
+        images: [],
+      });
+    });
+  }
+
+  return products;
+}
+
+function mergeProduct(product, overrides) {
+  const override = overrides[product.id] || {};
+  return {
+    ...product,
+    ...override,
+    id: product.id,
+    baseName: product.name,
+    images: Array.isArray(override.images) ? override.images : product.images,
+  };
+}
+
+function cleanProductImages(images) {
+  const source = Array.isArray(images) ? images : String(images || "").split(/\r?\n/);
+  return source
+    .map((image) => cleanTrackingString(image, 260))
+    .filter(Boolean)
+    .filter((image) => image.startsWith("assets/") || image.startsWith("/") || /^https?:\/\//i.test(image))
+    .slice(0, 8);
+}
+
+function cleanProductPatch(body) {
+  const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
+  return {
+    name: cleanTrackingString(body.name, 180) || "Prodotto",
+    original: cleanTrackingString(body.original, 40),
+    finalPrice: cleanTrackingString(body.finalPrice, 40),
+    discount: cleanTrackingString(body.discount, 20),
+    collection: cleanTrackingString(body.collection, 80),
+    category: cleanTrackingString(body.category, 80),
+    sizeType,
+    images: cleanProductImages(body.images),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
 function signPayload(payload) {
   const body = Buffer.from(JSON.stringify(payload)).toString("base64url");
   const sig = createHmac("sha256", sessionSecret).update(body).digest("base64url");
@@ -663,6 +787,42 @@ async function handleAdminUsers(req, res) {
       .map(publicUser)
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))),
   });
+}
+
+async function handleProducts(req, res) {
+  const data = await readProductOverrides();
+  json(res, 200, { ok: true, items: data.items });
+}
+
+async function handleAdminProducts(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+
+  if (req.method === "GET") {
+    return json(res, 200, {
+      ok: true,
+      products: defaults.map((product) => mergeProduct(product, overrides.items)),
+    });
+  }
+
+  if (req.method === "POST") {
+    const body = await parseBody(req);
+    const id = cleanTrackingString(body.id, 120);
+    if (!defaults.some((product) => product.id === id)) return badRequest(res, "Prodotto non valido.");
+    overrides.items[id] = cleanProductPatch(body);
+    await writeProductOverrides(overrides);
+    return json(res, 200, { ok: true, product: mergeProduct(defaults.find((product) => product.id === id), overrides.items) });
+  }
+
+  if (req.method === "DELETE") {
+    const body = await parseBody(req);
+    const id = cleanTrackingString(body.id, 120);
+    delete overrides.items[id];
+    await writeProductOverrides(overrides);
+    return json(res, 200, { ok: true });
+  }
+
+  return notFound(res);
 }
 
 function cleanTrackingString(value, max = 160) {
@@ -1235,6 +1395,7 @@ async function handleApi(req, res, url) {
   }
   if (req.method === "GET" && url.pathname === "/api/auth/me") return handleMe(req, res);
   if (req.method === "GET" && url.pathname === "/api/auth/providers") return json(res, 200, { ok: true, providers: providerStatus() });
+  if (req.method === "GET" && url.pathname === "/api/products") return handleProducts(req, res);
   if (req.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/admin/logout") {
     return json(res, 200, { ok: true }, { "Set-Cookie": clearCookie("hb_admin") });
@@ -1242,6 +1403,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
+  if (url.pathname === "/api/admin/products") return handleAdminProducts(req, res);
   return notFound(res);
 }
 
