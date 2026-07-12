@@ -76,7 +76,7 @@ async function readJson(filePath, fallback) {
 
 async function writeJson(filePath, data) {
   await ensureStorage();
-  const tmp = `${filePath}.${Date.now()}.tmp`;
+  const tmp = `${filePath}.${Date.now()}.${randomBytes(6).toString("hex")}.tmp`;
   await fs.writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
   await fs.rename(tmp, filePath);
 }
