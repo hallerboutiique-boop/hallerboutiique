@@ -113,6 +113,7 @@ const analyticsState = {
   lastScrollAt: 0,
   preciseLocation: null,
   locationRequested: false,
+  locationRequestToken: 0,
 };
 
 const deviceInfoState = {};
@@ -207,16 +208,38 @@ function setLocationBannerStatus(text) {
   if (label && text) label.textContent = text;
 }
 
+function locationPermissionHelpMessage() {
+  const appleDevice = /iPhone|iPad|Macintosh|Mac OS X/i.test(navigator.userAgent || "");
+  if (appleDevice) {
+    return "Se non vedi il popup, abilita Localizzazione per il browser nelle impostazioni Apple e tocca per riprovare.";
+  }
+  return "Se non vedi il popup, abilita Posizione dalle impostazioni del browser e tocca per riprovare.";
+}
+
 function requestPreciseLocation(reason = "consent", options = {}) {
   if (!hasLocationConsent()) return;
   if (analyticsState.locationRequested && !options.force) return;
   analyticsState.locationRequested = true;
+  const requestToken = analyticsState.locationRequestToken + 1;
+  analyticsState.locationRequestToken = requestToken;
+
+  if (window.isSecureContext === false) {
+    sendTrack("precise_location_status", {
+      preciseLocationStatus: "insecure_context",
+      locationReason: reason,
+    });
+    setLocationBannerStatus("Apri il sito in HTTPS per autorizzare la posizione.");
+    analyticsState.locationRequested = false;
+    return;
+  }
+
   if (!navigator.geolocation) {
     sendTrack("precise_location_status", {
       preciseLocationStatus: "unsupported",
       locationReason: reason,
     });
     setLocationBannerStatus("Localizzazione non supportata da questo browser.");
+    analyticsState.locationRequested = false;
     return;
   }
 
@@ -224,8 +247,21 @@ function requestPreciseLocation(reason = "consent", options = {}) {
     setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
   }
 
+  const helpTimer = options.userInitiated
+    ? window.setTimeout(() => {
+        if (analyticsState.locationRequestToken === requestToken && !analyticsState.preciseLocation) {
+          setLocationBannerStatus(locationPermissionHelpMessage());
+        }
+      }, 2500)
+    : 0;
+
+  const finishLocationRequest = () => {
+    if (helpTimer) window.clearTimeout(helpTimer);
+  };
+
   navigator.geolocation.getCurrentPosition(
     (position) => {
+      finishLocationRequest();
       const preciseLocation = preciseLocationFromPosition(position);
       if (!preciseLocation) {
         sendTrack("precise_location_status", {
@@ -245,6 +281,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
       setLocationBannerStatus(`Localizzazione attiva. Tempi di consegna in tempo reale${accuracy}.`);
     },
     (error) => {
+      finishLocationRequest();
       const status = locationErrorName(error);
       sendTrack("precise_location_status", {
         preciseLocationStatus: status,
@@ -252,9 +289,9 @@ function requestPreciseLocation(reason = "consent", options = {}) {
         locationReason: reason,
       });
       const messages = {
-        denied: "Permesso posizione negato. Abilitalo dalle impostazioni del browser.",
-        timeout: "Richiesta posizione scaduta. Tocca per riprovare.",
-        unavailable: "Posizione non disponibile. Tocca per riprovare.",
+        denied: "Permesso posizione negato. Clicca sul lucchetto del sito e imposta Posizione su Consenti.",
+        timeout: locationPermissionHelpMessage(),
+        unavailable: "Posizione non disponibile. Attiva il GPS del dispositivo e tocca per riprovare.",
         error: "Errore posizione. Tocca per riprovare.",
       };
       setLocationBannerStatus(messages[status] || "Posizione non disponibile. Tocca per riprovare.");
