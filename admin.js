@@ -281,7 +281,12 @@ function clearReplayTimers() {
 function renderReplaySessions(sessions) {
   if (!replaySessionsRoot) return;
   if (!sessions || sessions.length === 0) {
-    replaySessionsRoot.innerHTML = emptyState("Nessun replay registrato. Serve consenso replay dall'utente.");
+    replaySessionsRoot.innerHTML = `
+      <div class="replay-help">
+        <strong>Nessun video registrato ancora.</strong>
+        <p>Per vedere un video: apri il sito in una nuova scheda, premi "Accetta tutto" nel banner cookie, naviga/clicca qualche prodotto per almeno 10 secondi, poi torna qui e premi Aggiorna.</p>
+      </div>
+    `;
     return;
   }
   replaySessionsRoot.innerHTML = sessions
@@ -293,7 +298,7 @@ function renderReplaySessions(sessions) {
             <span>${escapeHtml(session.device)} · ${escapeHtml(session.browser)} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(session.events)} eventi</span>
             <span>${formatDate(session.replayLastAt || session.lastSeenAt)} · ${formatDuration(session.durationMs)}</span>
           </div>
-          <button type="button" data-replay-session="${escapeHtml(session.id)}">Riproduci</button>
+          <button type="button" data-replay-session="${escapeHtml(session.id)}">Guarda video</button>
         </article>
       `
     )
@@ -315,10 +320,13 @@ function playReplay(events) {
   const cursor = replayPlayer?.querySelector("[data-replay-cursor]");
   const ring = replayPlayer?.querySelector("[data-replay-click]");
   const progress = replayPlayer?.querySelector("[data-replay-progress]");
+  const current = replayPlayer?.querySelector("[data-replay-current]");
   const rows = Array.from(replayPlayer?.querySelectorAll("[data-replay-event-row]") || []);
   if (!screen || !cursor || !progress || events.length === 0) return;
 
   const maxTime = Math.max(...events.map((event) => Number(event.t || 0)), 1);
+  progress.style.setProperty("--progress", "0%");
+  rows.forEach((row) => row.classList.remove("is-active"));
   events.forEach((event, index) => {
     const delay = Math.min(16000, Math.round((Number(event.t || 0) / maxTime) * 16000));
     replayTimers.push(
@@ -326,6 +334,8 @@ function playReplay(events) {
         rows.forEach((row) => row.classList.remove("is-active"));
         rows[index]?.classList.add("is-active");
         progress.style.setProperty("--progress", `${Math.round(((index + 1) / events.length) * 100)}%`);
+        if (current) current.textContent = replayEventLabel(event);
+        screen.dataset.page = `${event.path || ""} · ${replayEventLabel(event)}`.slice(0, 120);
         if (event.type === "move" || event.type === "click") {
           const position = eventPosition(event, screen);
           cursor.style.left = `${position.x}px`;
@@ -362,10 +372,11 @@ function renderReplayPlayer(replay) {
       <span>${escapeHtml(events.length)} eventi</span>
     </div>
     <div class="replay-controls">
-      <button type="button" data-replay-play>Riproduci</button>
+      <button type="button" data-replay-play>Riproduci video</button>
       <div class="replay-progress" data-replay-progress><i></i></div>
     </div>
     <div class="replay-screen" data-replay-screen data-page="${escapeHtml(replay.path || "/")}">
+      <strong class="replay-current" data-replay-current>Pronto per riprodurre</strong>
       <span class="replay-cursor" data-replay-cursor style="left: 50%; top: 50%;"></span>
       <span class="replay-click-ring" data-replay-click></span>
     </div>
@@ -382,6 +393,7 @@ function renderReplayPlayer(replay) {
     </div>
   `;
   replayPlayer.querySelector("[data-replay-play]")?.addEventListener("click", () => playReplay(events));
+  window.setTimeout(() => playReplay(events), 350);
 }
 
 async function loadReplay(sessionId) {
