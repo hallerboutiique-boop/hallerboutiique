@@ -4,6 +4,7 @@ let active = 0;
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
+let productOverrides = {};
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
@@ -909,6 +910,34 @@ const catalogSections = [
   },
 ];
 
+function slugifyProduct(value) {
+  return String(value || "prodotto")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "prodotto";
+}
+
+function assignCatalogProductIds() {
+  const counters = {};
+  catalogSections.forEach((section) => {
+    section.categories.forEach((category) => {
+      category.products.forEach((product) => {
+        const slug = slugifyProduct(product.name);
+        counters[slug] = (counters[slug] || 0) + 1;
+        product.id = counters[slug] === 1 ? slug : `${slug}-${counters[slug]}`;
+        product.baseName = product.name;
+        product.collection = section.title;
+        product.category = category.name;
+      });
+    });
+  });
+}
+
+assignCatalogProductIds();
+
 function showSlide(index) {
   if (slides.length === 0) {
     return;
@@ -946,7 +975,7 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "home-clean-pay-1";
+const productImageVersion = "admin-products-1";
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.png",
@@ -962,8 +991,41 @@ function withProductImageVersion(src) {
   return `${src}?v=${productImageVersion}`;
 }
 
+function normalizeProductPrice(value) {
+  return String(value || "").includes("€") ? String(value) : euro(value);
+}
+
+function applyProductOverride(product) {
+  const override = productOverrides[product.id] || {};
+  return {
+    ...product,
+    ...override,
+    id: product.id,
+    baseName: product.baseName || product.name,
+    original: normalizeProductPrice(override.original || product.original),
+    finalPrice: normalizeProductPrice(override.finalPrice || product.finalPrice),
+    discount: override.discount || product.discount,
+    sizeType: override.sizeType || product.sizeType,
+    images: Array.isArray(override.images) ? override.images : product.images || [],
+  };
+}
+
+async function loadProductOverrides() {
+  try {
+    const response = await fetch("/api/products", { cache: "no-store" });
+    if (!response.ok) return;
+    const data = await response.json();
+    productOverrides = data.items && typeof data.items === "object" ? data.items : {};
+    renderCatalog();
+  } catch {
+    productOverrides = {};
+  }
+}
+
 function createProductMediaMarkup(product) {
-  const gallery = productImageGalleries[product.name] || [];
+  const gallery = product.images?.length
+    ? product.images
+    : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
 
   if (gallery.length === 0) {
     return `
@@ -1008,9 +1070,9 @@ function createProductCard(product) {
 }
 
 function getAllProducts() {
-  return catalogSections.flatMap((section) =>
-    section.categories.flatMap((category) => category.products)
-  );
+  return catalogSections
+    .flatMap((section) => section.categories.flatMap((category) => category.products))
+    .map(applyProductOverride);
 }
 
 const homeFeaturedProductNames = [
@@ -1028,7 +1090,7 @@ const homeFeaturedProductNames = [
 function getHomeFeaturedProducts() {
   const allProducts = getAllProducts();
   return homeFeaturedProductNames
-    .map((productName) => allProducts.find((product) => product.name === productName))
+    .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
     .filter(Boolean)
     .slice(0, 9);
 }
@@ -1484,6 +1546,7 @@ async function confirmCheckoutOrder(button) {
 }
 
 renderCatalog();
+loadProductOverrides();
 updateCartCount();
 setupLocationDeliveryBanner();
 
