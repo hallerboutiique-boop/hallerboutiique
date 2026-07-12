@@ -176,9 +176,32 @@ function parseCookies(req) {
   );
 }
 
+function normalizeIp(ip) {
+  return String(ip || "")
+    .trim()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/^::ffff:/, "");
+}
+
+function cleanIp(ip) {
+  const normalized = normalizeIp(ip);
+  return isIP(normalized) ? normalized : "";
+}
+
 function clientIp(req) {
-  const forwarded = String(req.headers["x-forwarded-for"] || "").split(",")[0].trim();
-  return forwarded || String(req.headers["fly-client-ip"] || req.socket.remoteAddress || "").replace(/^::ffff:/, "");
+  const directHeaders = ["fly-client-ip", "cf-connecting-ip", "true-client-ip", "x-real-ip"];
+  for (const header of directHeaders) {
+    const candidate = cleanIp(req.headers[header]);
+    if (candidate) return candidate;
+  }
+
+  const forwarded = String(req.headers["x-forwarded-for"] || "")
+    .split(",")
+    .map(cleanIp)
+    .find(Boolean);
+
+  return forwarded || cleanIp(req.socket.remoteAddress);
 }
 
 function maskIp(ip) {
@@ -195,14 +218,6 @@ function maskIp(ip) {
 
 function hashIp(ip) {
   return ip ? createHash("sha256").update(`${sessionSecret}:${ip}`).digest("hex").slice(0, 16) : "";
-}
-
-function normalizeIp(ip) {
-  return String(ip || "")
-    .trim()
-    .replace(/^\[/, "")
-    .replace(/\]$/, "")
-    .replace(/^::ffff:/, "");
 }
 
 function isPrivateOrReservedIp(ip) {
@@ -714,6 +729,7 @@ async function handleTrack(req, res) {
   const visitorId = cookieVisitorId || cleanTrackingString(body.visitorId, 80) || sessionId;
   const pathName = cleanTrackingString(body.path, 220) || "/";
   const ip = clientIp(req);
+  const ipAddress = cleanIp(ip);
   const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const analytics = await readAnalytics();
@@ -733,6 +749,7 @@ async function handleTrack(req, res) {
     path: pathName,
     referrer: existing.referrer || cleanTrackingString(body.referrer, 240),
     landingPage: existing.landingPage || pathName,
+    ipAddress: ipAddress || existing.ipAddress,
     ipMasked: existing.ipMasked || maskIp(ip),
     ipHash: existing.ipHash || hashIp(ip),
     ipLocation,
@@ -810,6 +827,7 @@ async function handleCreateOrder(req, res) {
   const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const ip = clientIp(req);
+  const ipAddress = cleanIp(ip);
   const ipLocation = await lookupIpLocation(ip);
   const order = {
     id: `ord_${randomBytes(10).toString("hex")}`,
@@ -832,6 +850,7 @@ async function handleCreateOrder(req, res) {
     products,
     totalValue: formatEuroValue(totalValue),
     total: `${formatEuroValue(totalValue).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`,
+    ipAddress,
     ipMasked: maskIp(ip),
     ipHash: hashIp(ip),
     ipLocation,
@@ -904,6 +923,7 @@ function buildMetrics(users, analytics, orders) {
     os: session.os,
     osVersion: session.osVersion,
     screen: session.screen,
+    ipAddress: session.ipAddress || "",
     ipMasked: session.ipMasked,
     ipLocation: session.ipLocation || emptyIpLocation(),
     checkoutStarted: Boolean(session.checkoutStarted),
@@ -1002,6 +1022,7 @@ async function handleAdminReplay(req, res, url) {
       osVersion: session.osVersion,
       screen: session.screen,
       viewport: session.viewport,
+      ipAddress: session.ipAddress || "",
       ipMasked: session.ipMasked,
       ipLocation: session.ipLocation || emptyIpLocation(),
       events: session.replay,
