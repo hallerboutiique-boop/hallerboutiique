@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=dashboard-1">
+    <link rel="stylesheet" href="styles.css?v=consent-replay-1">
   </head>
   <body>
     <header class="site-header">
@@ -71,6 +71,7 @@
             <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
             <button type="button" data-admin-tab="orders">Ordini</button>
             <button type="button" data-admin-tab="users">Utenti</button>
+            <button type="button" data-admin-tab="replay">Replay</button>
             <button type="button" data-admin-tab="activity">Attivit&agrave;</button>
           </div>
 
@@ -150,6 +151,21 @@
             </div>
           </section>
 
+          <section class="admin-tab-panel" data-admin-panel-tab="replay">
+            <div class="dashboard-grid">
+              <section class="dashboard-card dashboard-card-wide">
+                <h2>Sessioni registrate</h2>
+                <div class="replay-list" data-replay-sessions></div>
+              </section>
+              <section class="dashboard-card dashboard-card-wide">
+                <h2>Player replay</h2>
+                <div class="replay-player" data-replay-player>
+                  <p class="admin-empty">Seleziona una sessione registrata.</p>
+                </div>
+              </section>
+            </div>
+          </section>
+
           <section class="admin-tab-panel" data-admin-panel-tab="activity">
             <div class="dashboard-grid">
               <section class="dashboard-card dashboard-card-wide">
@@ -175,6 +191,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=dashboard-1"></script>
+    <script src="admin.js?v=consent-replay-1"></script>
   </body>
 </html>
