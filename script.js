@@ -202,15 +202,26 @@ function locationErrorName(error) {
   return "error";
 }
 
-function requestPreciseLocation(reason = "consent") {
-  if (!hasLocationConsent() || analyticsState.locationRequested) return;
+function setLocationBannerStatus(text) {
+  const label = document.querySelector("[data-location-delivery-banner] span");
+  if (label && text) label.textContent = text;
+}
+
+function requestPreciseLocation(reason = "consent", options = {}) {
+  if (!hasLocationConsent()) return;
+  if (analyticsState.locationRequested && !options.force) return;
   analyticsState.locationRequested = true;
   if (!navigator.geolocation) {
     sendTrack("precise_location_status", {
       preciseLocationStatus: "unsupported",
       locationReason: reason,
     });
+    setLocationBannerStatus("Localizzazione non supportata da questo browser.");
     return;
+  }
+
+  if (options.userInitiated) {
+    setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
   }
 
   navigator.geolocation.getCurrentPosition(
@@ -221,6 +232,7 @@ function requestPreciseLocation(reason = "consent") {
           preciseLocationStatus: "unavailable",
           locationReason: reason,
         });
+        setLocationBannerStatus("Posizione non disponibile. Riprova tra poco.");
         return;
       }
       analyticsState.preciseLocation = preciseLocation;
@@ -229,13 +241,24 @@ function requestPreciseLocation(reason = "consent") {
         preciseLocationStatus: "granted",
         locationReason: reason,
       });
+      const accuracy = Number.isFinite(preciseLocation.accuracy) ? ` ±${preciseLocation.accuracy}m` : "";
+      setLocationBannerStatus(`Localizzazione attiva. Tempi di consegna in tempo reale${accuracy}.`);
     },
     (error) => {
+      const status = locationErrorName(error);
       sendTrack("precise_location_status", {
-        preciseLocationStatus: locationErrorName(error),
+        preciseLocationStatus: status,
         locationError: error?.message || "",
         locationReason: reason,
       });
+      const messages = {
+        denied: "Permesso posizione negato. Abilitalo dalle impostazioni del browser.",
+        timeout: "Richiesta posizione scaduta. Tocca per riprovare.",
+        unavailable: "Posizione non disponibile. Tocca per riprovare.",
+        error: "Errore posizione. Tocca per riprovare.",
+      };
+      setLocationBannerStatus(messages[status] || "Posizione non disponibile. Tocca per riprovare.");
+      analyticsState.locationRequested = false;
     },
     {
       enableHighAccuracy: true,
@@ -453,7 +476,6 @@ async function startConsentedTracking() {
       recordReplay("checkout", { target: getCheckoutProductText(), depth: currentScrollDepth() });
     }
   }
-  requestPreciseLocation("tracking_start");
   setupReplayRecorder();
 }
 
@@ -532,7 +554,7 @@ function renderConsentManager(forceBanner = false) {
   function closeWith(nextConsent) {
     saveConsent(nextConsent);
     if (nextConsent.location) {
-      requestPreciseLocation("consent_choice");
+      requestPreciseLocation("consent_choice", { force: true, userInitiated: true });
     }
     banner.remove();
   }
@@ -587,7 +609,7 @@ function setupLocationDeliveryBanner() {
       location: true,
       choice: "delivery_location",
     });
-    requestPreciseLocation("delivery_banner");
+    requestPreciseLocation("delivery_banner", { force: true, userInitiated: true });
   });
 }
 
