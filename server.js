@@ -32,6 +32,17 @@ const contentTypes = {
   ".ico": "image/x-icon",
   ".webp": "image/webp",
 };
+const publicFiles = new Set([
+  "/index.html",
+  "/checkout.html",
+  "/account.html",
+  "/admin.html",
+  "/styles.css",
+  "/script.js",
+  "/account.js",
+  "/admin.js",
+]);
+const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
 const oauthProviders = {
   google: {
@@ -1156,6 +1167,8 @@ async function handleApi(req, res, url) {
 
 function safeStaticPath(urlPathname) {
   const pathname = decodeURIComponent(urlPathname === "/" ? "/index.html" : urlPathname);
+  if (!publicFiles.has(pathname) && !pathname.startsWith("/assets/")) return null;
+  if (pathname.startsWith("/assets/") && !publicAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
   const filePath = path.normalize(path.join(publicDir, pathname));
   if (!filePath.startsWith(publicDir)) return null;
   return filePath;
