@@ -1,6 +1,7 @@
 import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createReadStream, promises as fs } from "node:fs";
 import http from "node:http";
+import { isIP } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -16,6 +17,8 @@ const adminPassword = process.env.ADMIN_PASSWORD || "";
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
+const geoLookupTimeoutMs = 1800;
+const geoCache = new Map();
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -181,6 +184,102 @@ function maskIp(ip) {
 
 function hashIp(ip) {
   return ip ? createHash("sha256").update(`${sessionSecret}:${ip}`).digest("hex").slice(0, 16) : "";
+}
+
+function normalizeIp(ip) {
+  return String(ip || "")
+    .trim()
+    .replace(/^\[/, "")
+    .replace(/\]$/, "")
+    .replace(/^::ffff:/, "");
+}
+
+function isPrivateOrReservedIp(ip) {
+  const normalized = normalizeIp(ip);
+  const version = isIP(normalized);
+  if (!version) return true;
+  if (version === 4) {
+    const parts = normalized.split(".").map((part) => Number.parseInt(part, 10));
+    const [a, b] = parts;
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      a >= 224 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 192 && b === 0) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      (a === 198 && b === 51) ||
+      (a === 203 && b === 0)
+    );
+  }
+
+  const lower = normalized.toLowerCase();
+  return (
+    lower === "::" ||
+    lower === "::1" ||
+    lower.startsWith("fc") ||
+    lower.startsWith("fd") ||
+    lower.startsWith("fe80") ||
+    lower.startsWith("ff") ||
+    lower.startsWith("2001:db8")
+  );
+}
+
+function cleanLocationField(value, max = 80) {
+  return String(value || "")
+    .replace(/[^\p{L}\p{N}\s.'-]/gu, "")
+    .trim()
+    .slice(0, max);
+}
+
+function emptyIpLocation() {
+  return { country: "", countryCode: "", region: "", city: "" };
+}
+
+function rememberIpLocation(ip, location) {
+  if (geoCache.size > 1000) geoCache.delete(geoCache.keys().next().value);
+  geoCache.set(ip, { location, expiresAt: Date.now() + 24 * 60 * 60 * 1000 });
+}
+
+async function lookupIpLocation(ip) {
+  const normalized = normalizeIp(ip);
+  if (isPrivateOrReservedIp(normalized)) return emptyIpLocation();
+
+  const cached = geoCache.get(normalized);
+  if (cached && cached.expiresAt > Date.now()) return cached.location;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), geoLookupTimeoutMs);
+  try {
+    const response = await fetch(
+      `https://ipwho.is/${encodeURIComponent(normalized)}?fields=success,country,country_code,region,city`,
+      {
+        signal: controller.signal,
+        headers: { "User-Agent": "HallerBoutique/1.0" },
+      }
+    );
+    if (!response.ok) throw new Error("IP location lookup failed");
+    const data = await response.json();
+    if (data.success === false) throw new Error("IP location unavailable");
+    const location = {
+      country: cleanLocationField(data.country),
+      countryCode: cleanLocationField(data.country_code, 8),
+      region: cleanLocationField(data.region),
+      city: cleanLocationField(data.city),
+    };
+    rememberIpLocation(normalized, location);
+    return location;
+  } catch {
+    const location = emptyIpLocation();
+    rememberIpLocation(normalized, location);
+    return location;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function cleanDeviceField(value, max = 120) {
@@ -608,6 +707,10 @@ async function handleTrack(req, res) {
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const analytics = await readAnalytics();
   const existing = analytics.sessions[sessionId] || {};
+  const ipLocation =
+    existing.ipLocation && (existing.ipLocation.country || existing.ipLocation.city)
+      ? existing.ipLocation
+      : await lookupIpLocation(ip);
   const replayEvents = body.replayConsent === true ? cleanReplayEvents(body.replay) : [];
 
   const session = {
@@ -621,6 +724,7 @@ async function handleTrack(req, res) {
     landingPage: existing.landingPage || pathName,
     ipMasked: existing.ipMasked || maskIp(ip),
     ipHash: existing.ipHash || hashIp(ip),
+    ipLocation,
     device: ua.device,
     deviceModel: ua.deviceModel || existing.deviceModel,
     browser: ua.browser,
@@ -694,6 +798,8 @@ async function handleCreateOrder(req, res) {
   const totalValue = productsTotal || parseEuro(body.total);
   const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
+  const ip = clientIp(req);
+  const ipLocation = await lookupIpLocation(ip);
   const order = {
     id: `ord_${randomBytes(10).toString("hex")}`,
     orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
@@ -715,8 +821,9 @@ async function handleCreateOrder(req, res) {
     products,
     totalValue: formatEuroValue(totalValue),
     total: `${formatEuroValue(totalValue).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`,
-    ipMasked: maskIp(clientIp(req)),
-    ipHash: hashIp(clientIp(req)),
+    ipMasked: maskIp(ip),
+    ipHash: hashIp(ip),
+    ipLocation,
     userAgent: ua,
     deviceInfo: clientInfo,
   };
@@ -787,6 +894,7 @@ function buildMetrics(users, analytics, orders) {
     osVersion: session.osVersion,
     screen: session.screen,
     ipMasked: session.ipMasked,
+    ipLocation: session.ipLocation || emptyIpLocation(),
     checkoutStarted: Boolean(session.checkoutStarted),
     orderPlaced: Boolean(session.orderPlaced),
   });
@@ -884,6 +992,7 @@ async function handleAdminReplay(req, res, url) {
       screen: session.screen,
       viewport: session.viewport,
       ipMasked: session.ipMasked,
+      ipLocation: session.ipLocation || emptyIpLocation(),
       events: session.replay,
     },
   });
