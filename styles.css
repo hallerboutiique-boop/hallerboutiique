@@ -471,6 +471,20 @@
   font-size: 12px;
 }
 
+.location-map-link,
+.location-status {
+  color: var(--gold);
+  font-weight: 800;
+}
+
+.location-map-link {
+  text-decoration: none;
+}
+
+.location-map-link:hover {
+  text-decoration: underline;
+}
+
 .replay-list {
   display: grid;
   gap: 10px;
