@@ -14,6 +14,7 @@ const productMessage = document.querySelector("[data-product-message]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
 const productUploadStatus = document.querySelector("[data-product-upload-status]");
+const productPreviews = document.querySelector("[data-product-previews]");
 let replayTimers = [];
 let adminProducts = [];
 let selectedProductId = "";
@@ -92,6 +93,38 @@ function setProductUploadStatus(message) {
 
 function formatAdminProductPrice(value) {
   return String(value || "").replace("€", "").trim();
+}
+
+function productImageUrl(src) {
+  const value = String(src || "").trim();
+  if (!value) return "";
+  if (/^https?:\/\//i.test(value)) return value;
+  return value.startsWith("/") ? value : `/${value}`;
+}
+
+function currentProductImages() {
+  return String(productForm?.elements.images.value || "")
+    .split(/\r?\n/)
+    .map((image) => image.trim())
+    .filter(Boolean);
+}
+
+function renderProductPreviews(images = currentProductImages()) {
+  if (!productPreviews) return;
+  if (!images.length) {
+    productPreviews.innerHTML = `<p class="admin-empty">Nessuna immagine caricata per questo prodotto.</p>`;
+    return;
+  }
+  productPreviews.innerHTML = images
+    .map(
+      (image, index) => `
+        <figure class="product-preview-item">
+          <img src="${escapeHtml(productImageUrl(image))}" alt="Anteprima prodotto ${index + 1}" loading="lazy">
+          <figcaption>Foto ${index + 1}</figcaption>
+        </figure>
+      `
+    )
+    .join("");
 }
 
 function deviceLine(session) {
@@ -412,6 +445,7 @@ function fillProductForm(product) {
   productForm.elements.discount.value = product.discount || "";
   productForm.elements.sizeType.value = product.sizeType || "none";
   productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
+  renderProductPreviews(product.images || []);
   setProductMessage("");
   renderAdminProducts();
 }
@@ -435,15 +469,28 @@ function renderAdminProducts() {
   }
   adminProductsRoot.innerHTML = products
     .map(
-      (product) => `
+      (product) => {
+        const image = Array.isArray(product.images) && product.images.length ? product.images[0] : "";
+        return `
         <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
-          <strong>${escapeHtml(product.name)}</strong>
-          <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-          <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}</small>
+          <span class="admin-product-thumb">
+            ${
+              image
+                ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+                : `<i data-lucide="image"></i>`
+            }
+          </span>
+          <span class="admin-product-text">
+            <strong>${escapeHtml(product.name)}</strong>
+            <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}</small>
+          </span>
         </button>
-      `
+      `;
+      }
     )
     .join("");
+  if (window.lucide) window.lucide.createIcons();
 }
 
 async function loadProducts() {
@@ -773,6 +820,10 @@ document.addEventListener("click", (event) => {
 });
 
 productSearch?.addEventListener("input", renderAdminProducts);
+
+productForm?.elements.images?.addEventListener("input", () => {
+  renderProductPreviews();
+});
 
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
