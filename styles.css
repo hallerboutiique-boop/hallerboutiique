@@ -1186,6 +1186,10 @@ button {
   object-position: right center;
 }
 
+.hero-slide-man > img {
+  filter: brightness(1.16) contrast(1.04) saturate(1.04);
+}
+
 .hero-slide.has-copy::after {
   content: "";
   position: absolute;
