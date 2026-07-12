@@ -63,6 +63,14 @@ function emptyState(text) {
   return `<p class="admin-empty">${escapeHtml(text)}</p>`;
 }
 
+function deviceLine(session) {
+  const model = session.deviceModel || session.device || "Dispositivo";
+  const os = [session.os, session.osVersion].filter(Boolean).join(" ") || session.device || "";
+  const browser = session.browser || "";
+  const screen = session.screen ? `schermo ${session.screen}` : "";
+  return [model, os, browser, screen].filter(Boolean).join(" · ");
+}
+
 function renderMetrics(metrics) {
   const kpi = metrics.kpis;
   const cards = [
@@ -124,7 +132,7 @@ function renderLiveSessions(sessions) {
       (session) => `
         <article class="live-session">
           <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(session.device)} · ${escapeHtml(session.browser)} · IP ${escapeHtml(session.ipMasked)}</span>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)}</span>
           <small>${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
         </article>
       `
@@ -188,7 +196,7 @@ function renderSegments(segments) {
 function renderOrders(orders) {
   if (!ordersTable) return;
   if (!orders || orders.length === 0) {
-    ordersTable.innerHTML = `<tr><td colspan="7">Nessun ordine ancora.</td></tr>`;
+    ordersTable.innerHTML = `<tr><td colspan="8">Nessun ordine ancora.</td></tr>`;
     return;
   }
   ordersTable.innerHTML = orders
@@ -201,12 +209,17 @@ function renderOrders(orders) {
         .filter(Boolean)
         .map(escapeHtml)
         .join("<br>");
+      const orderDevice = deviceLine({
+        ...(order.userAgent || {}),
+        screen: order.deviceInfo?.screen,
+      });
       return `
         <tr>
           <td>${escapeHtml(order.orderCode)}</td>
           <td>${customer || "-"}</td>
           <td>${escapeHtml(products)}</td>
           <td>${escapeHtml(order.paymentMethod)}</td>
+          <td>${escapeHtml(orderDevice)}</td>
           <td>${escapeHtml(order.total || formatMoney(order.totalValue))}</td>
           <td>${escapeHtml(order.status)}</td>
           <td>${formatDate(order.createdAt)}</td>
@@ -295,7 +308,7 @@ function renderReplaySessions(sessions) {
         <article class="replay-session">
           <div>
             <strong>${escapeHtml(session.path || "/")}</strong>
-            <span>${escapeHtml(session.device)} · ${escapeHtml(session.browser)} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(session.events)} eventi</span>
+            <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(session.events)} eventi</span>
             <span>${formatDate(session.replayLastAt || session.lastSeenAt)} · ${formatDuration(session.durationMs)}</span>
           </div>
           <button type="button" data-replay-session="${escapeHtml(session.id)}">Guarda video</button>
@@ -393,7 +406,7 @@ function renderReplayPlayer(replay) {
   replayPlayer.innerHTML = `
     <div class="replay-meta">
       <span>${escapeHtml(replay.path || "/")}</span>
-      <span>${escapeHtml(replay.device)} · ${escapeHtml(replay.browser)} · ${escapeHtml(replay.os)}</span>
+      <span>${escapeHtml(deviceLine(replay))}</span>
       <span>IP ${escapeHtml(replay.ipMasked)}</span>
       <span>${escapeHtml(events.length)} eventi</span>
     </div>
@@ -446,7 +459,9 @@ function renderDashboard(metrics) {
   renderActivity(metrics.recentEvents);
   renderReplaySessions(metrics.replaySessions);
   renderChart("[data-devices]", metrics.devices);
+  renderChart("[data-device-models]", metrics.deviceModels);
   renderChart("[data-browsers]", metrics.browsers);
+  renderChart("[data-os-versions]", metrics.osVersions);
   renderChart("[data-pages]", metrics.pages);
   renderChart("[data-referrers]", metrics.referrers);
   renderChart("[data-payments]", metrics.payments);
