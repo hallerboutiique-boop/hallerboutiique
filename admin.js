@@ -7,7 +7,13 @@ const adminTotal = document.querySelector("[data-admin-total]");
 const metricGrid = document.querySelector("[data-metric-grid]");
 const replaySessionsRoot = document.querySelector("[data-replay-sessions]");
 const replayPlayer = document.querySelector("[data-replay-player]");
+const adminProductsRoot = document.querySelector("[data-admin-products]");
+const productForm = document.querySelector("[data-product-form]");
+const productSearch = document.querySelector("[data-product-search]");
+const productMessage = document.querySelector("[data-product-message]");
 let replayTimers = [];
+let adminProducts = [];
+let selectedProductId = "";
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -61,6 +67,16 @@ function escapeHtml(value) {
 
 function emptyState(text) {
   return `<p class="admin-empty">${escapeHtml(text)}</p>`;
+}
+
+function setProductMessage(message, type = "") {
+  if (!productMessage) return;
+  productMessage.textContent = message || "";
+  productMessage.dataset.type = type;
+}
+
+function formatAdminProductPrice(value) {
+  return String(value || "").replace("€", "").trim();
 }
 
 function deviceLine(session) {
@@ -369,6 +385,59 @@ function renderTopProducts(products) {
     .join("");
 }
 
+function fillProductForm(product) {
+  if (!productForm || !product) return;
+  selectedProductId = product.id;
+  productForm.elements.id.value = product.id;
+  productForm.elements.name.value = product.name || "";
+  productForm.elements.collection.value = product.collection || "";
+  productForm.elements.category.value = product.category || "";
+  productForm.elements.original.value = formatAdminProductPrice(product.original);
+  productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
+  productForm.elements.discount.value = product.discount || "";
+  productForm.elements.sizeType.value = product.sizeType || "none";
+  productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
+  setProductMessage("");
+  renderAdminProducts();
+}
+
+function filteredAdminProducts() {
+  const query = (productSearch?.value || "").trim().toLowerCase();
+  if (!query) return adminProducts;
+  return adminProducts.filter((product) =>
+    [product.name, product.collection, product.category, product.discount]
+      .filter(Boolean)
+      .some((value) => String(value).toLowerCase().includes(query))
+  );
+}
+
+function renderAdminProducts() {
+  if (!adminProductsRoot) return;
+  const products = filteredAdminProducts();
+  if (products.length === 0) {
+    adminProductsRoot.innerHTML = emptyState("Nessun prodotto trovato.");
+    return;
+  }
+  adminProductsRoot.innerHTML = products
+    .map(
+      (product) => `
+        <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
+          <strong>${escapeHtml(product.name)}</strong>
+          <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+          <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}</small>
+        </button>
+      `
+    )
+    .join("");
+}
+
+async function loadProducts() {
+  const data = await api("/api/admin/products");
+  adminProducts = data.products || [];
+  renderAdminProducts();
+  if (!selectedProductId && adminProducts.length) fillProductForm(adminProducts[0]);
+}
+
 function renderOrders(orders) {
   if (!ordersTable) return;
   if (!orders || orders.length === 0) {
@@ -655,6 +724,7 @@ async function loadDashboard() {
   adminPanel.hidden = false;
   renderUsers(usersData.users);
   renderDashboard(metricsData.metrics);
+  await loadProducts();
 }
 
 adminLogin?.addEventListener("submit", async (event) => {
@@ -678,6 +748,56 @@ document.addEventListener("click", (event) => {
   const replayButton = event.target.closest("[data-replay-session]");
   if (replayButton) {
     loadReplay(replayButton.dataset.replaySession);
+  }
+
+  const productButton = event.target.closest("[data-product-id]");
+  if (productButton) {
+    const product = adminProducts.find((entry) => entry.id === productButton.dataset.productId);
+    if (product) fillProductForm(product);
+  }
+});
+
+productSearch?.addEventListener("input", renderAdminProducts);
+
+productForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setProductMessage("Salvataggio in corso...");
+  const payload = Object.fromEntries(new FormData(productForm));
+  payload.images = String(payload.images || "")
+    .split(/\r?\n/)
+    .map((image) => image.trim())
+    .filter(Boolean);
+  try {
+    await api("/api/admin/products", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    selectedProductId = payload.id;
+    await loadProducts();
+    const product = adminProducts.find((entry) => entry.id === selectedProductId);
+    if (product) fillProductForm(product);
+    setProductMessage("Prodotto salvato.", "success");
+  } catch (error) {
+    setProductMessage(error.message, "error");
+  }
+});
+
+document.querySelector("[data-product-reset]")?.addEventListener("click", async () => {
+  const id = productForm?.elements.id.value;
+  if (!id) return;
+  setProductMessage("Ripristino in corso...");
+  try {
+    await api("/api/admin/products", {
+      method: "DELETE",
+      body: JSON.stringify({ id }),
+    });
+    selectedProductId = id;
+    await loadProducts();
+    const product = adminProducts.find((entry) => entry.id === id);
+    if (product) fillProductForm(product);
+    setProductMessage("Default ripristinato.", "success");
+  } catch (error) {
+    setProductMessage(error.message, "error");
   }
 });
 
