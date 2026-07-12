@@ -568,33 +568,57 @@
 
 .replay-screen {
   position: relative;
-  min-height: 320px;
+  min-height: 520px;
   overflow: hidden;
   border: 1px solid var(--panel-line);
   border-radius: 10px;
-  background:
-    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
-    #050505;
-  background-size: 48px 48px;
+  background: #050505;
 }
 
 .replay-screen::before {
   content: attr(data-page);
   position: absolute;
+  z-index: 4;
   top: 14px;
   left: 14px;
+  max-width: calc(100% - 28px);
+  padding: 8px 10px;
   color: var(--gold);
+  border: 1px solid rgba(var(--gold-rgb), 0.34);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.72);
   text-transform: uppercase;
   font-size: 12px;
   font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.replay-frame {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #000;
+  pointer-events: none;
+}
+
+.replay-frame-shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.34));
 }
 
 .replay-current {
   position: absolute;
   left: 50%;
   bottom: 22px;
-  z-index: 3;
+  z-index: 5;
   width: min(620px, calc(100% - 40px));
   padding: 14px 16px;
   color: var(--text-strong);
@@ -609,7 +633,7 @@
 
 .replay-cursor {
   position: absolute;
-  z-index: 2;
+  z-index: 4;
   width: 15px;
   height: 15px;
   border: 2px solid #050505;
@@ -622,7 +646,7 @@
 
 .replay-click-ring {
   position: absolute;
-  z-index: 1;
+  z-index: 3;
   width: 44px;
   height: 44px;
   border: 2px solid var(--gold);
@@ -816,7 +840,7 @@
   }
 
   .replay-screen {
-    min-height: 240px;
+    min-height: 360px;
   }
 
   .cookie-banner {
