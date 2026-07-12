@@ -946,14 +946,55 @@ function createSizesMarkup(product) {
   `;
 }
 
+const productImageVersion = "product-images-2";
+const productImageGalleries = {
+  "Louis Vuitton Skate Beige/White": [
+    "assets/products/louis-vuitton-skate-beige-white-1.png",
+    "assets/products/louis-vuitton-skate-beige-white-2.png",
+    "assets/products/louis-vuitton-skate-beige-white-3.png",
+  ],
+  "Nike Air Force Louis Vuitton Red": [
+    "assets/products/nike-air-force-louis-vuitton-red-1.png",
+    "assets/products/nike-air-force-louis-vuitton-red-2.png",
+    "assets/products/nike-air-force-louis-vuitton-red-3.png",
+    "assets/products/nike-air-force-louis-vuitton-red-4.png",
+    "assets/products/nike-air-force-louis-vuitton-red-5.png",
+    "assets/products/nike-air-force-louis-vuitton-red-6.png",
+  ],
+};
+
+function withProductImageVersion(src) {
+  return `${src}?v=${productImageVersion}`;
+}
+
+function createProductMediaMarkup(product) {
+  const gallery = productImageGalleries[product.name] || [];
+
+  if (gallery.length === 0) {
+    return `
+      <div class="image-placeholder">
+        <span>Placeholder immagine</span>
+      </div>
+    `;
+  }
+
+  return `
+    <img
+      class="product-image"
+      src="${withProductImageVersion(gallery[0])}"
+      alt="${product.name}"
+      loading="lazy"
+      decoding="async"
+    >
+  `;
+}
+
 function createProductCard(product) {
   return `
     <article class="product-card">
       <div class="product-media">
         <span class="discount-badge">${product.discount}</span>
-        <div class="image-placeholder">
-          <span>Placeholder immagine</span>
-        </div>
+        ${createProductMediaMarkup(product)}
       </div>
       <div class="product-body">
         <h4>${product.name}</h4>
@@ -983,10 +1024,10 @@ const homeFeaturedProductNames = [
   "Tracksuit Nike Nocta",
   "Jacket Stone Island",
   "Crossbody Bag Louis Vuitton",
-  "Air Jordan",
   "Bag Louis Vuitton",
+  "Nike Air Force Louis Vuitton Red",
+  "Louis Vuitton Skate Beige/White",
   "Nike Air Force White/Pink",
-  "Balenciaga Track Black/Pink",
 ];
 
 function getHomeFeaturedProducts() {
