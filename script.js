@@ -10,6 +10,8 @@ const orderCodeKey = "hallerBoutiqueOrderCode";
 const visitorIdKey = "hallerBoutiqueVisitorId";
 const analyticsSessionKey = "hallerBoutiqueSessionId";
 const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
+const consentKey = "hallerBoutiqueConsent";
+const consentVersion = 1;
 
 function randomId(prefix) {
   const bytes =
@@ -17,6 +19,43 @@ function randomId(prefix) {
       ? Array.from(window.crypto.getRandomValues(new Uint8Array(10)))
       : Array.from({ length: 10 }, () => Math.floor(Math.random() * 256));
   return `${prefix}_${bytes.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function readConsent() {
+  try {
+    const consent = JSON.parse(window.localStorage.getItem(consentKey));
+    return consent && consent.version === consentVersion
+      ? { analytics: Boolean(consent.analytics), replay: Boolean(consent.replay), choice: consent.choice || "custom" }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function saveConsent(consent) {
+  const nextConsent = {
+    version: consentVersion,
+    analytics: Boolean(consent.analytics || consent.replay),
+    replay: Boolean(consent.replay),
+    choice: consent.choice || "custom",
+    savedAt: new Date().toISOString(),
+  };
+  window.localStorage.setItem(consentKey, JSON.stringify(nextConsent));
+  if (!nextConsent.replay) {
+    analyticsState.replayBuffer = [];
+  }
+  renderConsentManager();
+  if (nextConsent.analytics) {
+    startConsentedTracking();
+  }
+}
+
+function hasAnalyticsConsent() {
+  return Boolean(readConsent()?.analytics);
+}
+
+function hasReplayConsent() {
+  return Boolean(readConsent()?.replay);
 }
 
 function getVisitorId() {
@@ -39,13 +78,37 @@ function getAnalyticsSessionId() {
 }
 
 const analyticsState = {
-  visitorId: getVisitorId(),
-  sessionId: getAnalyticsSessionId(),
-  startedAt: Number(window.sessionStorage.getItem(analyticsSessionStartedKey) || Date.now()),
+  visitorId: "",
+  sessionId: "",
+  startedAt: Date.now(),
   maxScroll: 0,
+  initialized: false,
+  started: false,
+  replayStarted: false,
+  replayBuffer: [],
+  replayFlushTimer: 0,
+  lastMoveAt: 0,
+  lastScrollAt: 0,
 };
 
+function initAnalyticsState() {
+  if (!analyticsState.initialized) {
+    analyticsState.visitorId = getVisitorId();
+    analyticsState.sessionId = getAnalyticsSessionId();
+    analyticsState.startedAt = Number(window.sessionStorage.getItem(analyticsSessionStartedKey) || Date.now());
+    analyticsState.initialized = true;
+  }
+  return analyticsState;
+}
+
+function trackingIds() {
+  if (!hasAnalyticsConsent()) return { visitorId: "", sessionId: "" };
+  initAnalyticsState();
+  return { visitorId: analyticsState.visitorId, sessionId: analyticsState.sessionId };
+}
+
 function sessionDurationMs() {
+  if (!analyticsState.initialized) return 0;
   return Date.now() - analyticsState.startedAt;
 }
 
@@ -57,10 +120,13 @@ function currentScrollDepth() {
 }
 
 function sendTrack(type, extra = {}) {
+  if (!hasAnalyticsConsent()) return;
+  initAnalyticsState();
   const payload = {
     type,
     visitorId: analyticsState.visitorId,
     sessionId: analyticsState.sessionId,
+    replayConsent: hasReplayConsent(),
     path: window.location.pathname,
     title: document.title,
     referrer: document.referrer,
@@ -81,6 +147,233 @@ function sendTrack(type, extra = {}) {
     body,
     keepalive: true,
   }).catch(() => {});
+}
+
+function cleanReplayText(value) {
+  return String(value || "").replace(/\s+/g, " ").trim().slice(0, 80);
+}
+
+function replayTarget(element) {
+  if (!element) return "";
+  const target = element.closest("button, a, input, select, textarea, label, .product-card, .payment-option");
+  if (!target) return element.tagName ? element.tagName.toLowerCase() : "";
+  if (target.matches("input, textarea, select")) {
+    return `${target.tagName.toLowerCase()}[${target.getAttribute("name") || target.type || "field"}]`;
+  }
+  if (target.matches("button, a")) {
+    return cleanReplayText(target.textContent) || target.tagName.toLowerCase();
+  }
+  return cleanReplayText(target.getAttribute("aria-label") || target.className || target.tagName.toLowerCase());
+}
+
+function recordReplay(type, data = {}) {
+  if (!hasReplayConsent()) return;
+  initAnalyticsState();
+  analyticsState.replayBuffer.push({
+    type,
+    t: sessionDurationMs(),
+    w: window.innerWidth,
+    h: window.innerHeight,
+    ...data,
+  });
+  if (analyticsState.replayBuffer.length >= 24) {
+    flushReplay("batch");
+  }
+}
+
+function flushReplay(reason = "flush") {
+  if (!hasReplayConsent() || analyticsState.replayBuffer.length === 0) return;
+  const replay = analyticsState.replayBuffer.splice(0, analyticsState.replayBuffer.length);
+  sendTrack("replay", { replay, replayReason: reason });
+}
+
+function setupReplayRecorder() {
+  if (analyticsState.replayStarted || !hasReplayConsent()) return;
+  analyticsState.replayStarted = true;
+  recordReplay("page", {
+    target: document.title,
+    scrollY: window.scrollY,
+    depth: currentScrollDepth(),
+  });
+
+  document.addEventListener(
+    "pointermove",
+    (event) => {
+      const now = Date.now();
+      if (now - analyticsState.lastMoveAt < 450) return;
+      analyticsState.lastMoveAt = now;
+      recordReplay("move", { x: Math.round(event.clientX), y: Math.round(event.clientY) });
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    "click",
+    (event) => {
+      recordReplay("click", {
+        x: Math.round(event.clientX),
+        y: Math.round(event.clientY),
+        target: replayTarget(event.target),
+        text: event.target?.matches?.("input, textarea") ? "" : cleanReplayText(event.target?.textContent),
+      });
+      flushReplay("click");
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    "scroll",
+    () => {
+      const now = Date.now();
+      if (now - analyticsState.lastScrollAt < 350) return;
+      analyticsState.lastScrollAt = now;
+      recordReplay("scroll", { scrollY: Math.round(window.scrollY), depth: currentScrollDepth() });
+    },
+    { passive: true }
+  );
+
+  window.addEventListener(
+    "resize",
+    () => {
+      recordReplay("resize", { w: window.innerWidth, h: window.innerHeight });
+    },
+    { passive: true }
+  );
+
+  document.addEventListener(
+    "input",
+    (event) => {
+      const field = event.target;
+      if (!field?.matches?.("input, textarea, select")) return;
+      recordReplay("input", {
+        target: replayTarget(field),
+        field: field.getAttribute("name") || field.type || field.tagName.toLowerCase(),
+        text: field.type === "password" ? "campo protetto" : "campo modificato",
+      });
+    },
+    { passive: true }
+  );
+
+  analyticsState.replayFlushTimer = window.setInterval(() => flushReplay("timer"), 10000);
+}
+
+function startConsentedTracking() {
+  if (!hasAnalyticsConsent()) return;
+  initAnalyticsState();
+  if (!analyticsState.started) {
+    analyticsState.started = true;
+    sendTrack("pageview");
+    if (document.querySelector(".checkout-page")) {
+      sendTrack("checkout_start", { product: getCheckoutProductText() });
+      recordReplay("checkout", { target: getCheckoutProductText(), depth: currentScrollDepth() });
+    }
+  }
+  setupReplayRecorder();
+}
+
+function consentBannerMarkup(consent) {
+  const analyticsChecked = consent?.analytics ? "checked" : "";
+  const replayChecked = consent?.replay ? "checked" : "";
+  return `
+    <section class="cookie-banner" data-cookie-banner aria-label="Preferenze cookie">
+      <div class="cookie-copy">
+        <span>Privacy Haller Boutique</span>
+        <h2>Cookie e registrazione sessione</h2>
+        <p>Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche e replay sessione per capire visite, checkout abbandonati e problemi di navigazione. Password, pagamenti e valori dei campi non vengono registrati.</p>
+      </div>
+      <div class="cookie-options" data-cookie-options hidden>
+        <label>
+          <input type="checkbox" checked disabled>
+          <span>Necessari</span>
+          <small>Carrello, checkout, login e preferenza consenso.</small>
+        </label>
+        <label>
+          <input type="checkbox" data-consent-analytics ${analyticsChecked}>
+          <span>Metriche sito</span>
+          <small>Visite, dispositivo, browser, pagine, conversione.</small>
+        </label>
+        <label>
+          <input type="checkbox" data-consent-replay ${replayChecked}>
+          <span>Replay sessione</span>
+          <small>Movimenti, click e scroll mascherando gli input.</small>
+        </label>
+      </div>
+      <div class="cookie-actions">
+        <button type="button" data-consent-reject>Solo necessari</button>
+        <button type="button" data-consent-metrics>Solo metriche</button>
+        <button type="button" data-consent-custom>Personalizza</button>
+        <button type="button" data-consent-save hidden>Salva preferenze</button>
+        <button type="button" data-consent-accept>Accetta tutto</button>
+      </div>
+    </section>
+  `;
+}
+
+function renderConsentManager(forceBanner = false) {
+  document.querySelector("[data-cookie-banner]")?.remove();
+  document.querySelector("[data-cookie-manage]")?.remove();
+  const consent = readConsent();
+
+  if (consent && !forceBanner) {
+    const manage = document.createElement("button");
+    manage.type = "button";
+    manage.className = "cookie-manage";
+    manage.dataset.cookieManage = "";
+    manage.textContent = "Cookie";
+    manage.addEventListener("click", () => renderConsentManager(true));
+    document.body.appendChild(manage);
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = consentBannerMarkup(consent);
+  const banner = wrapper.firstElementChild;
+  document.body.appendChild(banner);
+
+  const options = banner.querySelector("[data-cookie-options]");
+  const analyticsToggle = banner.querySelector("[data-consent-analytics]");
+  const replayToggle = banner.querySelector("[data-consent-replay]");
+  const saveButton = banner.querySelector("[data-consent-save]");
+  const customButton = banner.querySelector("[data-consent-custom]");
+
+  function closeWith(nextConsent) {
+    saveConsent(nextConsent);
+    banner.remove();
+  }
+
+  banner.querySelector("[data-consent-reject]")?.addEventListener("click", () => {
+    closeWith({ analytics: false, replay: false, choice: "necessary" });
+  });
+
+  banner.querySelector("[data-consent-metrics]")?.addEventListener("click", () => {
+    closeWith({ analytics: true, replay: false, choice: "analytics" });
+  });
+
+  banner.querySelector("[data-consent-accept]")?.addEventListener("click", () => {
+    closeWith({ analytics: true, replay: true, choice: "all" });
+  });
+
+  customButton?.addEventListener("click", () => {
+    options.hidden = false;
+    saveButton.hidden = false;
+    customButton.hidden = true;
+  });
+
+  replayToggle?.addEventListener("change", () => {
+    if (replayToggle.checked) analyticsToggle.checked = true;
+  });
+
+  analyticsToggle?.addEventListener("change", () => {
+    if (!analyticsToggle.checked) replayToggle.checked = false;
+  });
+
+  saveButton?.addEventListener("click", () => {
+    closeWith({
+      analytics: analyticsToggle.checked,
+      replay: replayToggle.checked,
+      choice: "custom",
+    });
+  });
 }
 
 const cryptoWallets = {
@@ -470,6 +763,11 @@ function addToCart(button) {
 
   if (productName) {
     sendTrack(button && button.dataset.buyNow ? "buy_now" : "add_to_cart", { product: productName });
+    recordReplay(button && button.dataset.buyNow ? "checkout" : "click", {
+      target: button && button.dataset.buyNow ? "Acquista ora" : "Aggiungi al carrello",
+      text: productName,
+      depth: currentScrollDepth(),
+    });
   }
 
   if (!button) {
@@ -768,10 +1066,11 @@ async function confirmCheckoutOrder(button) {
   const originalText = button.textContent;
   button.disabled = true;
   button.textContent = "Conferma in corso";
+  const ids = trackingIds();
 
   const payload = {
-    visitorId: analyticsState.visitorId,
-    sessionId: analyticsState.sessionId,
+    visitorId: ids.visitorId,
+    sessionId: ids.sessionId,
     orderCode: readOrderCode(),
     customer: {
       name: checkoutField("name"),
@@ -800,6 +1099,12 @@ async function confirmCheckoutOrder(button) {
       method: payload.paymentMethod,
       product: payload.products.map((product) => product.name).join("; "),
     });
+    recordReplay("order", {
+      target: data.order.orderCode,
+      text: payload.paymentMethod,
+      depth: currentScrollDepth(),
+    });
+    flushReplay("order");
 
     window.localStorage.removeItem(cartItemsKey);
     window.localStorage.removeItem(cartKey);
@@ -822,12 +1127,8 @@ async function confirmCheckoutOrder(button) {
 
 renderCatalog();
 updateCartCount();
-
-sendTrack("pageview");
-
-if (document.querySelector(".checkout-page")) {
-  sendTrack("checkout_start", { product: getCheckoutProductText() });
-}
+renderConsentManager();
+startConsentedTracking();
 
 window.addEventListener("scroll", currentScrollDepth, { passive: true });
 window.setInterval(() => {
@@ -835,6 +1136,7 @@ window.setInterval(() => {
 }, 30000);
 
 window.addEventListener("pagehide", () => {
+  flushReplay("pagehide");
   sendTrack("page_exit");
 });
 
