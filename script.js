@@ -97,6 +97,59 @@ const analyticsState = {
   lastScrollAt: 0,
 };
 
+const deviceInfoState = {};
+
+function baseDeviceInfo() {
+  return {
+    platform: navigator.platform || "",
+    language: navigator.language || "",
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "",
+    screenWidth: window.screen?.width || 0,
+    screenHeight: window.screen?.height || 0,
+    viewportWidth: window.innerWidth || 0,
+    viewportHeight: window.innerHeight || 0,
+    pixelRatio: window.devicePixelRatio || 1,
+    touchPoints: navigator.maxTouchPoints || 0,
+  };
+}
+
+async function refreshDeviceInfo() {
+  Object.assign(deviceInfoState, baseDeviceInfo());
+  if (navigator.userAgentData?.getHighEntropyValues) {
+    try {
+      const hints = await navigator.userAgentData.getHighEntropyValues([
+        "architecture",
+        "bitness",
+        "model",
+        "platform",
+        "platformVersion",
+        "uaFullVersion",
+        "fullVersionList",
+      ]);
+      Object.assign(deviceInfoState, {
+        architecture: hints.architecture || "",
+        bitness: hints.bitness || "",
+        model: hints.model || "",
+        platform: hints.platform || deviceInfoState.platform,
+        platformVersion: hints.platformVersion || "",
+        mobile: Boolean(navigator.userAgentData.mobile),
+        uaFullVersion: hints.uaFullVersion || "",
+        fullVersionList: Array.isArray(hints.fullVersionList)
+          ? hints.fullVersionList.map((item) => `${item.brand} ${item.version}`).join(", ")
+          : "",
+      });
+    } catch {
+      // Safari and some privacy modes do not expose high entropy client hints.
+    }
+  }
+  return deviceInfoState;
+}
+
+function currentDeviceInfo() {
+  Object.assign(deviceInfoState, baseDeviceInfo());
+  return { ...deviceInfoState };
+}
+
 function initAnalyticsState() {
   if (!analyticsState.initialized) {
     analyticsState.visitorId = getVisitorId();
@@ -120,6 +173,7 @@ async function syncConsentServer(consent) {
       body: JSON.stringify({
         analytics: Boolean(consent?.analytics),
         replay: Boolean(consent?.replay),
+        deviceInfo: currentDeviceInfo(),
       }),
       keepalive: true,
     });
@@ -164,6 +218,7 @@ function sendTrack(type, extra = {}) {
     referrer: document.referrer,
     durationMs: sessionDurationMs(),
     scrollDepth: currentScrollDepth(),
+    deviceInfo: currentDeviceInfo(),
     ...extra,
   };
   const body = JSON.stringify(payload);
@@ -289,9 +344,10 @@ function setupReplayRecorder() {
   analyticsState.replayFlushTimer = window.setInterval(() => flushReplay("timer"), 10000);
 }
 
-function startConsentedTracking() {
+async function startConsentedTracking() {
   if (!hasAnalyticsConsent()) return;
   initAnalyticsState();
+  await refreshDeviceInfo();
   if (!analyticsState.started) {
     analyticsState.started = true;
     sendTrack("pageview");
@@ -1116,6 +1172,7 @@ async function confirmCheckoutOrder(button) {
     txHash: checkoutField("tx-hash"),
     discountCode: checkoutField("discount-code"),
     products: collectCheckoutProducts(),
+    deviceInfo: currentDeviceInfo(),
   };
 
   try {
