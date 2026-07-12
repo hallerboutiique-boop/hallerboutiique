@@ -8,6 +8,7 @@ const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
 const orderCodeKey = "hallerBoutiqueOrderCode";
 const visitorIdKey = "hallerBoutiqueVisitorId";
+const serverVisitorIdKey = "hallerBoutiqueServerVisitorId";
 const analyticsSessionKey = "hallerBoutiqueSessionId";
 const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
 const consentKey = "hallerBoutiqueConsent";
@@ -46,9 +47,11 @@ function saveConsent(consent) {
     analyticsState.replayBuffer = [];
   }
   renderConsentManager();
-  if (nextConsent.analytics) {
-    startConsentedTracking();
-  }
+  syncConsentServer(nextConsent).finally(() => {
+    if (nextConsent.analytics) {
+      startConsentedTracking();
+    }
+  });
 }
 
 function hasAnalyticsConsent() {
@@ -62,7 +65,7 @@ function hasReplayConsent() {
 }
 
 function getVisitorId() {
-  let id = window.localStorage.getItem(visitorIdKey);
+  let id = window.localStorage.getItem(serverVisitorIdKey) || window.localStorage.getItem(visitorIdKey);
   if (!id) {
     id = randomId("vis");
     window.localStorage.setItem(visitorIdKey, id);
@@ -102,6 +105,32 @@ function initAnalyticsState() {
     analyticsState.initialized = true;
   }
   return analyticsState;
+}
+
+async function syncConsentServer(consent) {
+  if (isReplayView) return;
+  if (!consent?.analytics && !consent?.replay) {
+    window.localStorage.removeItem(serverVisitorIdKey);
+  }
+  try {
+    const response = await fetch("/api/consent", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        analytics: Boolean(consent?.analytics),
+        replay: Boolean(consent?.replay),
+      }),
+      keepalive: true,
+    });
+    const data = await response.json();
+    if (data.visitorId) {
+      window.localStorage.setItem(serverVisitorIdKey, data.visitorId);
+      analyticsState.visitorId = data.visitorId;
+    }
+  } catch {
+    // Tracking still works with the local first-party id if Safari blocks this request.
+  }
 }
 
 function trackingIds() {
@@ -1133,7 +1162,10 @@ updateCartCount();
 
 if (!isReplayView) {
   renderConsentManager();
-  startConsentedTracking();
+  const existingConsent = readConsent();
+  if (existingConsent?.analytics) {
+    syncConsentServer(existingConsent).finally(startConsentedTracking);
+  }
 }
 
 window.addEventListener("scroll", currentScrollDepth, { passive: true });
