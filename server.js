@@ -1265,6 +1265,7 @@ async function serveStatic(req, res, url) {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,
       "X-Content-Type-Options": "nosniff",
+      "Permissions-Policy": "geolocation=(self)",
       "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=604800",
     });
     createReadStream(filePath).pipe(res);
