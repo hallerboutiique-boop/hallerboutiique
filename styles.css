@@ -1198,32 +1198,21 @@ button {
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.32) 0%,
-    rgba(0, 0, 0, 0.2) 34%,
-    rgba(0, 0, 0, 0.06) 48%,
-    rgba(0, 0, 0, 0) 62%
+    #000 0%,
+    #000 31%,
+    rgba(0, 0, 0, 0.98) 38%,
+    rgba(0, 0, 0, 0.62) 46%,
+    rgba(0, 0, 0, 0.18) 53%,
+    rgba(0, 0, 0, 0) 60%
   );
 }
 
 .promo-copy {
   position: absolute;
   z-index: 2;
-  isolation: isolate;
   left: clamp(54px, 5.6vw, 86px);
   top: 39%;
   width: min(48vw, 690px);
-}
-
-.promo-copy::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: clamp(-34px, -2.8vw, -18px) clamp(-42px, -3.4vw, -22px);
-  background:
-    radial-gradient(ellipse at 28% 42%, rgba(0, 0, 0, 0.86) 0%, rgba(0, 0, 0, 0.62) 38%, rgba(0, 0, 0, 0.24) 67%, rgba(0, 0, 0, 0) 100%),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.36) 58%, rgba(0, 0, 0, 0) 100%);
-  filter: blur(10px);
-  pointer-events: none;
 }
 
 .promo-copy h1 {
@@ -2383,10 +2372,11 @@ button {
   .hero-slide.has-copy::after {
     background: linear-gradient(
       90deg,
-      rgba(0, 0, 0, 0.3) 0%,
-      rgba(0, 0, 0, 0.16) 52%,
-      rgba(0, 0, 0, 0.04) 74%,
-      rgba(0, 0, 0, 0) 100%
+      #000 0%,
+      #000 36%,
+      rgba(0, 0, 0, 0.9) 48%,
+      rgba(0, 0, 0, 0.36) 64%,
+      rgba(0, 0, 0, 0) 78%
     );
   }
 
