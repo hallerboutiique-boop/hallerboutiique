@@ -21,4 +21,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Video replay sessione in admin con pagina web dentro al player, mouse, click, scroll, resize e input mascherati
 - Tracking anonimo first-party per utenti Safari/iOS con cookie server HttpOnly dopo consenso
 - Rilevamento modello dispositivo, sistema operativo, versione OS, browser, schermo e viewport quando disponibili
-- Storico analytics conservato fino a 365 giorni con modello dispositivo e IP mascherato
+- Storico analytics conservato fino a 365 giorni con modello dispositivo, IP mascherato e localizzazione IP per citta/paese quando disponibile
