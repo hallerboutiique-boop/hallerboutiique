@@ -18,4 +18,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Route pronte per login Google e Microsoft tramite credenziali OAuth
 - Dashboard admin con visite live, IP mascherati, checkout abbandonati, conversione, ordini, incassi, dispositivi, browser, pagine, sorgenti e prodotti piu venduti
 - Banner consenso cookie con opzioni necessari, metriche e replay sessione
-- Replay sessione in admin con mouse, click, scroll, resize e input mascherati
+- Video replay sessione in admin con player automatico, mouse, click, scroll, resize e input mascherati
