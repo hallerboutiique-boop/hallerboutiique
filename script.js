@@ -661,15 +661,25 @@ function renderConsentManager(forceBanner = false) {
 
 function requestLocationFromBanner(event) {
   event?.preventDefault?.();
+  if (event?.hallerLocationHandled) return;
+  if (event) event.hallerLocationHandled = true;
+
   const current = readConsent() || {};
-  setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
-  saveConsent({
+  const nextConsent = {
     analytics: true,
     replay: Boolean(current.replay),
     location: true,
     choice: "delivery_location",
-  });
+  };
+  runtimeConsent = {
+    version: consentVersion,
+    ...nextConsent,
+    savedAt: new Date().toISOString(),
+  };
+
+  setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
   requestPreciseLocation("delivery_banner", { force: true, userInitiated: true });
+  saveConsent(nextConsent);
 }
 
 window.HallerLocation = {
