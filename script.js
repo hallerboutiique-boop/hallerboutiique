@@ -977,6 +977,26 @@ function getAllProducts() {
   );
 }
 
+const homeFeaturedProductNames = [
+  "T-Shirt Balenciaga",
+  "Polo Gucci",
+  "Tracksuit Nike Nocta",
+  "Jacket Stone Island",
+  "Crossbody Bag Louis Vuitton",
+  "Air Jordan",
+  "Bag Louis Vuitton",
+  "Nike Air Force White/Pink",
+  "Balenciaga Track Black/Pink",
+];
+
+function getHomeFeaturedProducts() {
+  const allProducts = getAllProducts();
+  return homeFeaturedProductNames
+    .map((productName) => allProducts.find((product) => product.name === productName))
+    .filter(Boolean)
+    .slice(0, 9);
+}
+
 function findProduct(productName) {
   return getAllProducts().find((product) => product.name === productName);
 }
@@ -1006,35 +1026,13 @@ function renderCatalog() {
     return;
   }
 
-  catalogRoot.innerHTML = catalogSections
-    .map(
-      (section) => `
-        <section class="catalog-gender" id="${section.id}">
-          <header class="catalog-gender-heading">
-            <p>Haller Boutique</p>
-            <h2>${section.title}</h2>
-          </header>
-          <div class="catalog-categories">
-            ${section.categories
-              .map(
-                (category) => `
-                  <section class="catalog-category">
-                    <header class="catalog-category-heading">
-                      <h3>${category.name}</h3>
-                      <span>${category.discount}</span>
-                    </header>
-                    <div class="product-grid">
-                      ${category.products.map(createProductCard).join("")}
-                    </div>
-                  </section>
-                `
-              )
-              .join("")}
-          </div>
-        </section>
-      `
-    )
-    .join("");
+  catalogRoot.innerHTML = `
+    <section class="catalog-featured">
+      <div class="product-grid product-grid-featured">
+        ${getHomeFeaturedProducts().map(createProductCard).join("")}
+      </div>
+    </section>
+  `;
 }
 
 function readCartCount() {
