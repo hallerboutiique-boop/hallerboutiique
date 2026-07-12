@@ -674,9 +674,39 @@ function cleanSessionId(value) {
   return /^[a-zA-Z0-9_-]{8,80}$/.test(id) ? id : `srv_${randomBytes(12).toString("hex")}`;
 }
 
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function cleanPreciseLocation(location) {
+  if (!location || typeof location !== "object") return null;
+  const latitude = finiteNumber(location.latitude);
+  const longitude = finiteNumber(location.longitude);
+  if (latitude === null || longitude === null) return null;
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) return null;
+
+  const accuracy = finiteNumber(location.accuracy);
+  const altitude = finiteNumber(location.altitude);
+  const altitudeAccuracy = finiteNumber(location.altitudeAccuracy);
+  const heading = finiteNumber(location.heading);
+  const speed = finiteNumber(location.speed);
+
+  return {
+    latitude: Number(latitude.toFixed(7)),
+    longitude: Number(longitude.toFixed(7)),
+    accuracy: accuracy === null ? null : Math.max(0, Math.min(100000, Math.round(accuracy))),
+    altitude: altitude === null ? null : Number(altitude.toFixed(2)),
+    altitudeAccuracy: altitudeAccuracy === null ? null : Math.max(0, Math.min(100000, Math.round(altitudeAccuracy))),
+    heading: heading === null ? null : Math.max(0, Math.min(360, Math.round(heading))),
+    speed: speed === null ? null : Math.max(0, Math.min(1000, Number(speed.toFixed(2)))),
+    capturedAt: cleanTrackingString(location.capturedAt, 40) || new Date().toISOString(),
+  };
+}
+
 async function handleConsent(req, res) {
   const body = await parseBody(req);
-  const accepted = Boolean(body.analytics || body.replay);
+  const accepted = Boolean(body.analytics || body.replay || body.location);
   if (!accepted) {
     return json(res, 200, { ok: true, visitorId: "" }, { "Set-Cookie": clearCookie("hb_anon") });
   }
@@ -738,6 +768,8 @@ async function handleTrack(req, res) {
     existing.ipLocation && (existing.ipLocation.country || existing.ipLocation.city)
       ? existing.ipLocation
       : await lookupIpLocation(ip);
+  const preciseLocation = cleanPreciseLocation(body.preciseLocation);
+  const preciseLocationStatus = cleanTrackingString(body.preciseLocationStatus, 40);
   const replayEvents = body.replayConsent === true ? cleanReplayEvents(body.replay) : [];
 
   const session = {
@@ -753,6 +785,10 @@ async function handleTrack(req, res) {
     ipMasked: existing.ipMasked || maskIp(ip),
     ipHash: existing.ipHash || hashIp(ip),
     ipLocation,
+    preciseLocation: preciseLocation || existing.preciseLocation,
+    preciseLocationStatus: preciseLocation ? "granted" : preciseLocationStatus || existing.preciseLocationStatus,
+    preciseLocationError: cleanTrackingString(body.locationError, 160) || existing.preciseLocationError,
+    preciseLocationAt: preciseLocation ? now : existing.preciseLocationAt,
     device: ua.device,
     deviceModel: ua.deviceModel || existing.deviceModel,
     browser: ua.browser,
@@ -795,6 +831,8 @@ async function handleTrack(req, res) {
     method: cleanTrackingString(body.method, 80),
     scrollDepth: Number(body.scrollDepth || 0),
     durationMs: Number(body.durationMs || 0),
+    preciseLocation: preciseLocation || undefined,
+    preciseLocationStatus: preciseLocationStatus || undefined,
     replayCount: replayEvents.length,
   });
 
@@ -829,6 +867,7 @@ async function handleCreateOrder(req, res) {
   const ip = clientIp(req);
   const ipAddress = cleanIp(ip);
   const ipLocation = await lookupIpLocation(ip);
+  const preciseLocation = cleanPreciseLocation(body.preciseLocation);
   const order = {
     id: `ord_${randomBytes(10).toString("hex")}`,
     orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
@@ -854,6 +893,7 @@ async function handleCreateOrder(req, res) {
     ipMasked: maskIp(ip),
     ipHash: hashIp(ip),
     ipLocation,
+    preciseLocation,
     userAgent: ua,
     deviceInfo: clientInfo,
   };
@@ -926,6 +966,10 @@ function buildMetrics(users, analytics, orders) {
     ipAddress: session.ipAddress || "",
     ipMasked: session.ipMasked,
     ipLocation: session.ipLocation || emptyIpLocation(),
+    preciseLocation: session.preciseLocation || null,
+    preciseLocationStatus: session.preciseLocationStatus || "",
+    preciseLocationError: session.preciseLocationError || "",
+    preciseLocationAt: session.preciseLocationAt || "",
     checkoutStarted: Boolean(session.checkoutStarted),
     orderPlaced: Boolean(session.orderPlaced),
   });
@@ -1025,6 +1069,10 @@ async function handleAdminReplay(req, res, url) {
       ipAddress: session.ipAddress || "",
       ipMasked: session.ipMasked,
       ipLocation: session.ipLocation || emptyIpLocation(),
+      preciseLocation: session.preciseLocation || null,
+      preciseLocationStatus: session.preciseLocationStatus || "",
+      preciseLocationError: session.preciseLocationError || "",
+      preciseLocationAt: session.preciseLocationAt || "",
       events: session.replay,
     },
   });
