@@ -19,3 +19,4 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Dashboard admin con visite live, IP mascherati, checkout abbandonati, conversione, ordini, incassi, dispositivi, browser, pagine, sorgenti e prodotti piu venduti
 - Banner consenso cookie con opzioni necessari, metriche e replay sessione
 - Video replay sessione in admin con pagina web dentro al player, mouse, click, scroll, resize e input mascherati
+- Tracking anonimo first-party per utenti Safari/iOS con cookie server HttpOnly dopo consenso
