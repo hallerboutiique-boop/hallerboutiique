@@ -403,6 +403,7 @@
 .chart-row,
 .funnel-row,
 .live-session,
+.history-session,
 .product-row-admin,
 .activity-row,
 .privacy-list p {
@@ -413,6 +414,7 @@
 .chart-row:last-child,
 .funnel-row:last-child,
 .live-session:last-child,
+.history-session:last-child,
 .product-row-admin:last-child,
 .activity-row:last-child,
 .privacy-list p:last-child {
@@ -430,6 +432,7 @@
 .chart-row span,
 .funnel-row span,
 .live-session span,
+.history-session span,
 .product-row-admin span,
 .activity-row span,
 .activity-row p,
@@ -442,6 +445,7 @@
 .chart-row strong,
 .funnel-row strong,
 .live-session strong,
+.history-session strong,
 .product-row-admin strong,
 .activity-row strong,
 .privacy-list strong {
@@ -459,7 +463,8 @@
   box-shadow: 0 0 12px rgba(var(--gold-rgb), 0.35);
 }
 
-.live-session small {
+.live-session small,
+.history-session small {
   display: block;
   margin-top: 6px;
   color: var(--gold);
