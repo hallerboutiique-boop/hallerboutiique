@@ -1160,6 +1160,12 @@ button {
   min-height: 280px;
   overflow: hidden;
   background: #050505;
+  transition: height 450ms ease;
+}
+
+.hero-slider.is-woman-active {
+  height: min(1024px, 66.667vw);
+  min-height: min(1024px, 66.667vw);
 }
 
 .hero-slide {
@@ -1184,6 +1190,10 @@ button {
 .hero-slide-man > img,
 .hero-slide-woman > img {
   object-position: right center;
+}
+
+.hero-slide-woman > img {
+  object-fit: cover;
 }
 
 .hero-slide.has-copy::after {
