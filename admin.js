@@ -71,6 +71,12 @@ function deviceLine(session) {
   return [model, os, browser, screen].filter(Boolean).join(" · ");
 }
 
+function locationLine(session) {
+  const location = session.ipLocation || {};
+  const place = [location.city, location.country].filter(Boolean).join(", ");
+  return place || "Localizzazione non disponibile";
+}
+
 function renderMetrics(metrics) {
   const kpi = metrics.kpis;
   const cards = [
@@ -132,7 +138,7 @@ function renderLiveSessions(sessions) {
       (session) => `
         <article class="live-session">
           <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)}</span>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(locationLine(session))}</span>
           <small>${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
         </article>
       `
@@ -152,7 +158,7 @@ function renderVisitHistory(sessions) {
       (session) => `
         <article class="history-session">
           <strong>${escapeHtml(session.path || "/")}</strong>
-          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked || "-")}</span>
+          <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked || "-")} · ${escapeHtml(locationLine(session))}</span>
           <small>Primo accesso ${formatDate(session.startedAt)} · Ultimo accesso ${formatDate(session.lastSeenAt)} · ${formatDuration(session.durationMs)}</small>
         </article>
       `
@@ -316,7 +322,7 @@ function renderReplaySessions(sessions) {
         <article class="replay-session">
           <div>
             <strong>${escapeHtml(session.path || "/")}</strong>
-            <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(session.events)} eventi</span>
+            <span>${escapeHtml(deviceLine(session))} · IP ${escapeHtml(session.ipMasked)} · ${escapeHtml(locationLine(session))} · ${escapeHtml(session.events)} eventi</span>
             <span>${formatDate(session.replayLastAt || session.lastSeenAt)} · ${formatDuration(session.durationMs)}</span>
           </div>
           <button type="button" data-replay-session="${escapeHtml(session.id)}">Guarda video</button>
@@ -416,6 +422,7 @@ function renderReplayPlayer(replay) {
       <span>${escapeHtml(replay.path || "/")}</span>
       <span>${escapeHtml(deviceLine(replay))}</span>
       <span>IP ${escapeHtml(replay.ipMasked)}</span>
+      <span>${escapeHtml(locationLine(replay))}</span>
       <span>${escapeHtml(events.length)} eventi</span>
     </div>
     <div class="replay-controls">
