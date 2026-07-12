@@ -1156,16 +1156,10 @@ button {
 
 .hero-slider {
   position: relative;
-  height: min(374px, 24.35vw);
-  min-height: 280px;
+  height: 66.667vw;
+  min-height: 0;
   overflow: hidden;
   background: #050505;
-  transition: height 450ms ease;
-}
-
-.hero-slider.is-woman-active {
-  height: min(1024px, 66.667vw);
-  min-height: min(1024px, 66.667vw);
 }
 
 .hero-slide {
@@ -1190,10 +1184,6 @@ button {
 .hero-slide-man > img,
 .hero-slide-woman > img {
   object-position: right center;
-}
-
-.hero-slide-woman > img {
-  object-fit: cover;
 }
 
 .hero-slide.has-copy::after {
@@ -2361,16 +2351,16 @@ button {
   }
 
   .hero-slider {
-    height: clamp(330px, 52vw, 420px);
+    height: 66.667vw;
     min-height: 0;
   }
 
   .hero-slide-man > img {
-    object-position: 64% center;
+    object-position: right center;
   }
 
   .hero-slide-woman > img {
-    object-position: 70% center;
+    object-position: right center;
   }
 
   .hero-slide.has-copy::after {
@@ -2524,19 +2514,19 @@ button {
   }
 
   .hero-slider {
-    height: 430px;
+    height: 66.667vw;
   }
 
   .hero-slide > img {
-    object-position: center;
+    object-position: right center;
   }
 
   .hero-slide-man > img {
-    object-position: 68% center;
+    object-position: right center;
   }
 
   .hero-slide-woman > img {
-    object-position: 73% center;
+    object-position: right center;
   }
 
   .benefits {
