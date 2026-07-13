@@ -3856,11 +3856,15 @@ body.motion-enabled .product-actions .buy-action:hover {
   .promo-copy p {
     font-size: clamp(14px, 3.95vw, 16px);
     line-height: 1.32;
-    margin-bottom: 0;
+    margin-bottom: 12px;
   }
 
   .promo-copy a {
-    display: none;
+    display: inline-grid;
+    min-width: 128px;
+    min-height: 34px;
+    padding-inline: 12px;
+    font-size: 11px;
   }
 
   .site-footer {
