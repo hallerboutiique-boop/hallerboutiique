@@ -1724,28 +1724,28 @@ button {
 .footer-logo img {
   display: block;
   height: auto;
-  width: min(100%, 560px);
+  width: min(100%, 430px);
 }
 
 .social-links {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 57px;
+  gap: 40px;
   padding-top: 27px;
 }
 
 .social-links a {
   display: inline-grid;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   place-items: center;
   color: var(--gold);
 }
 
 .social-links svg {
-  width: 42px;
-  height: 42px;
+  width: 34px;
+  height: 34px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -1757,8 +1757,8 @@ button {
 }
 
 .telegram-icon {
-  width: 45px;
-  height: 45px;
+  width: 36px;
+  height: 36px;
 }
 
 .footer-center p {
@@ -3254,7 +3254,7 @@ button {
   }
 
   .footer-logo img {
-    width: min(100%, 330px);
+    width: min(100%, 250px);
   }
 
   .promo-copy {
@@ -3298,7 +3298,7 @@ button {
   .social-links {
     width: 100%;
     justify-content: center;
-    gap: 34px;
+    gap: 24px;
     padding-top: 22px;
   }
 
