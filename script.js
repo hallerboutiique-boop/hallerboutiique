@@ -1770,7 +1770,7 @@ if (languagePicker) {
   const languageMenu = languagePicker.querySelector(".language-menu");
   const languageOptions = [...languagePicker.querySelectorAll("[data-language-option]")];
   const languageLabels = Object.fromEntries(
-    languageOptions.map((option) => [option.dataset.languageOption, option.textContent.trim()])
+    languageOptions.map((option) => [option.dataset.languageOption, option.getAttribute("aria-label")])
   );
   const savedLanguage = localStorage.getItem("haller-language") || "it";
 

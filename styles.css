@@ -1379,7 +1379,7 @@ button {
   right: 0;
   z-index: 20;
   display: none;
-  min-width: 172px;
+  min-width: 0;
   padding: 7px;
   border: 1px solid rgba(var(--gold-rgb), 0.62);
   border-radius: 8px;
@@ -1394,11 +1394,11 @@ button {
 
 .language-menu button {
   display: grid;
-  grid-template-columns: 24px 1fr;
-  min-height: 38px;
+  width: 42px;
+  min-height: 42px;
   align-items: center;
-  gap: 8px;
-  padding: 0 9px;
+  justify-content: center;
+  padding: 0;
   border-radius: 5px;
   color: var(--text);
   text-align: left;
@@ -1413,7 +1413,7 @@ button {
 }
 
 .language-flag {
-  font-size: 18px;
+  font-size: 21px;
   line-height: 1;
 }
 
@@ -3307,10 +3307,6 @@ button {
 
   .logo:not(.footer-logo) {
     max-width: calc(100% - 152px);
-  }
-
-  .language-menu {
-    min-width: 160px;
   }
 
   .footer-logo img {

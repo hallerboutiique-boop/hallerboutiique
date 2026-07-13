@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=language-menu-2">
+    <link rel="stylesheet" href="styles.css?v=language-flags-3">
   </head>
   <body>
     <header class="site-header">
@@ -16,28 +16,23 @@
         <div class="header-tools">
           <div class="language-picker" data-language-picker>
             <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false" aria-controls="language-menu">
-              <i data-lucide="languages"></i>
+              <i data-lucide="globe"></i>
             </button>
             <div class="language-menu" id="language-menu" role="menu" aria-label="Seleziona lingua">
-              <button type="button" role="menuitemradio" aria-checked="true" data-language-option="it">
+              <button type="button" role="menuitemradio" aria-label="Italiano" aria-checked="true" data-language-option="it">
                 <span class="language-flag" aria-hidden="true">🇮🇹</span>
-                <span>Italiano</span>
               </button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="en">
+              <button type="button" role="menuitemradio" aria-label="English" aria-checked="false" data-language-option="en">
                 <span class="language-flag" aria-hidden="true">🇬🇧</span>
-                <span>English</span>
               </button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="fr">
+              <button type="button" role="menuitemradio" aria-label="Français" aria-checked="false" data-language-option="fr">
                 <span class="language-flag" aria-hidden="true">🇫🇷</span>
-                <span>Français</span>
               </button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="de">
+              <button type="button" role="menuitemradio" aria-label="Deutsch" aria-checked="false" data-language-option="de">
                 <span class="language-flag" aria-hidden="true">🇩🇪</span>
-                <span>Deutsch</span>
               </button>
-              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="es">
+              <button type="button" role="menuitemradio" aria-label="Español" aria-checked="false" data-language-option="es">
                 <span class="language-flag" aria-hidden="true">🇪🇸</span>
-                <span>Español</span>
               </button>
             </div>
           </div>
@@ -158,6 +153,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="script.js?v=language-menu-1"></script>
+    <script src="script.js?v=language-flags-2"></script>
   </body>
 </html>
