@@ -18,7 +18,7 @@ const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-m
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
-const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1";
+const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
@@ -820,13 +820,14 @@ function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
 }
 
-async function generateTryOnImage({ userImage, productImage, productName, category }) {
+function buildTryOnForm({ userImage, productImage, productName, category, arrayField }) {
   const form = new FormData();
-  const imageField = productImage ? "image[]" : "image";
+  const imageField = productImage && arrayField ? "image[]" : "image";
   appendImageFormData(form, imageField, userImage);
   if (productImage) appendImageFormData(form, imageField, productImage);
   form.append("model", openaiTryOnModel);
   form.append("size", "1024x1024");
+  form.append("input_fidelity", "high");
   form.append(
     "prompt",
     [
@@ -840,7 +841,10 @@ async function generateTryOnImage({ userImage, productImage, productName, catego
       "Return a premium, realistic square preview suitable for a product try-on modal.",
     ].join(" ")
   );
+  return form;
+}
 
+async function requestTryOnEdit(form) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
   try {
@@ -869,6 +873,23 @@ async function generateTryOnImage({ userImage, productImage, productName, catego
   } finally {
     clearTimeout(timeout);
   }
+}
+
+async function generateTryOnImage(input) {
+  const attempts = [
+    buildTryOnForm({ ...input, arrayField: true }),
+    buildTryOnForm({ ...input, arrayField: false }),
+  ];
+  let lastError;
+  for (const form of attempts) {
+    try {
+      return await requestTryOnEdit(form);
+    } catch (error) {
+      lastError = error;
+      if (error.status && error.status !== 400) break;
+    }
+  }
+  throw lastError || new Error("Try-on non disponibile.");
 }
 
 function signPayload(payload) {
