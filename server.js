@@ -16,6 +16,10 @@ const uploadsDir = path.join(dataDir, "uploads");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
+const openaiApiKey = process.env.OPENAI_API_KEY || "";
+const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
+const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1";
+const openaiTimeoutMs = 45000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
@@ -70,7 +74,7 @@ async function ensureStorage() {
   await ensureJsonFile(usersFile, []);
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
-  await ensureJsonFile(productsFile, { items: {} });
+  await ensureJsonFile(productsFile, { items: {}, custom: [] });
   await fs.mkdir(uploadsDir, { recursive: true });
 }
 
@@ -116,8 +120,9 @@ async function writeOrders(orders) {
 }
 
 async function readProductOverrides() {
-  const data = await readJson(productsFile, { items: {} });
+  const data = await readJson(productsFile, { items: {}, custom: [] });
   data.items = data.items && typeof data.items === "object" ? data.items : {};
+  data.custom = Array.isArray(data.custom) ? data.custom : [];
   return data;
 }
 
@@ -125,6 +130,7 @@ async function writeProductOverrides(data) {
   return writeJson(productsFile, {
     updatedAt: new Date().toISOString(),
     items: data.items && typeof data.items === "object" ? data.items : {},
+    custom: Array.isArray(data.custom) ? data.custom : [],
   });
 }
 
@@ -536,6 +542,7 @@ function mergeProduct(product, overrides) {
     ...override,
     id: product.id,
     baseName: product.name,
+    custom: false,
     images: Array.isArray(override.images) ? override.images : product.images,
   };
 }
@@ -553,6 +560,7 @@ function cleanProductPatch(body) {
   const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
   return {
     name: cleanTrackingString(body.name, 180) || "Prodotto",
+    description: cleanTrackingString(body.description, 700),
     original: cleanTrackingString(body.original, 40),
     finalPrice: cleanTrackingString(body.finalPrice, 40),
     discount: cleanTrackingString(body.discount, 20),
@@ -562,6 +570,305 @@ function cleanProductPatch(body) {
     images: cleanProductImages(body.images),
     updatedAt: new Date().toISOString(),
   };
+}
+
+function cleanCustomProduct(product, options = {}) {
+  const patch = cleanProductPatch(product);
+  const id = cleanTrackingString(product.id, 140) || `custom-${slugifyProduct(patch.name)}-${Date.now().toString(36)}`;
+  const updatedAt = options.preserveUpdatedAt ? cleanTrackingString(product.updatedAt, 40) || patch.updatedAt : patch.updatedAt;
+  return {
+    id,
+    custom: true,
+    baseName: patch.name,
+    createdAt: cleanTrackingString(product.createdAt, 40) || new Date().toISOString(),
+    ...patch,
+    updatedAt,
+  };
+}
+
+function mergeCustomProduct(product) {
+  const cleaned = cleanCustomProduct(product, { preserveUpdatedAt: true });
+  return {
+    ...cleaned,
+    custom: true,
+    baseName: cleaned.baseName || cleaned.name,
+  };
+}
+
+function makeUniqueCustomProductId(name, overrides) {
+  const base = `custom-${slugifyProduct(name)}`;
+  const used = new Set([
+    ...Object.keys(overrides.items || {}),
+    ...(overrides.custom || []).map((product) => product.id),
+  ]);
+  let id = `${base}-${Date.now().toString(36)}`;
+  let count = 2;
+  while (used.has(id)) {
+    id = `${base}-${Date.now().toString(36)}-${count}`;
+    count += 1;
+  }
+  return id;
+}
+
+function formatAiPrice(value) {
+  if (value === null || value === undefined) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const normalized = raw.replace(/[^\d,.-]/g, "").replace(".", "").replace(",", ".");
+  const number = Number.parseFloat(normalized);
+  if (!Number.isFinite(number) || number <= 0) return raw.replace("€", "").trim();
+  return number.toLocaleString("it-IT", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+function cleanAiSuggestion(suggestion, imageUrl) {
+  const body = suggestion && typeof suggestion === "object" ? suggestion : {};
+  const patch = cleanProductPatch({
+    name: body.name,
+    description: body.description,
+    collection: body.collection,
+    category: body.category,
+    original: formatAiPrice(body.original),
+    finalPrice: formatAiPrice(body.finalPrice),
+    discount: body.discount,
+    sizeType: body.sizeType,
+    images: [imageUrl],
+  });
+  return {
+    ...patch,
+    confidence: cleanTrackingString(body.confidence, 40) || "media",
+    sources: Array.isArray(body.sources) ? body.sources.map((source) => cleanTrackingString(source, 220)).filter(Boolean).slice(0, 4) : [],
+  };
+}
+
+function responseOutputText(data) {
+  if (typeof data?.output_text === "string") return data.output_text;
+  const chunks = [];
+  const walk = (value) => {
+    if (!value) return;
+    if (typeof value === "string") {
+      chunks.push(value);
+      return;
+    }
+    if (Array.isArray(value)) return value.forEach(walk);
+    if (typeof value !== "object") return;
+    if (typeof value.text === "string") chunks.push(value.text);
+    if (typeof value.output_text === "string") chunks.push(value.output_text);
+    if (value.content) walk(value.content);
+    if (value.output) walk(value.output);
+  };
+  walk(data?.output);
+  return chunks.join("\n").trim();
+}
+
+function parseAiJson(text) {
+  const raw = String(text || "").trim().replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+  try {
+    return JSON.parse(raw);
+  } catch {
+    const start = raw.indexOf("{");
+    const end = raw.lastIndexOf("}");
+    if (start !== -1 && end > start) return JSON.parse(raw.slice(start, end + 1));
+    throw new Error("Risposta AI non leggibile.");
+  }
+}
+
+async function callOpenAiResponse(payload) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: { message: text || "Risposta OpenAI non valida." } };
+    }
+    if (!response.ok) {
+      const message = data?.error?.message || `OpenAI HTTP ${response.status}`;
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return data;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function analyzeProductImageWithAi(dataUrl) {
+  const schema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["name", "description", "collection", "category", "original", "finalPrice", "discount", "sizeType", "confidence", "sources"],
+    properties: {
+      name: { type: "string" },
+      description: { type: "string" },
+      collection: { type: "string" },
+      category: { type: "string" },
+      original: { type: "string" },
+      finalPrice: { type: "string" },
+      discount: { type: "string" },
+      sizeType: { type: "string", enum: ["clothing", "sneakers", "none"] },
+      confidence: { type: "string", enum: ["alta", "media", "bassa"] },
+      sources: { type: "array", items: { type: "string" } },
+    },
+  };
+  const prompt = [
+    "Analizza questa immagine prodotto per l'admin di Haller Boutique.",
+    "Usa la ricerca web per verificare marca, modello e categoria quando possibile.",
+    "Non inventare marchi o modelli non riconoscibili: se non sei sicuro, usa un nome generico premium.",
+    "Scegli collection tra Catalogo Uomo, Catalogo Donna o Selezione Haller Boutique.",
+    "Scegli category in italiano, ad esempio Sneakers Uomo, Sneakers Donna, Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo, Accessori.",
+    "Per original/finalPrice restituisci valori in formato italiano senza simbolo euro, oppure stringa vuota se non stimabili.",
+    "Per discount usa formato tipo -30%, oppure stringa vuota se non stimabile.",
+  ].join(" ");
+  const basePayload = {
+    model: openaiProductModel,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: prompt },
+          { type: "input_image", image_url: dataUrl },
+        ],
+      },
+    ],
+  };
+  const schemaPayload = {
+    ...basePayload,
+    tools: [{ type: "web_search_preview" }],
+    text: {
+      format: {
+        type: "json_schema",
+        name: "haller_product_suggestion",
+        schema,
+        strict: true,
+      },
+    },
+  };
+
+  let lastError;
+  const attempts = [
+    schemaPayload,
+    { ...schemaPayload, tools: [{ type: "web_search" }] },
+    {
+      ...basePayload,
+      tools: [{ type: "web_search_preview" }],
+      input: [
+        {
+          role: "user",
+          content: [
+            { type: "input_text", text: `${prompt} Rispondi solo con JSON valido con questi campi: ${Object.keys(schema.properties).join(", ")}.` },
+            { type: "input_image", image_url: dataUrl },
+          ],
+        },
+      ],
+    },
+  ];
+
+  for (const payload of attempts) {
+    try {
+      const data = await callOpenAiResponse(payload);
+      return parseAiJson(responseOutputText(data));
+    } catch (error) {
+      lastError = error;
+      if (error.status && error.status !== 400) break;
+    }
+  }
+  throw lastError || new Error("AI non disponibile.");
+}
+
+function fieldValue(parts, name, max = 260) {
+  return cleanTrackingString(parts.find((part) => part.name === name)?.data.toString("utf8"), max);
+}
+
+function imageMimeFromExtension(ext) {
+  if (ext === ".png") return "image/png";
+  if (ext === ".webp") return "image/webp";
+  return "image/jpeg";
+}
+
+async function readLocalProductImage(src) {
+  const value = cleanTrackingString(src, 260);
+  if (!value || /^https?:\/\//i.test(value)) return null;
+  const pathname = value.startsWith("/") ? value : `/${value}`;
+  const safePath = safeStaticPath(pathname.split("?")[0]);
+  if (!safePath) return null;
+  try {
+    const data = await fs.readFile(safePath);
+    const ext = path.extname(safePath).toLowerCase();
+    const mime = contentTypes[ext]?.split(";")[0] || imageMimeFromExtension(ext);
+    return { data, mime, filename: `product${ext || ".jpg"}` };
+  } catch {
+    return null;
+  }
+}
+
+function appendImageFormData(form, field, image) {
+  form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
+}
+
+async function generateTryOnImage({ userImage, productImage, productName, category }) {
+  const form = new FormData();
+  const imageField = productImage ? "image[]" : "image";
+  appendImageFormData(form, imageField, userImage);
+  if (productImage) appendImageFormData(form, imageField, productImage);
+  form.append("model", openaiTryOnModel);
+  form.append("size", "1024x1024");
+  form.append(
+    "prompt",
+    [
+      "Create a realistic virtual try-on preview for an ecommerce fashion site.",
+      "Use the first image as the customer photo and keep the person's identity, face, body shape, pose and background natural.",
+      productImage
+        ? "Use the second image as the exact Haller Boutique product reference for the clothing style, color and visible details."
+        : `Dress the person with this Haller Boutique item: ${productName || "fashion product"}.`,
+      `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
+      "Only change the outfit area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
+      "Return a premium, realistic square preview suitable for a product try-on modal.",
+    ].join(" ")
+  );
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
+  try {
+    const response = await fetch("https://api.openai.com/v1/images/edits", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${openaiApiKey}` },
+      body: form,
+      signal: controller.signal,
+    });
+    const text = await response.text();
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { error: { message: text || "Risposta OpenAI non valida." } };
+    }
+    if (!response.ok) {
+      const error = new Error(data?.error?.message || `OpenAI HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
+    const output = data?.data?.[0];
+    if (output?.b64_json) return `data:image/png;base64,${output.b64_json}`;
+    if (output?.url) return output.url;
+    throw new Error("Immagine try-on non ricevuta.");
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function signPayload(payload) {
@@ -839,7 +1146,7 @@ async function handleAdminUsers(req, res) {
 
 async function handleProducts(req, res) {
   const data = await readProductOverrides();
-  json(res, 200, { ok: true, items: data.items });
+  json(res, 200, { ok: true, items: data.items, custom: data.custom.map(mergeCustomProduct) });
 }
 
 async function handleAdminProducts(req, res) {
@@ -849,23 +1156,55 @@ async function handleAdminProducts(req, res) {
   if (req.method === "GET") {
     return json(res, 200, {
       ok: true,
-      products: defaults.map((product) => mergeProduct(product, overrides.items)),
+      products: [
+        ...overrides.custom.map(mergeCustomProduct),
+        ...defaults.map((product) => mergeProduct(product, overrides.items)),
+      ],
     });
   }
 
   if (req.method === "POST") {
     const body = await parseBody(req);
     const id = cleanTrackingString(body.id, 120);
-    if (!defaults.some((product) => product.id === id)) return badRequest(res, "Prodotto non valido.");
-    overrides.items[id] = cleanProductPatch(body);
+    const defaultProduct = defaults.find((product) => product.id === id);
+    const customIndex = overrides.custom.findIndex((product) => product.id === id);
+
+    if (defaultProduct) {
+      overrides.items[id] = cleanProductPatch(body);
+      await writeProductOverrides(overrides);
+      return json(res, 200, { ok: true, product: mergeProduct(defaultProduct, overrides.items) });
+    }
+
+    if (customIndex !== -1) {
+      const current = overrides.custom[customIndex];
+      overrides.custom[customIndex] = cleanCustomProduct({
+        ...current,
+        ...body,
+        id: current.id,
+        createdAt: current.createdAt,
+      });
+      await writeProductOverrides(overrides);
+      return json(res, 200, { ok: true, product: mergeCustomProduct(overrides.custom[customIndex]) });
+    }
+
+    const patch = cleanProductPatch(body);
+    const product = cleanCustomProduct({
+      ...patch,
+      id: makeUniqueCustomProductId(patch.name, overrides),
+    });
+    overrides.custom.unshift(product);
     await writeProductOverrides(overrides);
-    return json(res, 200, { ok: true, product: mergeProduct(defaults.find((product) => product.id === id), overrides.items) });
+    return json(res, 201, { ok: true, product: mergeCustomProduct(product) });
   }
 
   if (req.method === "DELETE") {
     const body = await parseBody(req);
     const id = cleanTrackingString(body.id, 120);
-    delete overrides.items[id];
+    if (defaults.some((product) => product.id === id)) {
+      delete overrides.items[id];
+    } else {
+      overrides.custom = overrides.custom.filter((product) => product.id !== id);
+    }
     await writeProductOverrides(overrides);
     return json(res, 200, { ok: true });
   }
@@ -889,8 +1228,10 @@ async function handleAdminProductImages(req, res) {
   }
 
   const productId = cleanTrackingString(parts.find((part) => part.name === "productId")?.data.toString("utf8"), 120);
-  const defaults = await readDefaultProducts();
-  if (!defaults.some((product) => product.id === productId)) return badRequest(res, "Prodotto non valido.");
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  const base = defaults.find((product) => product.id === productId);
+  const customIndex = overrides.custom.findIndex((product) => product.id === productId);
+  if (!base && customIndex === -1) return badRequest(res, "Prodotto non valido.");
 
   await fs.mkdir(uploadsDir, { recursive: true });
   const saved = [];
@@ -904,22 +1245,123 @@ async function handleAdminProductImages(req, res) {
 
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
 
-  const overrides = await readProductOverrides();
-  const existing = overrides.items[productId] || {};
-  const base = defaults.find((product) => product.id === productId);
-  overrides.items[productId] = {
-    ...base,
-    ...existing,
-    id: undefined,
-    baseName: undefined,
-    images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
-    updatedAt: new Date().toISOString(),
-  };
-  delete overrides.items[productId].id;
-  delete overrides.items[productId].baseName;
+  let product;
+  if (base) {
+    const existing = overrides.items[productId] || {};
+    overrides.items[productId] = {
+      ...base,
+      ...existing,
+      id: undefined,
+      baseName: undefined,
+      images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
+      updatedAt: new Date().toISOString(),
+    };
+    delete overrides.items[productId].id;
+    delete overrides.items[productId].baseName;
+    product = mergeProduct(base, overrides.items);
+  } else {
+    const existing = overrides.custom[customIndex];
+    overrides.custom[customIndex] = cleanCustomProduct({
+      ...existing,
+      images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
+    });
+    product = mergeCustomProduct(overrides.custom[customIndex]);
+  }
   await writeProductOverrides(overrides);
 
-  json(res, 200, { ok: true, images: saved, product: mergeProduct(base, overrides.items) });
+  json(res, 200, { ok: true, images: saved, product });
+}
+
+async function handleAdminAiProduct(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  if (req.method !== "POST") return notFound(res);
+  if (!openaiApiKey) {
+    return json(res, 503, {
+      ok: false,
+      message: "Chiave AI non configurata. Imposta OPENAI_API_KEY su Fly e riprova.",
+    });
+  }
+
+  const contentType = String(req.headers["content-type"] || "");
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
+  if (!boundary) return badRequest(res, "Upload non valido.");
+
+  let parts;
+  try {
+    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+  } catch (error) {
+    return badRequest(res, error.message || "Upload non valido.");
+  }
+
+  const image = parts.find((part) => part.name === "image" && part.filename);
+  if (!image || image.data.length === 0) return badRequest(res, "Carica una immagine prodotto.");
+  const ext = imageExtension(image.filename, image.contentType);
+  if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato per AI. Usa JPG, PNG o WebP.");
+
+  await fs.mkdir(uploadsDir, { recursive: true });
+  const name = `ai-product-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
+  await fs.writeFile(path.join(uploadsDir, name), image.data);
+  const imageUrl = `/uploads/${name}`;
+  const mime = image.contentType || (ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg");
+  const dataUrl = `data:${mime};base64,${image.data.toString("base64")}`;
+
+  try {
+    const rawSuggestion = await analyzeProductImageWithAi(dataUrl);
+    const suggestion = cleanAiSuggestion(rawSuggestion, imageUrl);
+    json(res, 200, { ok: true, image: imageUrl, suggestion });
+  } catch (error) {
+    json(res, 502, {
+      ok: false,
+      message: `AI non disponibile: ${cleanTrackingString(error.message, 220)}`,
+      image: imageUrl,
+    });
+  }
+}
+
+async function handleTryOn(req, res) {
+  if (req.method !== "POST") return notFound(res);
+  if (!openaiApiKey) {
+    return json(res, 503, {
+      ok: false,
+      message: "Try-on AI non configurato. Imposta OPENAI_API_KEY su Fly.",
+    });
+  }
+
+  const contentType = String(req.headers["content-type"] || "");
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
+  if (!boundary) return badRequest(res, "Upload non valido.");
+
+  let parts;
+  try {
+    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+  } catch (error) {
+    return badRequest(res, error.message || "Upload non valido.");
+  }
+
+  const image = parts.find((part) => part.name === "userImage" && part.filename);
+  if (!image || image.data.length === 0) return badRequest(res, "Carica una tua foto.");
+  const ext = imageExtension(image.filename, image.contentType);
+  if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato. Usa JPG, PNG o WebP.");
+
+  const productName = fieldValue(parts, "productName", 180);
+  const category = fieldValue(parts, "category", 120);
+  const productImageSrc = fieldValue(parts, "productImage", 260);
+  const productImage = await readLocalProductImage(productImageSrc);
+  const userImage = {
+    data: image.data,
+    mime: image.contentType || imageMimeFromExtension(ext),
+    filename: `customer${ext}`,
+  };
+
+  try {
+    const generated = await generateTryOnImage({ userImage, productImage, productName, category });
+    json(res, 200, { ok: true, image: generated });
+  } catch (error) {
+    json(res, 502, {
+      ok: false,
+      message: `Try-on non disponibile: ${cleanTrackingString(error.message, 220)}`,
+    });
+  }
 }
 
 function cleanTrackingString(value, max = 160) {
@@ -1485,6 +1927,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
+  if (url.pathname === "/api/try-on") return handleTryOn(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/login") return handleLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {
@@ -1500,6 +1943,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
+  if (url.pathname === "/api/admin/ai-product") return handleAdminAiProduct(req, res);
   if (url.pathname === "/api/admin/product-images") return handleAdminProductImages(req, res);
   if (url.pathname === "/api/admin/products") return handleAdminProducts(req, res);
   return notFound(res);
