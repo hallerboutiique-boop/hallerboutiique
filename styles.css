@@ -1445,6 +1445,43 @@ button {
   height: auto;
 }
 
+.motion-toggle {
+  position: absolute;
+  top: 50%;
+  left: calc(50% + clamp(195px, 16.95vw, 260px) + 14px);
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  color: rgba(255, 255, 255, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.72);
+  cursor: pointer;
+  transform: translateY(-50%);
+  transition: color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.motion-toggle svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 1.8;
+}
+
+.motion-toggle:hover,
+.motion-toggle:focus-visible {
+  border-color: rgba(var(--gold-rgb), 0.72);
+  color: var(--text-strong);
+  transform: translateY(-50%) scale(1.08);
+}
+
+.motion-toggle.is-on {
+  color: var(--gold-hot);
+  border-color: var(--gold);
+  box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.58);
+}
+
 .icon-button {
   position: relative;
   display: inline-grid;
@@ -1456,8 +1493,8 @@ button {
   transition: color 180ms ease, transform 180ms ease, filter 180ms ease;
 }
 
-.icon-button:hover,
-.icon-button:focus-visible {
+body.motion-enabled .icon-button:hover,
+body.motion-enabled .icon-button:focus-visible {
   color: var(--gold-hot);
   transform: translateY(-2px) scale(1.06);
   filter: drop-shadow(0 0 8px rgba(var(--gold-rgb), 0.58));
@@ -1514,8 +1551,8 @@ button {
   transition: color 180ms ease, transform 180ms ease;
 }
 
-.main-nav a:not(.active):hover,
-.main-nav a:not(.active):focus-visible {
+body.motion-enabled .main-nav a:not(.active):hover,
+body.motion-enabled .main-nav a:not(.active):focus-visible {
   color: var(--gold);
   transform: translateY(-2px);
 }
@@ -1568,7 +1605,7 @@ button {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transform: scale(1.025) translate3d(var(--hero-x, 0px), var(--hero-y, 0px), 0);
+  transform: none;
   transition: transform 700ms ease-out, filter 500ms ease;
 }
 
@@ -1595,12 +1632,21 @@ button {
   left: clamp(54px, 5.6vw, 86px);
   top: 39%;
   width: min(48vw, 690px);
+  opacity: 1;
+  transform: none;
+}
+
+body.motion-enabled .hero-slide > img {
+  transform: scale(1.025) translate3d(var(--hero-x, 0px), var(--hero-y, 0px), 0);
+}
+
+body.motion-enabled .promo-copy {
   opacity: 0;
   transform: translateY(22px);
   transition: opacity 520ms ease, transform 520ms ease;
 }
 
-.hero-slide.is-active .promo-copy {
+body.motion-enabled .hero-slide.is-active .promo-copy {
   opacity: 1;
   transform: translateY(0);
 }
@@ -1638,8 +1684,8 @@ button {
   transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.promo-copy a:hover,
-.promo-copy a:focus-visible {
+body.motion-enabled .promo-copy a:hover,
+body.motion-enabled .promo-copy a:focus-visible {
   color: #050505;
   background: var(--gold);
   box-shadow: 0 0 26px rgba(var(--gold-rgb), 0.62);
@@ -1677,7 +1723,7 @@ button {
   transition: background 220ms ease, transform 220ms ease;
 }
 
-.benefits article:hover {
+body.motion-enabled .benefits article:hover {
   background: rgba(var(--gold-rgb), 0.08);
   transform: translateY(-3px);
 }
@@ -2011,7 +2057,7 @@ button {
   transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
 }
 
-.product-card:hover {
+body.motion-enabled .product-card:hover {
   border-color: rgba(var(--gold-rgb), 0.76);
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.68), 0 0 24px rgba(var(--gold-rgb), 0.13);
   transform: translateY(-7px);
@@ -2044,7 +2090,7 @@ button {
   transition: transform 420ms ease, filter 420ms ease;
 }
 
-.product-card:hover .product-image {
+body.motion-enabled .product-card:hover .product-image {
   filter: saturate(1.08) contrast(1.04);
   transform: scale(1.055);
 }
@@ -2167,19 +2213,19 @@ button {
   transition: color 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
-.product-actions button:hover,
-.product-actions button:focus-visible {
+body.motion-enabled .product-actions button:hover,
+body.motion-enabled .product-actions button:focus-visible {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
 }
 
-.product-actions .cart-action:hover,
-.product-actions .tryon-action:hover {
+body.motion-enabled .product-actions .cart-action:hover,
+body.motion-enabled .product-actions .tryon-action:hover {
   border-color: var(--gold-hot);
   background: rgba(var(--gold-rgb), 0.16);
 }
 
-.product-actions .buy-action:hover {
+body.motion-enabled .product-actions .buy-action:hover {
   background: var(--gold-hot);
   box-shadow: 0 0 20px rgba(var(--gold-rgb), 0.42);
 }
@@ -2233,19 +2279,19 @@ button {
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  [data-reveal] {
+  body.motion-enabled [data-reveal] {
     opacity: 0;
     transform: translateY(24px);
     transition: opacity 560ms ease, transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
     transition-delay: var(--reveal-delay, 0ms);
   }
 
-  [data-reveal].is-revealed {
+  body.motion-enabled [data-reveal].is-revealed {
     opacity: 1;
     transform: translateY(0);
   }
 
-  .product-card[data-reveal].is-revealed:hover {
+  body.motion-enabled .product-card[data-reveal].is-revealed:hover {
     transform: translateY(-7px);
   }
 }
@@ -3097,6 +3143,10 @@ button {
     width: min(58vw, 330px);
   }
 
+  .motion-toggle {
+    left: calc(50% + min(29vw, 165px) + 12px);
+  }
+
   .main-nav {
     justify-content: flex-start;
     gap: 28px;
@@ -3260,6 +3310,18 @@ button {
 
   .site-header {
     padding-inline: 10px;
+  }
+
+  .motion-toggle {
+    right: 82px;
+    left: auto;
+    width: 30px;
+    height: 30px;
+  }
+
+  .motion-toggle svg {
+    width: 16px;
+    height: 16px;
   }
 
   .icon-button {
