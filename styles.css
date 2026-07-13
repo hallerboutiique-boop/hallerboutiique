@@ -3840,11 +3840,20 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   .promo-copy {
-    left: 0;
+    left: 50%;
     top: 24%;
-    width: min(56vw, 218px);
+    width: min(70vw, 270px);
     padding-inline: 10px;
     text-align: center;
+    transform: translateX(-50%);
+  }
+
+  body.motion-enabled .promo-copy {
+    transform: translate(-50%, 22px);
+  }
+
+  body.motion-enabled .hero-slide.is-active .promo-copy {
+    transform: translate(-50%, 0);
   }
 
   .promo-copy h1 {
