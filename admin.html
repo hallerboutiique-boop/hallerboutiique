@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=mobile-header-cards-1">
+    <link rel="stylesheet" href="styles.css?v=tryon-ai-products-1">
   </head>
   <body>
     <header class="site-header">
@@ -144,6 +144,18 @@
           </section>
 
           <section class="admin-tab-panel" data-admin-panel-tab="products">
+            <section class="dashboard-card dashboard-card-wide product-ai-card">
+              <div>
+                <h2>Aggiunta prodotto con AI</h2>
+                <p>Carica una foto dal Finder: l'AI analizza immagine, cerca sul web e prepara nome, descrizione, categoria, prezzo e taglie.</p>
+              </div>
+              <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" data-ai-product-image>
+              <button type="button" data-ai-product-button>
+                <i data-lucide="sparkles"></i>
+                <span>Crea prodotto con AI</span>
+              </button>
+              <small data-ai-product-status>La bozza resta modificabile prima del salvataggio.</small>
+            </section>
             <div class="product-admin-layout">
               <section class="dashboard-card">
                 <h2>Catalogo prodotti</h2>
@@ -169,6 +181,10 @@
                   <label>
                     <span>Categoria</span>
                     <input name="category" placeholder="Sneakers Uomo">
+                  </label>
+                  <label class="product-editor-description">
+                    <span>Descrizione</span>
+                    <textarea name="description" rows="3" placeholder="Descrizione prodotto generata o modificata"></textarea>
                   </label>
                   <label>
                     <span>Prezzo originale</span>
@@ -273,6 +289,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=mobile-header-cards-1"></script>
+    <script src="admin.js?v=tryon-ai-products-1"></script>
   </body>
 </html>
