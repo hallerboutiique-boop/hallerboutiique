@@ -15,6 +15,9 @@ const productImageUpload = document.querySelector("[data-product-image-upload]")
 const productImageButton = document.querySelector("[data-product-image-button]");
 const productUploadStatus = document.querySelector("[data-product-upload-status]");
 const productPreviews = document.querySelector("[data-product-previews]");
+const aiProductImage = document.querySelector("[data-ai-product-image]");
+const aiProductButton = document.querySelector("[data-ai-product-button]");
+const aiProductStatus = document.querySelector("[data-ai-product-status]");
 let replayTimers = [];
 let adminProducts = [];
 let selectedProductId = "";
@@ -89,6 +92,12 @@ function setProductMessage(message, type = "") {
 function setProductUploadStatus(message) {
   if (!productUploadStatus) return;
   productUploadStatus.textContent = message || "";
+}
+
+function setAiProductStatus(message, type = "") {
+  if (!aiProductStatus) return;
+  aiProductStatus.textContent = message || "";
+  aiProductStatus.dataset.type = type;
 }
 
 function formatAdminProductPrice(value) {
@@ -440,6 +449,7 @@ function fillProductForm(product) {
   productForm.elements.name.value = product.name || "";
   productForm.elements.collection.value = product.collection || "";
   productForm.elements.category.value = product.category || "";
+  if (productForm.elements.description) productForm.elements.description.value = product.description || "";
   productForm.elements.original.value = formatAdminProductPrice(product.original);
   productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
   productForm.elements.discount.value = product.discount || "";
@@ -447,6 +457,23 @@ function fillProductForm(product) {
   productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
   renderProductPreviews(product.images || []);
   setProductMessage("");
+  renderAdminProducts();
+}
+
+function fillAiProductDraft(suggestion) {
+  if (!productForm || !suggestion) return;
+  selectedProductId = "";
+  productForm.elements.id.value = "";
+  productForm.elements.name.value = suggestion.name || "";
+  productForm.elements.collection.value = suggestion.collection || "Selezione Haller Boutique";
+  productForm.elements.category.value = suggestion.category || "";
+  if (productForm.elements.description) productForm.elements.description.value = suggestion.description || "";
+  productForm.elements.original.value = formatAdminProductPrice(suggestion.original);
+  productForm.elements.finalPrice.value = formatAdminProductPrice(suggestion.finalPrice);
+  productForm.elements.discount.value = suggestion.discount || "";
+  productForm.elements.sizeType.value = suggestion.sizeType || "none";
+  productForm.elements.images.value = Array.isArray(suggestion.images) ? suggestion.images.join("\n") : "";
+  renderProductPreviews(suggestion.images || []);
   renderAdminProducts();
 }
 
@@ -483,7 +510,7 @@ function renderAdminProducts() {
           <span class="admin-product-text">
             <strong>${escapeHtml(product.name)}</strong>
             <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}</small>
+            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}${product.custom ? " · custom" : ""}</small>
           </span>
         </button>
       `;
@@ -497,7 +524,12 @@ async function loadProducts() {
   const data = await api("/api/admin/products");
   adminProducts = data.products || [];
   renderAdminProducts();
-  if (!selectedProductId && adminProducts.length) fillProductForm(adminProducts[0]);
+  const selected = adminProducts.find((product) => product.id === selectedProductId);
+  if (selected) {
+    fillProductForm(selected);
+  } else if (adminProducts.length) {
+    fillProductForm(adminProducts[0]);
+  }
 }
 
 function renderOrders(orders) {
@@ -834,11 +866,11 @@ productForm?.addEventListener("submit", async (event) => {
     .map((image) => image.trim())
     .filter(Boolean);
   try {
-    await api("/api/admin/products", {
+    const data = await api("/api/admin/products", {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    selectedProductId = payload.id;
+    selectedProductId = data.product?.id || payload.id;
     await loadProducts();
     const product = adminProducts.find((entry) => entry.id === selectedProductId);
     if (product) fillProductForm(product);
@@ -851,17 +883,18 @@ productForm?.addEventListener("submit", async (event) => {
 document.querySelector("[data-product-reset]")?.addEventListener("click", async () => {
   const id = productForm?.elements.id.value;
   if (!id) return;
+  const current = adminProducts.find((product) => product.id === id);
   setProductMessage("Ripristino in corso...");
   try {
     await api("/api/admin/products", {
       method: "DELETE",
       body: JSON.stringify({ id }),
     });
-    selectedProductId = id;
+    selectedProductId = current?.custom ? "" : id;
     await loadProducts();
     const product = adminProducts.find((entry) => entry.id === id);
     if (product) fillProductForm(product);
-    setProductMessage("Default ripristinato.", "success");
+    setProductMessage(current?.custom ? "Prodotto custom eliminato." : "Default ripristinato.", "success");
   } catch (error) {
     setProductMessage(error.message, "error");
   }
@@ -907,6 +940,38 @@ productImageUpload?.addEventListener("change", async () => {
   } finally {
     productImageButton.disabled = false;
     productImageUpload.value = "";
+  }
+});
+
+aiProductButton?.addEventListener("click", () => {
+  aiProductImage?.click();
+});
+
+aiProductImage?.addEventListener("change", async () => {
+  const file = aiProductImage.files?.[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("image", file);
+  aiProductButton.disabled = true;
+  setAiProductStatus("Analisi AI in corso...");
+  setProductMessage("");
+
+  try {
+    const data = await uploadApi("/api/admin/ai-product", formData);
+    const suggestion = {
+      ...(data.suggestion || {}),
+      images: data.suggestion?.images || (data.image ? [data.image] : []),
+    };
+    fillAiProductDraft(suggestion);
+    setAiProductStatus("Bozza AI pronta. Controlla i dati e premi Salva prodotto.", "success");
+    setProductMessage("Bozza prodotto creata con AI.", "success");
+  } catch (error) {
+    setAiProductStatus(error.message, "error");
+    setProductMessage(error.message, "error");
+  } finally {
+    aiProductButton.disabled = false;
+    aiProductImage.value = "";
   }
 });
 
