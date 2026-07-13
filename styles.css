@@ -1458,7 +1458,9 @@ button {
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
-  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  pointer-events: none;
+  touch-action: none;
   -webkit-tap-highlight-color: transparent;
 }
 
