@@ -1355,11 +1355,66 @@ button {
   justify-items: start;
 }
 
-.search-button {
+.header-tools {
   grid-column: 2;
   grid-row: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   justify-self: end;
+}
+
+.search-button {
   margin-right: 0;
+}
+
+.language-picker {
+  position: relative;
+}
+
+.language-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  display: none;
+  min-width: 172px;
+  padding: 7px;
+  border: 1px solid rgba(var(--gold-rgb), 0.62);
+  border-radius: 8px;
+  background: rgba(3, 3, 3, 0.98);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+}
+
+.language-menu.is-open {
+  display: grid;
+  gap: 3px;
+}
+
+.language-menu button {
+  display: grid;
+  grid-template-columns: 24px 1fr;
+  min-height: 38px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 9px;
+  border-radius: 5px;
+  color: var(--text);
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.language-menu button:hover,
+.language-menu button[aria-checked="true"] {
+  color: #050505;
+  background: var(--gold);
+}
+
+.language-flag {
+  font-size: 18px;
+  line-height: 1;
 }
 
 .logo {

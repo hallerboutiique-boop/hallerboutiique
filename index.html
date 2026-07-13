@@ -13,9 +13,39 @@
   <body>
     <header class="site-header">
       <div class="header-bar">
-        <button class="icon-button search-button" aria-label="Cerca">
-          <i data-lucide="search"></i>
-        </button>
+        <div class="header-tools">
+          <div class="language-picker" data-language-picker>
+            <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false" aria-controls="language-menu">
+              <i data-lucide="languages"></i>
+            </button>
+            <div class="language-menu" id="language-menu" role="menu" aria-label="Seleziona lingua">
+              <button type="button" role="menuitemradio" aria-checked="true" data-language-option="it">
+                <span class="language-flag" aria-hidden="true">🇮🇹</span>
+                <span>Italiano</span>
+              </button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="en">
+                <span class="language-flag" aria-hidden="true">🇬🇧</span>
+                <span>English</span>
+              </button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="fr">
+                <span class="language-flag" aria-hidden="true">🇫🇷</span>
+                <span>Français</span>
+              </button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="de">
+                <span class="language-flag" aria-hidden="true">🇩🇪</span>
+                <span>Deutsch</span>
+              </button>
+              <button type="button" role="menuitemradio" aria-checked="false" data-language-option="es">
+                <span class="language-flag" aria-hidden="true">🇪🇸</span>
+                <span>Español</span>
+              </button>
+            </div>
+          </div>
+
+          <button class="icon-button search-button" type="button" aria-label="Cerca">
+            <i data-lucide="search"></i>
+          </button>
+        </div>
 
         <a class="logo" href="index.html" aria-label="Haller Boutique home">
           <img src="assets/logo-original.png" alt="Haller Boutique">
@@ -128,6 +158,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="script.js?v=tryon-ai-products-1"></script>
+    <script src="script.js?v=language-menu-1"></script>
   </body>
 </html>

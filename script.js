@@ -1764,6 +1764,50 @@ if (window.lucide) {
   window.lucide.createIcons();
 }
 
+const languagePicker = document.querySelector("[data-language-picker]");
+if (languagePicker) {
+  const languageToggle = languagePicker.querySelector(".language-toggle");
+  const languageMenu = languagePicker.querySelector(".language-menu");
+  const languageOptions = [...languagePicker.querySelectorAll("[data-language-option]")];
+  const languageLabels = Object.fromEntries(
+    languageOptions.map((option) => [option.dataset.languageOption, option.textContent.trim()])
+  );
+  const savedLanguage = localStorage.getItem("haller-language") || "it";
+
+  const applyLanguage = (language) => {
+    const selectedLanguage = languageLabels[language] ? language : "it";
+    document.documentElement.lang = selectedLanguage;
+    languageOptions.forEach((option) => {
+      option.setAttribute("aria-checked", String(option.dataset.languageOption === selectedLanguage));
+    });
+    languageToggle.setAttribute("aria-label", `Lingua: ${languageLabels[selectedLanguage]}`);
+  };
+
+  const closeLanguageMenu = () => {
+    languageMenu.classList.remove("is-open");
+    languageToggle.setAttribute("aria-expanded", "false");
+  };
+
+  applyLanguage(savedLanguage);
+  languageToggle.addEventListener("click", () => {
+    const isOpen = languageMenu.classList.toggle("is-open");
+    languageToggle.setAttribute("aria-expanded", String(isOpen));
+  });
+
+  languageOptions.forEach((option) => {
+    option.addEventListener("click", () => {
+      const language = option.dataset.languageOption;
+      localStorage.setItem("haller-language", language);
+      applyLanguage(language);
+      closeLanguageMenu();
+    });
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!languagePicker.contains(event.target)) closeLanguageMenu();
+  });
+}
+
 if (slides.length > 0) {
   window.setInterval(() => {
     showSlide((active + 1) % slides.length);
