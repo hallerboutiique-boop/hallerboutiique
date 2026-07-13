@@ -1810,7 +1810,17 @@ button {
   align-items: center;
   justify-content: center;
   gap: 40px;
-  padding-top: 27px;
+  padding-top: 14px;
+}
+
+.social-heading {
+  margin: 22px 0 0;
+  color: var(--gold);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+  text-align: center;
 }
 
 .social-links a {
@@ -3387,7 +3397,12 @@ button {
     width: 100%;
     justify-content: center;
     gap: 24px;
-    padding-top: 22px;
+    padding-top: 12px;
+  }
+
+  .social-heading {
+    margin-top: 18px;
+    font-size: 12px;
   }
 
   .footer-center p {
