@@ -1202,6 +1202,7 @@ function refreshScrollReveals(root = document) {
           if (!entry.isIntersecting) return;
           entry.target.classList.add("is-revealed");
           revealObserver.unobserve(entry.target);
+          if (entry.target.classList.contains("product-card")) updateProductScrollMotion();
         });
       },
       { threshold: 0.12, rootMargin: "0px 0px -44px" }
@@ -1250,6 +1251,18 @@ function updateScrollMotion() {
   if (!progress) return;
   const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
   progress.style.setProperty("--scroll-progress", `${(window.scrollY / maxScroll) * 100}%`);
+  updateProductScrollMotion();
+}
+
+function updateProductScrollMotion() {
+  const viewportCenter = window.innerHeight / 2;
+  document.querySelectorAll(".product-card.is-revealed").forEach((card) => {
+    const bounds = card.getBoundingClientRect();
+    const distance = Math.max(-1, Math.min(1, (viewportCenter - (bounds.top + bounds.height / 2)) / window.innerHeight));
+    card.style.setProperty("--product-scroll-y", `${(distance * 10).toFixed(2)}px`);
+    card.style.setProperty("--product-scroll-tilt", `${(distance * -1.15).toFixed(2)}deg`);
+    card.style.setProperty("--product-image-y", `${(distance * -9).toFixed(2)}px`);
+  });
 }
 
 function setupSiteMotion() {
@@ -1314,7 +1327,12 @@ function setSiteMotion(enabled, persist = true) {
   document.querySelector(".scroll-progress")?.remove();
   heroSlider?.style.setProperty("--hero-x", "0px");
   heroSlider?.style.setProperty("--hero-y", "0px");
-  document.querySelectorAll("[data-reveal]").forEach((element) => element.classList.add("is-revealed"));
+  document.querySelectorAll("[data-reveal]").forEach((element) => {
+    element.classList.add("is-revealed");
+    element.style.removeProperty("--product-scroll-y");
+    element.style.removeProperty("--product-scroll-tilt");
+    element.style.removeProperty("--product-image-y");
+  });
 }
 
 function readCartCount() {
