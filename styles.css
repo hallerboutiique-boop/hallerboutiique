@@ -3627,14 +3627,21 @@ body.motion-enabled .product-actions .buy-action:hover {
 
   .site-footer {
     width: calc(100vw - 32px);
+    min-width: 0;
     margin-top: 26px;
+    margin-right: auto;
+    margin-left: auto;
   }
 
   .footer-links {
+    width: 100%;
+    min-width: 0;
     gap: 10px;
   }
 
   .footer-center {
+    width: 100%;
+    min-width: 0;
     align-items: center;
     text-align: center;
   }
