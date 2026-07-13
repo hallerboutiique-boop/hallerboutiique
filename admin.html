@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=logo-lock-3">
+    <link rel="stylesheet" href="styles.css?v=admin-crop-1">
   </head>
   <body>
     <header class="site-header">
@@ -282,6 +282,49 @@
           </section>
         </article>
       </section>
+
+      <dialog class="product-crop-dialog" data-product-crop-dialog aria-labelledby="product-crop-title">
+        <div class="product-crop-dialog-header">
+          <div>
+            <p>Immagine prodotto</p>
+            <h2 id="product-crop-title">Ritaglia immagine</h2>
+          </div>
+          <button class="product-crop-close" type="button" data-product-crop-cancel aria-label="Annulla ritaglio">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+        <div class="product-crop-layout">
+          <section class="product-crop-editor" aria-label="Editor di ritaglio">
+            <div class="product-crop-stage" data-product-crop-stage>
+              <img data-product-crop-image alt="Immagine prodotto da ritagliare">
+            </div>
+            <label class="product-crop-zoom">
+              <span>Zoom</span>
+              <input type="range" min="1" max="3" step="0.01" value="1" data-product-crop-zoom>
+            </label>
+          </section>
+          <section class="product-crop-storefront" aria-label="Anteprima scheda prodotto">
+            <p>Anteprima sul sito</p>
+            <article class="product-card product-crop-site-card">
+              <div class="product-media" data-product-crop-preview-media>
+                <span class="discount-badge">NUOVO</span>
+                <img class="product-image" data-product-crop-preview-image alt="Anteprima prodotto">
+              </div>
+              <div class="product-body">
+                <h4 data-product-crop-preview-name>Nuovo prodotto</h4>
+                <div class="product-prices" aria-label="Prezzo">
+                  <span class="price-original">PREZZO</span>
+                  <strong>DA DEFINIRE</strong>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+        <div class="product-crop-actions">
+          <button type="button" class="product-crop-secondary" data-product-crop-cancel>Annulla</button>
+          <button type="button" data-product-crop-confirm>Applica ritaglio</button>
+        </div>
+      </dialog>
     </main>
 
     <footer class="checkout-footer">
@@ -289,6 +332,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=ai-no-prices-1"></script>
+    <script src="admin.js?v=admin-crop-1"></script>
   </body>
 </html>

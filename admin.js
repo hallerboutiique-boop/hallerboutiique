@@ -18,9 +18,20 @@ const productPreviews = document.querySelector("[data-product-previews]");
 const aiProductImage = document.querySelector("[data-ai-product-image]");
 const aiProductButton = document.querySelector("[data-ai-product-button]");
 const aiProductStatus = document.querySelector("[data-ai-product-status]");
+const productCropDialog = document.querySelector("[data-product-crop-dialog]");
+const productCropStage = document.querySelector("[data-product-crop-stage]");
+const productCropImage = document.querySelector("[data-product-crop-image]");
+const productCropPreviewMedia = document.querySelector("[data-product-crop-preview-media]");
+const productCropPreviewImage = document.querySelector("[data-product-crop-preview-image]");
+const productCropPreviewName = document.querySelector("[data-product-crop-preview-name]");
+const productCropZoom = document.querySelector("[data-product-crop-zoom]");
+const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
 let adminProducts = [];
 let selectedProductId = "";
+let cropState = null;
+let cropDrag = null;
+let productUploadQueue = null;
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -134,6 +145,225 @@ function renderProductPreviews(images = currentProductImages()) {
       `
     )
     .join("");
+}
+
+function clamp(value, min, max) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function cropOutputName(file) {
+  const base = String(file?.name || "prodotto").replace(/\.[^.]+$/, "").trim() || "prodotto";
+  return `${base}-ritaglio.webp`;
+}
+
+function refreshCropStorefrontCopy(source) {
+  if (!productCropPreviewName) return;
+  const selectedName = String(productForm?.elements.name?.value || "").trim();
+  productCropPreviewName.textContent = source?.type === "manual" && selectedName ? selectedName : "Nuovo prodotto";
+}
+
+function updateCropPreview() {
+  if (!cropState || !productCropStage || !productCropImage || !productCropPreviewMedia || !productCropPreviewImage) return;
+  const stageBounds = productCropStage.getBoundingClientRect();
+  if (!stageBounds.width || !stageBounds.height || !cropState.sourceWidth || !cropState.sourceHeight) return;
+
+  const baseScale = Math.max(stageBounds.width / cropState.sourceWidth, stageBounds.height / cropState.sourceHeight);
+  const imageScale = baseScale * cropState.zoom;
+  const imageWidth = cropState.sourceWidth * imageScale;
+  const imageHeight = cropState.sourceHeight * imageScale;
+  const maxOffsetX = Math.max(0, (imageWidth - stageBounds.width) / 2);
+  const maxOffsetY = Math.max(0, (imageHeight - stageBounds.height) / 2);
+  cropState.baseScale = baseScale;
+  cropState.stageWidth = stageBounds.width;
+  cropState.stageHeight = stageBounds.height;
+  cropState.offsetX = clamp(cropState.offsetX, -maxOffsetX, maxOffsetX);
+  cropState.offsetY = clamp(cropState.offsetY, -maxOffsetY, maxOffsetY);
+
+  const applyPosition = (image, containerBounds) => {
+    const ratio = containerBounds.width / stageBounds.width;
+    image.style.width = `${imageWidth * ratio}px`;
+    image.style.left = `${containerBounds.width / 2 + cropState.offsetX * ratio}px`;
+    image.style.top = `${containerBounds.height / 2 + cropState.offsetY * ratio}px`;
+    image.style.transform = "translate(-50%, -50%)";
+  };
+
+  applyPosition(productCropImage, stageBounds);
+  const previewBounds = productCropPreviewMedia.getBoundingClientRect();
+  if (previewBounds.width && previewBounds.height) applyPosition(productCropPreviewImage, previewBounds);
+}
+
+function closeProductCropper() {
+  const objectUrl = cropState?.objectUrl;
+  cropState = null;
+  cropDrag = null;
+  productCropStage?.classList.remove("is-dragging");
+  if (productCropDialog?.open) productCropDialog.close();
+  if (productCropImage) productCropImage.removeAttribute("src");
+  if (productCropPreviewImage) productCropPreviewImage.removeAttribute("src");
+  if (objectUrl) URL.revokeObjectURL(objectUrl);
+}
+
+function cancelProductCropper() {
+  const source = cropState?.source;
+  closeProductCropper();
+  if (source?.type === "manual") {
+    productUploadQueue = null;
+    if (productImageButton) productImageButton.disabled = false;
+    if (productImageUpload) productImageUpload.value = "";
+    setProductUploadStatus("Caricamento annullato.");
+    return;
+  }
+  if (source?.type === "ai") {
+    if (aiProductImage) aiProductImage.value = "";
+    setAiProductStatus("Creazione bozza annullata.");
+  }
+}
+
+function openProductCropper(file, source) {
+  if (!productCropDialog || !productCropImage || !productCropPreviewImage || !productCropZoom) {
+    throw new Error("Ritaglio immagine non disponibile.");
+  }
+  if (!file?.type?.startsWith("image/")) throw new Error("Seleziona una immagine valida.");
+
+  closeProductCropper();
+  cropState = {
+    file,
+    source,
+    objectUrl: URL.createObjectURL(file),
+    sourceWidth: 0,
+    sourceHeight: 0,
+    baseScale: 1,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+    stageWidth: 0,
+    stageHeight: 0,
+  };
+  productCropZoom.value = "1";
+  productCropConfirm.textContent = source.type === "ai" ? "Ritaglia e crea bozza" : "Applica ritaglio e carica";
+  productCropConfirm.disabled = false;
+  refreshCropStorefrontCopy(source);
+  productCropImage.src = cropState.objectUrl;
+  productCropPreviewImage.src = cropState.objectUrl;
+  if (typeof productCropDialog.showModal === "function") productCropDialog.showModal();
+  else productCropDialog.setAttribute("open", "");
+}
+
+function createCroppedProductFile() {
+  if (!cropState || !cropState.sourceWidth || !cropState.sourceHeight || !cropState.stageWidth) {
+    throw new Error("L'immagine non e ancora pronta.");
+  }
+  const imageScale = cropState.baseScale * cropState.zoom;
+  const sourceCropSize = Math.min(cropState.stageWidth / imageScale, cropState.sourceWidth, cropState.sourceHeight);
+  const sourceX = clamp(
+    cropState.sourceWidth / 2 - (cropState.stageWidth / 2 + cropState.offsetX) / imageScale,
+    0,
+    cropState.sourceWidth - sourceCropSize
+  );
+  const sourceY = clamp(
+    cropState.sourceHeight / 2 - (cropState.stageHeight / 2 + cropState.offsetY) / imageScale,
+    0,
+    cropState.sourceHeight - sourceCropSize
+  );
+  const outputSize = Math.min(1600, Math.max(1, Math.round(sourceCropSize)));
+  const canvas = document.createElement("canvas");
+  canvas.width = outputSize;
+  canvas.height = outputSize;
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("Impossibile preparare il ritaglio.");
+  context.drawImage(productCropImage, sourceX, sourceY, sourceCropSize, sourceCropSize, 0, 0, outputSize, outputSize);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error("Impossibile creare il ritaglio."));
+          return;
+        }
+        resolve(new File([blob], cropOutputName(cropState.file), { type: "image/webp" }));
+      },
+      "image/webp",
+      0.92
+    );
+  });
+}
+
+async function uploadCroppedProductImage(file, productId, position, total) {
+  const formData = new FormData();
+  formData.append("productId", productId);
+  formData.append("images", file);
+  setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
+  setProductMessage("");
+  const data = await uploadApi("/api/admin/product-images", formData);
+  const current = currentProductImages();
+  productForm.elements.images.value = [...current, ...(data.images || [])].join("\n");
+  selectedProductId = productId;
+  await loadProducts();
+  const product = adminProducts.find((entry) => entry.id === productId);
+  if (product) fillProductForm(product);
+}
+
+async function createAiProductFromImage(file) {
+  const formData = new FormData();
+  formData.append("image", file);
+  aiProductButton.disabled = true;
+  setAiProductStatus("Analisi AI in corso...");
+  setProductMessage("");
+  try {
+    const data = await uploadApi("/api/admin/ai-product", formData);
+    const suggestion = {
+      ...(data.suggestion || {}),
+      images: data.suggestion?.images || (data.image ? [data.image] : []),
+    };
+    fillAiProductDraft(suggestion);
+    setAiProductStatus("Bozza AI pronta. Controlla i dati e premi Salva prodotto.", "success");
+    setProductMessage("Bozza prodotto creata con AI.", "success");
+  } catch (error) {
+    setAiProductStatus(error.message, "error");
+    setProductMessage(error.message, "error");
+  } finally {
+    aiProductButton.disabled = false;
+    aiProductImage.value = "";
+  }
+}
+
+function openNextProductCrop() {
+  if (!productUploadQueue) return;
+  const { files, index, productId } = productUploadQueue;
+  const file = files[index];
+  if (!file) return;
+  setProductUploadStatus(`Ritaglia foto ${index + 1} di ${files.length}.`);
+  openProductCropper(file, { type: "manual", productId });
+}
+
+async function handleCroppedProductFile(file, source) {
+  if (source.type === "ai") {
+    await createAiProductFromImage(file);
+    return;
+  }
+
+  const queue = productUploadQueue;
+  if (!queue) return;
+  try {
+    await uploadCroppedProductImage(file, source.productId, queue.index + 1, queue.files.length);
+  } catch (error) {
+    setProductUploadStatus("Upload non riuscito.");
+    setProductMessage(error.message, "error");
+    productUploadQueue = null;
+    productImageButton.disabled = false;
+    productImageUpload.value = "";
+    return;
+  }
+
+  queue.index += 1;
+  if (queue.index < queue.files.length) {
+    openNextProductCrop();
+    return;
+  }
+  setProductUploadStatus(`${queue.files.length} foto ritagliate e collegate al prodotto.`);
+  setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
+  productUploadQueue = null;
+  productImageButton.disabled = false;
+  productImageUpload.value = "";
 }
 
 function deviceLine(session) {
@@ -857,6 +1087,76 @@ productForm?.elements.images?.addEventListener("input", () => {
   renderProductPreviews();
 });
 
+productCropImage?.addEventListener("load", () => {
+  if (!cropState) return;
+  cropState.sourceWidth = productCropImage.naturalWidth;
+  cropState.sourceHeight = productCropImage.naturalHeight;
+  window.requestAnimationFrame(updateCropPreview);
+});
+
+productCropZoom?.addEventListener("input", () => {
+  if (!cropState) return;
+  cropState.zoom = Number(productCropZoom.value) || 1;
+  updateCropPreview();
+});
+
+productCropStage?.addEventListener("pointerdown", (event) => {
+  if (!cropState || event.button !== 0) return;
+  cropDrag = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    offsetX: cropState.offsetX,
+    offsetY: cropState.offsetY,
+  };
+  productCropStage.classList.add("is-dragging");
+  productCropStage.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+});
+
+productCropStage?.addEventListener("pointermove", (event) => {
+  if (!cropState || !cropDrag || cropDrag.pointerId !== event.pointerId) return;
+  cropState.offsetX = cropDrag.offsetX + event.clientX - cropDrag.startX;
+  cropState.offsetY = cropDrag.offsetY + event.clientY - cropDrag.startY;
+  updateCropPreview();
+  event.preventDefault();
+});
+
+function finishCropDrag(event) {
+  if (!cropDrag || cropDrag.pointerId !== event.pointerId) return;
+  cropDrag = null;
+  productCropStage?.classList.remove("is-dragging");
+}
+
+productCropStage?.addEventListener("pointerup", finishCropDrag);
+productCropStage?.addEventListener("pointercancel", finishCropDrag);
+productCropStage?.addEventListener("lostpointercapture", finishCropDrag);
+window.addEventListener("resize", () => window.requestAnimationFrame(updateCropPreview));
+
+document.querySelectorAll("[data-product-crop-cancel]").forEach((button) => {
+  button.addEventListener("click", cancelProductCropper);
+});
+
+productCropDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  cancelProductCropper();
+});
+
+productCropConfirm?.addEventListener("click", async () => {
+  if (!cropState) return;
+  productCropConfirm.disabled = true;
+  const source = cropState.source;
+  try {
+    const croppedFile = await createCroppedProductFile();
+    closeProductCropper();
+    await handleCroppedProductFile(croppedFile, source);
+  } catch (error) {
+    if (source.type === "ai") setAiProductStatus(error.message, "error");
+    else setProductUploadStatus(error.message);
+    productCropConfirm.disabled = false;
+  }
+});
+
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProductMessage("Salvataggio in corso...");
@@ -908,37 +1208,21 @@ productImageButton?.addEventListener("click", () => {
   productImageUpload?.click();
 });
 
-productImageUpload?.addEventListener("change", async () => {
+productImageUpload?.addEventListener("change", () => {
   const files = [...(productImageUpload.files || [])];
   const productId = productForm?.elements.id.value;
   if (!productId || files.length === 0) return;
 
-  const formData = new FormData();
-  formData.append("productId", productId);
-  files.forEach((file) => formData.append("images", file));
-
-  setProductUploadStatus(`Caricamento ${files.length} foto...`);
   setProductMessage("");
+  productUploadQueue = { files, productId, index: 0 };
   productImageButton.disabled = true;
-
   try {
-    const data = await uploadApi("/api/admin/product-images", formData);
-    const current = String(productForm.elements.images.value || "")
-      .split(/\r?\n/)
-      .map((image) => image.trim())
-      .filter(Boolean);
-    productForm.elements.images.value = [...current, ...(data.images || [])].join("\n");
-    selectedProductId = productId;
-    await loadProducts();
-    const product = adminProducts.find((entry) => entry.id === productId);
-    if (product) fillProductForm(product);
-    setProductUploadStatus(`${data.images.length} foto caricate e collegate al prodotto.`);
-    setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
+    openNextProductCrop();
   } catch (error) {
-    setProductUploadStatus("Upload non riuscito.");
-    setProductMessage(error.message, "error");
-  } finally {
+    productUploadQueue = null;
     productImageButton.disabled = false;
+    setProductUploadStatus("Ritaglio non disponibile.");
+    setProductMessage(error.message, "error");
     productImageUpload.value = "";
   }
 });
@@ -947,30 +1231,13 @@ aiProductButton?.addEventListener("click", () => {
   aiProductImage?.click();
 });
 
-aiProductImage?.addEventListener("change", async () => {
+aiProductImage?.addEventListener("change", () => {
   const file = aiProductImage.files?.[0];
   if (!file) return;
-
-  const formData = new FormData();
-  formData.append("image", file);
-  aiProductButton.disabled = true;
-  setAiProductStatus("Analisi AI in corso...");
-  setProductMessage("");
-
   try {
-    const data = await uploadApi("/api/admin/ai-product", formData);
-    const suggestion = {
-      ...(data.suggestion || {}),
-      images: data.suggestion?.images || (data.image ? [data.image] : []),
-    };
-    fillAiProductDraft(suggestion);
-    setAiProductStatus("Bozza AI pronta. Controlla i dati e premi Salva prodotto.", "success");
-    setProductMessage("Bozza prodotto creata con AI.", "success");
+    openProductCropper(file, { type: "ai" });
   } catch (error) {
     setAiProductStatus(error.message, "error");
-    setProductMessage(error.message, "error");
-  } finally {
-    aiProductButton.disabled = false;
     aiProductImage.value = "";
   }
 });
