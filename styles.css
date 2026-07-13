@@ -1436,6 +1436,10 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
   line-height: 0;
 }
 
@@ -1461,30 +1465,28 @@ body.motion-enabled .site-header .logo img {
   top: 50%;
   left: calc(50% + clamp(195px, 16.95vw, 260px) + 14px);
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   place-items: center;
   padding: 0;
-  color: rgba(255, 255, 255, 0.32);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.42);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.72);
   cursor: pointer;
   transform: translateY(-50%);
-  transition: color 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .motion-toggle svg {
-  width: 18px;
-  height: 18px;
-  stroke-width: 1.8;
+  width: 23px;
+  height: 23px;
+  stroke-width: 2;
 }
 
 .motion-toggle:hover,
 .motion-toggle:focus-visible {
   border-color: rgba(var(--gold-rgb), 0.72);
   color: var(--text-strong);
-  transform: translateY(-50%) scale(1.08);
 }
 
 .motion-toggle.is-on {
@@ -3340,13 +3342,13 @@ body.motion-enabled .product-actions .buy-action:hover {
   .motion-toggle {
     right: 82px;
     left: auto;
-    width: 30px;
-    height: 30px;
+    width: 38px;
+    height: 38px;
   }
 
   .motion-toggle svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
   }
 
   .icon-button {
