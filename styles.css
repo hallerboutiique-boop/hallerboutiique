@@ -1951,8 +1951,11 @@ button {
 .product-media {
   position: relative;
   display: grid;
+  overflow: hidden;
   aspect-ratio: 1;
   min-height: 0;
+  flex: 0 0 auto;
+  isolation: isolate;
   place-items: center;
   border-bottom: 1px solid var(--panel-line);
   background:
@@ -1961,11 +1964,14 @@ button {
 }
 
 .product-image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: center 68%;
+  z-index: 0;
 }
 
 .discount-badge {
@@ -1994,9 +2000,12 @@ button {
 }
 
 .product-body {
+  position: relative;
   display: flex;
+  min-width: 0;
   min-height: 268px;
   padding: 16px;
+  z-index: 1;
   flex: 1;
   flex-direction: column;
 }
