@@ -731,8 +731,7 @@ async function analyzeProductImageWithAi(dataUrl) {
     "Non inventare marchi o modelli non riconoscibili: se non sei sicuro, usa un nome generico premium.",
     "Scegli collection tra Catalogo Uomo, Catalogo Donna o Selezione Haller Boutique.",
     "Scegli category in italiano, ad esempio Sneakers Uomo, Sneakers Donna, Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo, Accessori.",
-    "Per original/finalPrice restituisci valori in formato italiano senza simbolo euro, oppure stringa vuota se non stimabili.",
-    "Per discount usa formato tipo -30%, oppure stringa vuota se non stimabile.",
+    "Per original, finalPrice e discount restituisci sempre stringhe vuote: i prezzi vengono inseriti manualmente dall'admin.",
   ].join(" ");
   const basePayload = {
     model: openaiProductModel,

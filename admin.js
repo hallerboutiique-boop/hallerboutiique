@@ -468,9 +468,9 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.collection.value = suggestion.collection || "Selezione Haller Boutique";
   productForm.elements.category.value = suggestion.category || "";
   if (productForm.elements.description) productForm.elements.description.value = suggestion.description || "";
-  productForm.elements.original.value = formatAdminProductPrice(suggestion.original);
-  productForm.elements.finalPrice.value = formatAdminProductPrice(suggestion.finalPrice);
-  productForm.elements.discount.value = suggestion.discount || "";
+  productForm.elements.original.value = "";
+  productForm.elements.finalPrice.value = "";
+  productForm.elements.discount.value = "";
   productForm.elements.sizeType.value = suggestion.sizeType || "none";
   productForm.elements.images.value = Array.isArray(suggestion.images) ? suggestion.images.join("\n") : "";
   renderProductPreviews(suggestion.images || []);
