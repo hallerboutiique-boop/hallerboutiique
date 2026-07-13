@@ -1711,12 +1711,19 @@ button {
 }
 
 .footer-logo {
+  position: static;
+  transform: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   padding-bottom: 17px;
   border-bottom: 2px solid rgba(var(--gold-rgb), 0.9);
 }
 
 .footer-logo img {
+  display: block;
+  height: auto;
   width: min(100%, 560px);
 }
 
@@ -3239,7 +3246,11 @@ button {
   }
 
   .logo img {
-    width: min(56vw, 255px);
+    width: min(62vw, 270px);
+  }
+
+  .logo:not(.footer-logo) {
+    max-width: calc(100% - 86px);
   }
 
   .footer-logo img {
