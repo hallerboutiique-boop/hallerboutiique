@@ -1233,7 +1233,7 @@ function createClickRipple(event) {
   if (!siteMotionEnabled) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const target = event.target.closest("button, a");
-  if (!target || target.closest(".language-menu") || target.matches("[data-motion-toggle]")) return;
+  if (!target || target.closest(".language-menu")) return;
 
   const bounds = target.getBoundingClientRect();
   if (bounds.width === 0 || bounds.height === 0) return;
@@ -1326,13 +1326,6 @@ function setupSiteMotion() {
 function setSiteMotion(enabled, flickerLogo = false) {
   siteMotionEnabled = Boolean(enabled) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.body.classList.toggle("motion-enabled", siteMotionEnabled);
-  const toggle = document.querySelector("[data-motion-toggle]");
-  if (toggle) {
-    toggle.classList.toggle("is-on", siteMotionEnabled);
-    toggle.setAttribute("aria-pressed", String(siteMotionEnabled));
-    toggle.setAttribute("aria-label", siteMotionEnabled ? "Disattiva animazioni" : "Attiva animazioni");
-    toggle.title = siteMotionEnabled ? "Animazioni ON" : "Animazioni OFF";
-  }
   const logo = document.querySelector(".site-header .logo img");
   logo?.classList.remove("is-powering-on");
   if (siteMotionEnabled && flickerLogo && logo) {
@@ -1906,7 +1899,7 @@ renderCatalog();
 loadProductOverrides();
 updateCartCount();
 setupLocationDeliveryBanner();
-setSiteMotion(false);
+setSiteMotion(true, true);
 
 if (!isReplayView) {
   renderConsentManager();
@@ -1929,13 +1922,6 @@ window.addEventListener("pagehide", () => {
 if (window.lucide) {
   window.lucide.createIcons();
 }
-
-document.querySelector("[data-motion-toggle]")?.addEventListener("click", () => {
-  const toggle = document.querySelector("[data-motion-toggle]");
-  toggle?.classList.remove("is-ripple-target");
-  toggle?.querySelectorAll(".click-ripple").forEach((ripple) => ripple.remove());
-  setSiteMotion(!siteMotionEnabled, !siteMotionEnabled);
-});
 
 const languagePicker = document.querySelector("[data-language-picker]");
 if (languagePicker) {
