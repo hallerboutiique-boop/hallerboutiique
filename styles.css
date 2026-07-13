@@ -1455,6 +1455,9 @@ button {
   background: transparent;
   box-shadow: none;
   line-height: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
