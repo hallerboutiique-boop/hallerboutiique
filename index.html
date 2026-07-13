@@ -14,32 +14,13 @@
     <header class="site-header">
       <div class="header-bar">
         <div class="header-tools">
-          <div class="language-picker" data-language-picker>
-            <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false" aria-controls="language-menu">
-              <i data-lucide="globe"></i>
-            </button>
-            <div class="language-menu" id="language-menu" role="menu" aria-label="Seleziona lingua">
-              <button type="button" role="menuitemradio" aria-label="Italiano" aria-checked="true" data-language-option="it">
-                <span class="language-flag" aria-hidden="true">🇮🇹</span>
-              </button>
-              <button type="button" role="menuitemradio" aria-label="English" aria-checked="false" data-language-option="en">
-                <span class="language-flag" aria-hidden="true">🇬🇧</span>
-              </button>
-              <button type="button" role="menuitemradio" aria-label="Français" aria-checked="false" data-language-option="fr">
-                <span class="language-flag" aria-hidden="true">🇫🇷</span>
-              </button>
-              <button type="button" role="menuitemradio" aria-label="Deutsch" aria-checked="false" data-language-option="de">
-                <span class="language-flag" aria-hidden="true">🇩🇪</span>
-              </button>
-              <button type="button" role="menuitemradio" aria-label="Español" aria-checked="false" data-language-option="es">
-                <span class="language-flag" aria-hidden="true">🇪🇸</span>
-              </button>
-            </div>
-          </div>
-
           <button class="icon-button search-button" type="button" aria-label="Cerca">
             <i data-lucide="search"></i>
           </button>
+          <a class="icon-button cart-button" href="checkout.html" aria-label="Vai al checkout">
+            <i data-lucide="shopping-bag"></i>
+            <span>0</span>
+          </a>
         </div>
 
         <a class="logo" href="index.html" aria-label="Haller Boutique home">
@@ -50,10 +31,18 @@
           <a class="icon-button" href="account.html" aria-label="Account">
             <i data-lucide="user-round"></i>
           </a>
-          <a class="icon-button cart-button" href="checkout.html" aria-label="Vai al checkout">
-            <i data-lucide="shopping-bag"></i>
-            <span>0</span>
-          </a>
+          <div class="language-picker" data-language-picker>
+            <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false" aria-controls="language-menu">
+              <i data-lucide="globe"></i>
+            </button>
+            <div class="language-menu" id="language-menu" role="menu" aria-label="Seleziona lingua">
+              <button type="button" role="menuitemradio" aria-label="Italiano" aria-checked="true" data-language-option="it"><span class="language-flag" aria-hidden="true">🇮🇹</span></button>
+              <button type="button" role="menuitemradio" aria-label="English" aria-checked="false" data-language-option="en"><span class="language-flag" aria-hidden="true">🇬🇧</span></button>
+              <button type="button" role="menuitemradio" aria-label="Français" aria-checked="false" data-language-option="fr"><span class="language-flag" aria-hidden="true">🇫🇷</span></button>
+              <button type="button" role="menuitemradio" aria-label="Deutsch" aria-checked="false" data-language-option="de"><span class="language-flag" aria-hidden="true">🇩🇪</span></button>
+              <button type="button" role="menuitemradio" aria-label="Español" aria-checked="false" data-language-option="es"><span class="language-flag" aria-hidden="true">🇪🇸</span></button>
+            </div>
+          </div>
         </div>
       </div>
 
