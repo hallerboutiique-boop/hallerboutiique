@@ -1330,7 +1330,7 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
   body {
-    cursor: url("assets/cursor-bag.svg") 16 8, auto;
+    cursor: url("assets/cursor-bag.svg?v=2") 20 8, auto;
   }
 
   a,
@@ -1338,7 +1338,7 @@ body {
   .icon-button,
   .product-card,
   [role="button"] {
-    cursor: url("assets/cursor-bag.svg") 16 8, pointer;
+    cursor: url("assets/cursor-bag.svg?v=2") 20 8, pointer;
   }
 
   input,
