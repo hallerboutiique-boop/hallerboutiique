@@ -3589,8 +3589,8 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   .logo img {
-    width: min(52vw, 190px);
-    max-width: calc(100vw - 176px);
+    width: min(54vw, 202px);
+    max-width: calc(100vw - 168px);
   }
 
   .logo:not(.footer-logo) {
