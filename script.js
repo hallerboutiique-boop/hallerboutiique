@@ -1307,7 +1307,7 @@ function setupSiteMotion() {
   refreshScrollReveals();
 }
 
-function setSiteMotion(enabled, persist = true) {
+function setSiteMotion(enabled, persist = true, flickerLogo = false) {
   siteMotionEnabled = Boolean(enabled) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.body.classList.toggle("motion-enabled", siteMotionEnabled);
   const toggle = document.querySelector("[data-motion-toggle]");
@@ -1318,6 +1318,14 @@ function setSiteMotion(enabled, persist = true) {
     toggle.title = siteMotionEnabled ? "Animazioni ON" : "Animazioni OFF";
   }
   if (persist) localStorage.setItem(motionPreferenceKey, siteMotionEnabled ? "on" : "off");
+
+  const logo = document.querySelector(".site-header .logo img");
+  logo?.classList.remove("is-powering-on");
+  if (siteMotionEnabled && flickerLogo && logo) {
+    void logo.offsetWidth;
+    logo.classList.add("is-powering-on");
+    logo.addEventListener("animationend", () => logo.classList.remove("is-powering-on"), { once: true });
+  }
 
   if (siteMotionEnabled) {
     setupSiteMotion();
@@ -1909,7 +1917,7 @@ if (window.lucide) {
 }
 
 document.querySelector("[data-motion-toggle]")?.addEventListener("click", () => {
-  setSiteMotion(!siteMotionEnabled);
+  setSiteMotion(!siteMotionEnabled, true, !siteMotionEnabled);
 });
 
 const languagePicker = document.querySelector("[data-language-picker]");
