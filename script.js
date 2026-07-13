@@ -1096,7 +1096,7 @@ function productPrimaryImage(product) {
 
 function createTryOnMarkup(product) {
   if (product.sizeType !== "clothing") return "";
-  return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">Prova con AI</button>`;
+  return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">Indossa</button>`;
 }
 
 function createProductCard(product) {
