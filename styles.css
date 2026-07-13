@@ -1356,8 +1356,10 @@ button {
 }
 
 .search-button {
+  grid-column: 2;
+  grid-row: 1;
   justify-self: end;
-  margin-right: 12px;
+  margin-right: 0;
 }
 
 .logo {
@@ -1393,9 +1395,11 @@ button {
 }
 
 .header-actions {
+  grid-column: 1;
+  grid-row: 1;
   display: flex;
-  width: 100%;
-  justify-content: flex-end;
+  width: auto;
+  justify-content: flex-start;
   gap: 20px;
 }
 
@@ -2845,7 +2849,7 @@ button {
   }
 
   .search-button {
-    margin-right: 4px;
+    margin-right: 0;
   }
 
   .logo img {
