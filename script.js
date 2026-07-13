@@ -7,6 +7,8 @@ let revealObserver = null;
 let siteMotionEnabled = false;
 let motionEventsBound = false;
 let motionScrollFrame = 0;
+let motionScrollDirection = "down";
+let lastMotionScrollY = window.scrollY;
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
@@ -1198,10 +1200,20 @@ function refreshScrollReveals(root = document) {
     revealObserver = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
+          const isProduct = entry.target.classList.contains("product-card");
+          if (isProduct) {
+            if (!entry.isIntersecting) return;
+            entry.target.dataset.scrollDirection = motionScrollDirection;
+            entry.target.classList.remove("is-revealed");
+            window.requestAnimationFrame(() => {
+              entry.target.classList.add("is-revealed");
+              updateProductScrollMotion();
+            });
+            return;
+          }
           if (!entry.isIntersecting) return;
           entry.target.classList.add("is-revealed");
           revealObserver.unobserve(entry.target);
-          if (entry.target.classList.contains("product-card")) updateProductScrollMotion();
         });
       },
       { threshold: 0.12, rootMargin: "0px 0px -44px" }
@@ -1278,6 +1290,11 @@ function setupSiteMotion() {
     window.addEventListener(
       "scroll",
       () => {
+        const nextScrollY = window.scrollY;
+        if (Math.abs(nextScrollY - lastMotionScrollY) > 2) {
+          motionScrollDirection = nextScrollY > lastMotionScrollY ? "down" : "up";
+          lastMotionScrollY = nextScrollY;
+        }
         if (siteMotionEnabled && !motionScrollFrame) motionScrollFrame = window.requestAnimationFrame(updateScrollMotion);
       },
       { passive: true }

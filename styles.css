@@ -2339,12 +2339,22 @@ body.motion-enabled .product-actions .buy-action:hover {
 
   body.motion-enabled .product-card[data-reveal] {
     filter: blur(4px);
-    transform: translateY(42px) scale(0.96);
+    transform: translate3d(0, 58px, 0) scale(0.94) rotateX(6deg);
+    transform-origin: center bottom;
+    transition:
+      opacity 620ms cubic-bezier(0.16, 1, 0.3, 1),
+      transform 720ms cubic-bezier(0.16, 1, 0.3, 1),
+      filter 520ms ease;
+  }
+
+  body.motion-enabled .product-card[data-reveal][data-scroll-direction="up"] {
+    transform: translate3d(0, -58px, 0) scale(0.94) rotateX(-6deg);
+    transform-origin: center top;
   }
 
   body.motion-enabled .product-card[data-reveal].is-revealed {
     filter: blur(0);
-    transform: translate3d(0, var(--product-scroll-y, 0px), 0) rotateX(var(--product-scroll-tilt, 0deg));
+    transform: translate3d(0, var(--product-scroll-y, 0px), 0) scale(1) rotateX(var(--product-scroll-tilt, 0deg));
   }
 
   body.motion-enabled .product-card[data-reveal].is-revealed .product-image {
@@ -2352,7 +2362,7 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   body.motion-enabled .product-card[data-reveal].is-revealed:hover {
-    transform: translate3d(0, calc(var(--product-scroll-y, 0px) - 7px), 0) rotateX(var(--product-scroll-tilt, 0deg));
+    transform: translate3d(0, calc(var(--product-scroll-y, 0px) - 7px), 0) scale(1.01) rotateX(var(--product-scroll-tilt, 0deg));
   }
 }
 
