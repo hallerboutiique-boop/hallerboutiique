@@ -1243,7 +1243,7 @@ async function handleAdminProductImages(req, res) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 10 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
@@ -1309,7 +1309,7 @@ async function handleAdminAiProduct(req, res) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 10 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
