@@ -3301,11 +3301,16 @@ button {
   }
 
   .logo img {
-    width: min(62vw, 270px);
+    width: min(52vw, 190px);
+    max-width: calc(100vw - 176px);
   }
 
   .logo:not(.footer-logo) {
-    max-width: calc(100% - 86px);
+    max-width: calc(100% - 152px);
+  }
+
+  .language-menu {
+    min-width: 160px;
   }
 
   .footer-logo img {
