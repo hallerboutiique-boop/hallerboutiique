@@ -3,6 +3,7 @@ const heroSlider = document.querySelector(".hero-slider");
 let active = 0;
 let tryOnProduct = null;
 let tryOnPreviewUrl = "";
+let revealObserver = null;
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
@@ -1183,6 +1184,97 @@ function renderCatalog() {
       </div>
     </section>
   `;
+  refreshScrollReveals(catalogRoot);
+}
+
+function refreshScrollReveals(root = document) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  if (!revealObserver) {
+    revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          entry.target.classList.add("is-revealed");
+          revealObserver.unobserve(entry.target);
+        });
+      },
+      { threshold: 0.12, rootMargin: "0px 0px -44px" }
+    );
+  }
+
+  const selector = ".benefits, .location-delivery-banner, .catalog-intro, .product-card, .site-footer > section";
+  root.querySelectorAll(selector).forEach((element, index) => {
+    if (element.hasAttribute("data-reveal")) return;
+    element.dataset.reveal = "";
+    element.style.setProperty("--reveal-delay", `${Math.min((index % 3) * 80, 160)}ms`);
+    revealObserver.observe(element);
+  });
+}
+
+function createClickRipple(event) {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const target = event.target.closest("button, a");
+  if (!target || target.closest(".language-menu")) return;
+
+  const bounds = target.getBoundingClientRect();
+  if (bounds.width === 0 || bounds.height === 0) return;
+  const ripple = document.createElement("span");
+  ripple.className = "click-ripple";
+  ripple.style.left = `${event.clientX - bounds.left}px`;
+  ripple.style.top = `${event.clientY - bounds.top}px`;
+  target.classList.add("is-ripple-target");
+  target.appendChild(ripple);
+  ripple.addEventListener("animationend", () => ripple.remove(), { once: true });
+}
+
+function bumpCart() {
+  document.querySelectorAll(".cart-button").forEach((cart) => {
+    cart.classList.remove("is-bumped");
+    void cart.offsetWidth;
+    cart.classList.add("is-bumped");
+  });
+}
+
+function setupSiteMotion() {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+  const progress = document.createElement("div");
+  progress.className = "scroll-progress";
+  progress.setAttribute("aria-hidden", "true");
+  document.body.prepend(progress);
+
+  let scrollFrame = 0;
+  const updateScrollMotion = () => {
+    scrollFrame = 0;
+    const maxScroll = Math.max(document.documentElement.scrollHeight - window.innerHeight, 1);
+    progress.style.setProperty("--scroll-progress", `${(window.scrollY / maxScroll) * 100}%`);
+  };
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (!scrollFrame) scrollFrame = window.requestAnimationFrame(updateScrollMotion);
+    },
+    { passive: true }
+  );
+  updateScrollMotion();
+
+  if (heroSlider && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+    heroSlider.addEventListener("pointermove", (event) => {
+      const bounds = heroSlider.getBoundingClientRect();
+      const x = ((event.clientX - bounds.left) / bounds.width - 0.5) * -10;
+      const y = ((event.clientY - bounds.top) / bounds.height - 0.5) * -8;
+      heroSlider.style.setProperty("--hero-x", `${x.toFixed(2)}px`);
+      heroSlider.style.setProperty("--hero-y", `${y.toFixed(2)}px`);
+    });
+    heroSlider.addEventListener("pointerleave", () => {
+      heroSlider.style.setProperty("--hero-x", "0px");
+      heroSlider.style.setProperty("--hero-y", "0px");
+    });
+  }
+
+  document.addEventListener("pointerdown", createClickRipple);
+  refreshScrollReveals();
 }
 
 function readCartCount() {
@@ -1230,6 +1322,7 @@ function addToCart(button) {
   const count = cartItems.length > 0 ? cartItems.length : readCartCount() + 1;
   window.localStorage.setItem(cartKey, String(count));
   updateCartCount(count);
+  bumpCart();
 
   if (productName) {
     sendTrack(button && button.dataset.buyNow ? "buy_now" : "add_to_cart", { product: productName });
@@ -1733,6 +1826,7 @@ renderCatalog();
 loadProductOverrides();
 updateCartCount();
 setupLocationDeliveryBanner();
+setupSiteMotion();
 
 if (!isReplayView) {
   renderConsentManager();

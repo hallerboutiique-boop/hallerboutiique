@@ -1453,6 +1453,14 @@ button {
   place-items: center;
   color: var(--gold);
   cursor: pointer;
+  transition: color 180ms ease, transform 180ms ease, filter 180ms ease;
+}
+
+.icon-button:hover,
+.icon-button:focus-visible {
+  color: var(--gold-hot);
+  transform: translateY(-2px) scale(1.06);
+  filter: drop-shadow(0 0 8px rgba(var(--gold-rgb), 0.58));
 }
 
 .icon-button svg {
@@ -1503,6 +1511,13 @@ button {
   align-items: center;
   gap: 10px;
   white-space: nowrap;
+  transition: color 180ms ease, transform 180ms ease;
+}
+
+.main-nav a:not(.active):hover,
+.main-nav a:not(.active):focus-visible {
+  color: var(--gold);
+  transform: translateY(-2px);
 }
 
 .main-nav svg {
@@ -1553,6 +1568,8 @@ button {
   height: 100%;
   object-fit: cover;
   object-position: center;
+  transform: scale(1.025) translate3d(var(--hero-x, 0px), var(--hero-y, 0px), 0);
+  transition: transform 700ms ease-out, filter 500ms ease;
 }
 
 .hero-slide-man > img,
@@ -1578,6 +1595,14 @@ button {
   left: clamp(54px, 5.6vw, 86px);
   top: 39%;
   width: min(48vw, 690px);
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity 520ms ease, transform 520ms ease;
+}
+
+.hero-slide.is-active .promo-copy {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .promo-copy h1 {
@@ -1610,6 +1635,15 @@ button {
   font-size: clamp(20px, 2.3vw, 34px);
   font-weight: 800;
   text-shadow: 0 3px 18px rgba(0, 0, 0, 0.95);
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.promo-copy a:hover,
+.promo-copy a:focus-visible {
+  color: #050505;
+  background: var(--gold);
+  box-shadow: 0 0 26px rgba(var(--gold-rgb), 0.62);
+  transform: translateY(-3px);
 }
 
 .benefits {
@@ -1640,6 +1674,12 @@ button {
   gap: 22px;
   min-width: 0;
   padding: 18px 30px;
+  transition: background 220ms ease, transform 220ms ease;
+}
+
+.benefits article:hover {
+  background: rgba(var(--gold-rgb), 0.08);
+  transform: translateY(-3px);
 }
 
 .benefits article + article {
@@ -1968,6 +2008,13 @@ button {
   background: linear-gradient(180deg, rgba(13, 13, 13, 0.96), rgba(2, 2, 2, 0.96));
   box-shadow: 0 12px 38px rgba(0, 0, 0, 0.45);
   flex-direction: column;
+  transition: border-color 220ms ease, box-shadow 220ms ease, transform 220ms ease;
+}
+
+.product-card:hover {
+  border-color: rgba(var(--gold-rgb), 0.76);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.68), 0 0 24px rgba(var(--gold-rgb), 0.13);
+  transform: translateY(-7px);
 }
 
 .product-media {
@@ -1994,6 +2041,12 @@ button {
   object-fit: cover;
   object-position: center 68%;
   z-index: 0;
+  transition: transform 420ms ease, filter 420ms ease;
+}
+
+.product-card:hover .product-image {
+  filter: saturate(1.08) contrast(1.04);
+  transform: scale(1.055);
 }
 
 .discount-badge {
@@ -2111,6 +2164,101 @@ button {
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  transition: color 180ms ease, background 180ms ease, border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.product-actions button:hover,
+.product-actions button:focus-visible {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.32);
+}
+
+.product-actions .cart-action:hover,
+.product-actions .tryon-action:hover {
+  border-color: var(--gold-hot);
+  background: rgba(var(--gold-rgb), 0.16);
+}
+
+.product-actions .buy-action:hover {
+  background: var(--gold-hot);
+  box-shadow: 0 0 20px rgba(var(--gold-rgb), 0.42);
+}
+
+.scroll-progress {
+  position: fixed;
+  z-index: 100;
+  top: 0;
+  left: 0;
+  width: var(--scroll-progress, 0%);
+  height: 3px;
+  pointer-events: none;
+  background: var(--gold-hot);
+  box-shadow: 0 0 12px rgba(var(--gold-rgb), 0.9);
+  transition: width 80ms linear;
+}
+
+.is-ripple-target {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.click-ripple {
+  position: absolute;
+  z-index: -1;
+  width: 12px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  background: rgba(var(--gold-rgb), 0.42);
+  transform: translate(-50%, -50%) scale(0);
+  animation: click-ripple 560ms ease-out forwards;
+}
+
+.cart-button.is-bumped {
+  animation: cart-bump 460ms ease-out;
+}
+
+@keyframes click-ripple {
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(22);
+  }
+}
+
+@keyframes cart-bump {
+  45% {
+    transform: translateY(-3px) scale(1.18);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal] {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 560ms ease, transform 560ms cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: var(--reveal-delay, 0ms);
+  }
+
+  [data-reveal].is-revealed {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .product-card[data-reveal].is-revealed:hover {
+    transform: translateY(-7px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 .product-actions .cart-action,
