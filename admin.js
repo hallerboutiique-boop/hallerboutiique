@@ -151,9 +151,14 @@ function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
 
-function cropOutputName(file) {
+function cropOutputName(file, mimeType) {
   const base = String(file?.name || "prodotto").replace(/\.[^.]+$/, "").trim() || "prodotto";
-  return `${base}-ritaglio.webp`;
+  const extension = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+  }[String(mimeType || "").toLowerCase()] || "jpg";
+  return `${base}-ritaglio.${extension}`;
 }
 
 function refreshCropStorefrontCopy(source) {
@@ -241,7 +246,7 @@ function openProductCropper(file, source) {
   };
   productCropZoom.value = "1";
   productCropConfirm.textContent = source.type === "ai" ? "Ritaglia e crea bozza" : "Applica ritaglio e carica";
-  productCropConfirm.disabled = false;
+  productCropConfirm.disabled = true;
   refreshCropStorefrontCopy(source);
   productCropImage.src = cropState.objectUrl;
   productCropPreviewImage.src = cropState.objectUrl;
@@ -249,7 +254,7 @@ function openProductCropper(file, source) {
   else productCropDialog.setAttribute("open", "");
 }
 
-function createCroppedProductFile() {
+function createCroppedProductImage() {
   if (!cropState || !cropState.sourceWidth || !cropState.sourceHeight || !cropState.stageWidth) {
     throw new Error("L'immagine non e ancora pronta.");
   }
@@ -266,6 +271,7 @@ function createCroppedProductFile() {
     cropState.sourceHeight - sourceCropSize
   );
   const outputSize = Math.min(1600, Math.max(1, Math.round(sourceCropSize)));
+  const sourceFile = cropState.file;
   const canvas = document.createElement("canvas");
   canvas.width = outputSize;
   canvas.height = outputSize;
@@ -279,7 +285,7 @@ function createCroppedProductFile() {
           reject(new Error("Impossibile creare il ritaglio."));
           return;
         }
-        resolve(new File([blob], cropOutputName(cropState.file), { type: "image/webp" }));
+        resolve({ blob, name: cropOutputName(sourceFile, blob.type) });
       },
       "image/webp",
       0.92
@@ -287,10 +293,10 @@ function createCroppedProductFile() {
   });
 }
 
-async function uploadCroppedProductImage(file, productId, position, total) {
+async function uploadCroppedProductImage(image, productId, position, total) {
   const formData = new FormData();
   formData.append("productId", productId);
-  formData.append("images", file);
+  formData.append("images", image.blob, image.name);
   setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
   setProductMessage("");
   const data = await uploadApi("/api/admin/product-images", formData);
@@ -302,9 +308,9 @@ async function uploadCroppedProductImage(file, productId, position, total) {
   if (product) fillProductForm(product);
 }
 
-async function createAiProductFromImage(file) {
+async function createAiProductFromImage(image) {
   const formData = new FormData();
-  formData.append("image", file);
+  formData.append("image", image.blob, image.name);
   aiProductButton.disabled = true;
   setAiProductStatus("Analisi AI in corso...");
   setProductMessage("");
@@ -335,16 +341,16 @@ function openNextProductCrop() {
   openProductCropper(file, { type: "manual", productId });
 }
 
-async function handleCroppedProductFile(file, source) {
+async function handleCroppedProductImage(image, source) {
   if (source.type === "ai") {
-    await createAiProductFromImage(file);
+    await createAiProductFromImage(image);
     return;
   }
 
   const queue = productUploadQueue;
   if (!queue) return;
   try {
-    await uploadCroppedProductImage(file, source.productId, queue.index + 1, queue.files.length);
+    await uploadCroppedProductImage(image, source.productId, queue.index + 1, queue.files.length);
   } catch (error) {
     setProductUploadStatus("Upload non riuscito.");
     setProductMessage(error.message, "error");
@@ -1091,7 +1097,16 @@ productCropImage?.addEventListener("load", () => {
   if (!cropState) return;
   cropState.sourceWidth = productCropImage.naturalWidth;
   cropState.sourceHeight = productCropImage.naturalHeight;
+  if (productCropConfirm) productCropConfirm.disabled = false;
   window.requestAnimationFrame(updateCropPreview);
+});
+
+productCropImage?.addEventListener("error", () => {
+  if (!cropState) return;
+  const source = cropState.source;
+  cancelProductCropper();
+  if (source.type === "ai") setAiProductStatus("Immagine non leggibile. Scegli JPG, PNG o WebP.", "error");
+  else setProductUploadStatus("Immagine non leggibile. Scegli JPG, PNG o WebP.");
 });
 
 productCropZoom?.addEventListener("input", () => {
@@ -1147,9 +1162,9 @@ productCropConfirm?.addEventListener("click", async () => {
   productCropConfirm.disabled = true;
   const source = cropState.source;
   try {
-    const croppedFile = await createCroppedProductFile();
+    const croppedImage = await createCroppedProductImage();
     closeProductCropper();
-    await handleCroppedProductFile(croppedFile, source);
+    await handleCroppedProductImage(croppedImage, source);
   } catch (error) {
     if (source.type === "ai") setAiProductStatus(error.message, "error");
     else setProductUploadStatus(error.message);
