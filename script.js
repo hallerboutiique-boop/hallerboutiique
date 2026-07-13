@@ -21,7 +21,6 @@ const serverVisitorIdKey = "hallerBoutiqueServerVisitorId";
 const analyticsSessionKey = "hallerBoutiqueSessionId";
 const analyticsSessionStartedKey = "hallerBoutiqueSessionStartedAt";
 const consentKey = "hallerBoutiqueConsent";
-const motionPreferenceKey = "hallerBoutiqueMotionEnabled";
 const consentVersion = 2;
 const isReplayView = new URLSearchParams(window.location.search).get("replay_view") === "1";
 let runtimeConsent = null;
@@ -1222,7 +1221,7 @@ function createClickRipple(event) {
   if (!siteMotionEnabled) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const target = event.target.closest("button, a");
-  if (!target || target.closest(".language-menu")) return;
+  if (!target || target.closest(".language-menu") || target.matches("[data-motion-toggle]")) return;
 
   const bounds = target.getBoundingClientRect();
   if (bounds.width === 0 || bounds.height === 0) return;
@@ -1307,7 +1306,7 @@ function setupSiteMotion() {
   refreshScrollReveals();
 }
 
-function setSiteMotion(enabled, persist = true, flickerLogo = false) {
+function setSiteMotion(enabled, flickerLogo = false) {
   siteMotionEnabled = Boolean(enabled) && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   document.body.classList.toggle("motion-enabled", siteMotionEnabled);
   const toggle = document.querySelector("[data-motion-toggle]");
@@ -1317,8 +1316,6 @@ function setSiteMotion(enabled, persist = true, flickerLogo = false) {
     toggle.setAttribute("aria-label", siteMotionEnabled ? "Disattiva animazioni" : "Attiva animazioni");
     toggle.title = siteMotionEnabled ? "Animazioni ON" : "Animazioni OFF";
   }
-  if (persist) localStorage.setItem(motionPreferenceKey, siteMotionEnabled ? "on" : "off");
-
   const logo = document.querySelector(".site-header .logo img");
   logo?.classList.remove("is-powering-on");
   if (siteMotionEnabled && flickerLogo && logo) {
@@ -1892,7 +1889,7 @@ renderCatalog();
 loadProductOverrides();
 updateCartCount();
 setupLocationDeliveryBanner();
-setSiteMotion(localStorage.getItem(motionPreferenceKey) === "on", false);
+setSiteMotion(false);
 
 if (!isReplayView) {
   renderConsentManager();
@@ -1917,7 +1914,10 @@ if (window.lucide) {
 }
 
 document.querySelector("[data-motion-toggle]")?.addEventListener("click", () => {
-  setSiteMotion(!siteMotionEnabled, true, !siteMotionEnabled);
+  const toggle = document.querySelector("[data-motion-toggle]");
+  toggle?.classList.remove("is-ripple-target");
+  toggle?.querySelectorAll(".click-ripple").forEach((ripple) => ripple.remove());
+  setSiteMotion(!siteMotionEnabled, !siteMotionEnabled);
 });
 
 const languagePicker = document.querySelector("[data-language-picker]");

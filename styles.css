@@ -1504,6 +1504,12 @@ body.motion-enabled .site-header .logo img {
   transform: translateY(-50%);
 }
 
+.motion-toggle.is-ripple-target {
+  position: absolute;
+  overflow: visible;
+  isolation: auto;
+}
+
 .motion-toggle svg {
   width: 23px;
   height: 23px;
