@@ -1447,43 +1447,43 @@ button {
   display: block;
   width: clamp(390px, 33.9vw, 520px);
   height: auto;
-  transition: opacity 260ms ease, filter 260ms ease;
+  transition: opacity 260ms ease;
 }
 
 body:not(.motion-enabled) .site-header .logo img {
   opacity: 0.32;
-  filter: grayscale(1) brightness(0.48);
+  filter: brightness(0.48);
 }
 
 body.motion-enabled .site-header .logo img {
   opacity: 1;
-  filter: drop-shadow(0 0 8px rgba(var(--gold-rgb), 0.62)) drop-shadow(0 0 22px rgba(var(--gold-rgb), 0.28));
+  filter: none;
 }
 
 .logo img.is-powering-on {
-  animation: logo-power-on 920ms steps(2, end) both;
+  animation: logo-power-on 1.7s steps(2, end) both;
 }
 
 @keyframes logo-power-on {
   0%, 12% {
     opacity: 0.22;
-    filter: grayscale(1) brightness(0.42);
+    filter: brightness(0.42);
   }
   18%, 30% {
     opacity: 1;
-    filter: drop-shadow(0 0 12px rgba(var(--gold-rgb), 0.92)) drop-shadow(0 0 34px rgba(var(--gold-rgb), 0.62));
+    filter: brightness(1.22) contrast(1.06);
   }
   42%, 54% {
     opacity: 0.36;
-    filter: grayscale(1) brightness(0.55);
+    filter: brightness(0.55);
   }
   64% {
     opacity: 0.82;
-    filter: drop-shadow(0 0 8px rgba(var(--gold-rgb), 0.68));
+    filter: brightness(0.88);
   }
   100% {
     opacity: 1;
-    filter: drop-shadow(0 0 8px rgba(var(--gold-rgb), 0.62)) drop-shadow(0 0 22px rgba(var(--gold-rgb), 0.28));
+    filter: none;
   }
 }
 
@@ -1519,7 +1519,7 @@ body.motion-enabled .site-header .logo img {
 .motion-toggle.is-on {
   color: var(--gold-hot);
   border-color: var(--gold);
-  box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.58);
+  box-shadow: none;
 }
 
 .icon-button {
