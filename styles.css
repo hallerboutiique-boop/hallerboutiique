@@ -1348,7 +1348,8 @@ button {
 
 .header-bar {
   display: grid;
-  grid-template-columns: 74px auto minmax(120px, 1fr);
+  position: relative;
+  grid-template-columns: 1fr auto;
   align-items: center;
   height: 82px;
   justify-items: start;
@@ -1360,11 +1361,13 @@ button {
 }
 
 .logo {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 0;
-  justify-self: start;
 }
 
 .logo img {
@@ -2836,7 +2839,7 @@ button {
   }
 
   .header-bar {
-    grid-template-columns: 42px auto minmax(76px, 1fr);
+    grid-template-columns: 1fr auto;
     height: 68px;
     gap: 8px;
   }
