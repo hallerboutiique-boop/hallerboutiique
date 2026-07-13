@@ -1,10 +1,13 @@
 const slides = Array.from(document.querySelectorAll(".hero-slide"));
 const heroSlider = document.querySelector(".hero-slider");
 let active = 0;
+let tryOnProduct = null;
+let tryOnPreviewUrl = "";
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 let productOverrides = {};
+let customProducts = [];
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
@@ -975,7 +978,7 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "mobile-header-cards-1";
+const productImageVersion = "tryon-ai-products-1";
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.png",
@@ -988,11 +991,29 @@ const productImageGalleries = {
 };
 
 function withProductImageVersion(src) {
-  return `${src}?v=${productImageVersion}`;
+  const value = String(src || "");
+  if (!value || value.startsWith("data:")) return value;
+  return `${value}${value.includes("?") ? "&" : "?"}v=${productImageVersion}`;
 }
 
 function normalizeProductPrice(value) {
   return String(value || "").includes("€") ? String(value) : euro(value);
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (char) => {
+    return {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;",
+    }[char];
+  });
+}
+
+function normalizeOptionalProductPrice(value) {
+  return String(value || "").trim() ? normalizeProductPrice(value) : "";
 }
 
 function applyProductOverride(product) {
@@ -1010,15 +1031,35 @@ function applyProductOverride(product) {
   };
 }
 
+function normalizeCustomProduct(product) {
+  const sizeType = ["clothing", "sneakers", "none"].includes(product.sizeType) ? product.sizeType : "none";
+  return {
+    id: product.id || slugifyProduct(product.name),
+    custom: true,
+    baseName: product.baseName || product.name,
+    name: product.name || "Prodotto",
+    description: product.description || "",
+    collection: product.collection || "Selezione Haller Boutique",
+    category: product.category || "Nuovi arrivi",
+    original: normalizeOptionalProductPrice(product.original),
+    finalPrice: normalizeOptionalProductPrice(product.finalPrice),
+    discount: product.discount || "",
+    sizeType,
+    images: Array.isArray(product.images) ? product.images : [],
+  };
+}
+
 async function loadProductOverrides() {
   try {
     const response = await fetch("/api/products", { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
+    customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
     renderCatalog();
   } catch {
     productOverrides = {};
+    customProducts = [];
   }
 }
 
@@ -1039,30 +1080,43 @@ function createProductMediaMarkup(product) {
     <img
       class="product-image"
       src="${withProductImageVersion(gallery[0])}"
-      alt="${product.name}"
+      alt="${escapeHtml(product.name)}"
       loading="lazy"
       decoding="async"
     >
   `;
 }
 
+function productPrimaryImage(product) {
+  const gallery = product.images?.length
+    ? product.images
+    : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
+  return gallery[0] || "";
+}
+
+function createTryOnMarkup(product) {
+  if (product.sizeType !== "clothing") return "";
+  return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">Prova con AI</button>`;
+}
+
 function createProductCard(product) {
   return `
     <article class="product-card">
       <div class="product-media">
-        <span class="discount-badge">${product.discount}</span>
+        <span class="discount-badge">${escapeHtml(product.discount)}</span>
         ${createProductMediaMarkup(product)}
       </div>
       <div class="product-body">
-        <h4>${product.name}</h4>
+        <h4>${escapeHtml(product.name)}</h4>
         <div class="product-prices" aria-label="Prezzo">
-          <span class="price-original">${product.original}</span>
-          <strong>${product.finalPrice}</strong>
+          <span class="price-original">${escapeHtml(product.original)}</span>
+          <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
         ${createSizesMarkup(product)}
         <div class="product-actions">
-          <button type="button" data-add-to-cart="${product.name}">Aggiungi al carrello</button>
-          <button type="button" data-buy-now="${product.name}">Acquista ora</button>
+          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}">Aggiungi al carrello</button>
+          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}">Acquista ora</button>
+          ${createTryOnMarkup(product)}
         </div>
       </div>
     </article>
@@ -1070,9 +1124,10 @@ function createProductCard(product) {
 }
 
 function getAllProducts() {
-  return catalogSections
+  const defaults = catalogSections
     .flatMap((section) => section.categories.flatMap((category) => category.products))
     .map(applyProductOverride);
+  return [...customProducts, ...defaults];
 }
 
 const homeFeaturedProductNames = [
@@ -1089,14 +1144,19 @@ const homeFeaturedProductNames = [
 
 function getHomeFeaturedProducts() {
   const allProducts = getAllProducts();
-  return homeFeaturedProductNames
+  const defaultFeatured = homeFeaturedProductNames
     .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
-    .filter(Boolean)
+    .filter(Boolean);
+  return [...customProducts, ...defaultFeatured]
     .slice(0, 9);
 }
 
 function findProduct(productName) {
   return getAllProducts().find((product) => product.name === productName);
+}
+
+function findProductById(productId) {
+  return getAllProducts().find((product) => product.id === productId);
 }
 
 function saveCheckoutItem(productName) {
@@ -1197,6 +1257,138 @@ function addToCart(button) {
   window.setTimeout(() => {
     button.textContent = originalText;
   }, 1200);
+}
+
+function ensureTryOnModal() {
+  let modal = document.querySelector("[data-tryon-modal]");
+  if (modal) return modal;
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <div class="tryon-modal" data-tryon-modal hidden>
+        <div class="tryon-backdrop" data-tryon-close></div>
+        <section class="tryon-dialog" role="dialog" aria-modal="true" aria-labelledby="tryon-title">
+          <button class="tryon-close" type="button" data-tryon-close aria-label="Chiudi try-on">
+            <i data-lucide="x"></i>
+          </button>
+          <div class="tryon-heading">
+            <p>Try-on AI</p>
+            <h2 id="tryon-title" data-tryon-title>Prova il prodotto</h2>
+            <span>Carica una tua foto frontale. La foto serve solo per generare l'anteprima e non viene salvata nel catalogo.</span>
+          </div>
+          <div class="tryon-layout">
+            <label class="tryon-upload">
+              <input type="file" accept="image/png,image/jpeg,image/webp" data-tryon-user-image>
+              <i data-lucide="upload-cloud"></i>
+              <strong>Carica foto</strong>
+              <span>JPG, PNG o WebP</span>
+            </label>
+            <div class="tryon-result" data-tryon-result>
+              <p>Il risultato comparira qui.</p>
+            </div>
+          </div>
+          <button class="tryon-generate" type="button" data-tryon-generate>Genera prova AI</button>
+          <p class="tryon-message" data-tryon-message aria-live="polite"></p>
+        </section>
+      </div>
+    `
+  );
+
+  modal = document.querySelector("[data-tryon-modal]");
+  modal.querySelectorAll("[data-tryon-close]").forEach((button) => {
+    button.addEventListener("click", closeTryOnModal);
+  });
+  modal.querySelector("[data-tryon-user-image]")?.addEventListener("change", previewTryOnUserImage);
+  modal.querySelector("[data-tryon-generate]")?.addEventListener("click", generateTryOn);
+  if (window.lucide) window.lucide.createIcons();
+  return modal;
+}
+
+function setTryOnMessage(message, type = "") {
+  const messageRoot = document.querySelector("[data-tryon-message]");
+  if (!messageRoot) return;
+  messageRoot.textContent = message || "";
+  messageRoot.dataset.type = type;
+}
+
+function setTryOnResult(content) {
+  const result = document.querySelector("[data-tryon-result]");
+  if (result) result.innerHTML = content;
+}
+
+function closeTryOnModal() {
+  const modal = document.querySelector("[data-tryon-modal]");
+  if (!modal) return;
+  modal.hidden = true;
+  modal.classList.remove("is-open");
+  tryOnProduct = null;
+  if (tryOnPreviewUrl) URL.revokeObjectURL(tryOnPreviewUrl);
+  tryOnPreviewUrl = "";
+}
+
+function openTryOnModal(productId) {
+  const product = findProductById(productId);
+  if (!product) return;
+  tryOnProduct = product;
+  const modal = ensureTryOnModal();
+  modal.hidden = false;
+  modal.classList.add("is-open");
+  const title = modal.querySelector("[data-tryon-title]");
+  if (title) title.textContent = `Prova ${product.name}`;
+  const input = modal.querySelector("[data-tryon-user-image]");
+  if (input) input.value = "";
+  setTryOnMessage("");
+  setTryOnResult("<p>Carica una tua foto per vedere l'anteprima.</p>");
+}
+
+function previewTryOnUserImage(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (tryOnPreviewUrl) URL.revokeObjectURL(tryOnPreviewUrl);
+  tryOnPreviewUrl = URL.createObjectURL(file);
+  setTryOnResult(`
+    <img src="${tryOnPreviewUrl}" alt="Foto caricata per try-on">
+    <span>Foto caricata. Premi Genera prova AI.</span>
+  `);
+  setTryOnMessage("");
+}
+
+async function generateTryOn() {
+  const modal = ensureTryOnModal();
+  const input = modal.querySelector("[data-tryon-user-image]");
+  const file = input?.files?.[0];
+  const button = modal.querySelector("[data-tryon-generate]");
+  if (!tryOnProduct) return;
+  if (!file) {
+    setTryOnMessage("Carica prima una tua foto.", "error");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("userImage", file);
+  formData.append("productId", tryOnProduct.id || "");
+  formData.append("productName", tryOnProduct.name || "");
+  formData.append("category", tryOnProduct.category || "");
+  formData.append("productImage", productPrimaryImage(tryOnProduct));
+
+  button.disabled = true;
+  setTryOnMessage("Generazione try-on in corso...");
+  setTryOnResult("<p>Sto preparando l'anteprima AI...</p>");
+
+  try {
+    const response = await fetch("/api/try-on", { method: "POST", body: formData });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || "Try-on non riuscito.");
+    setTryOnResult(`<img src="${escapeHtml(data.image)}" alt="Anteprima try-on AI">`);
+    setTryOnMessage("Anteprima pronta.", "success");
+    sendTrack("try_on_generated", { product: tryOnProduct.name });
+  } catch (error) {
+    setTryOnResult("<p>Non siamo riusciti a generare l'anteprima.</p>");
+    setTryOnMessage(error.message || "Try-on non disponibile.", "error");
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function createOrderCode() {
@@ -1579,8 +1771,13 @@ if (slides.length > 0) {
 }
 
 document.addEventListener("click", (event) => {
+  const tryOnButton = event.target.closest("[data-try-on]");
   const addButton = event.target.closest("[data-add-to-cart]");
   const buyButton = event.target.closest("[data-buy-now]");
+
+  if (tryOnButton) {
+    openTryOnModal(tryOnButton.dataset.tryOn);
+  }
 
   if (addButton) {
     addToCart(addButton);
