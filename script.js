@@ -589,17 +589,9 @@ function consentBannerMarkup(consent) {
 
 function renderConsentManager(forceBanner = false) {
   document.querySelector("[data-cookie-banner]")?.remove();
-  document.querySelector("[data-cookie-manage]")?.remove();
   const consent = readConsent();
 
   if (consent && !forceBanner) {
-    const manage = document.createElement("button");
-    manage.type = "button";
-    manage.className = "cookie-manage";
-    manage.dataset.cookieManage = "";
-    manage.textContent = "Cookie";
-    manage.addEventListener("click", () => renderConsentManager(true));
-    document.body.appendChild(manage);
     return;
   }
 
