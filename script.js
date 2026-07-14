@@ -1448,6 +1448,12 @@ function ensureTryOnModal() {
             </div>
           </div>
           <button class="tryon-generate" type="button" data-tryon-generate>Genera prova AI</button>
+          <div class="ai-progress" data-tryon-progress hidden>
+            <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento try-on AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+              <i data-tryon-progress-bar></i>
+            </div>
+            <span data-tryon-progress-label></span>
+          </div>
           <p class="tryon-message" data-tryon-message aria-live="polite"></p>
         </section>
       </div>
@@ -1471,6 +1477,70 @@ function setTryOnMessage(message, type = "") {
   messageRoot.dataset.type = type;
 }
 
+function setTryOnProgress(progress, message = "", type = "") {
+  const root = document.querySelector("[data-tryon-progress]");
+  const bar = document.querySelector("[data-tryon-progress-bar]");
+  const label = document.querySelector("[data-tryon-progress-label]");
+  if (!root || !bar || !label) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+  root.hidden = false;
+  root.dataset.type = type;
+  bar.style.setProperty("--ai-progress", `${value}%`);
+  bar.parentElement?.setAttribute("aria-valuenow", String(value));
+  label.textContent = message;
+}
+
+function resetTryOnProgress() {
+  const root = document.querySelector("[data-tryon-progress]");
+  const bar = document.querySelector("[data-tryon-progress-bar]");
+  const label = document.querySelector("[data-tryon-progress-label]");
+  if (!root || !bar || !label) return;
+  root.hidden = true;
+  root.dataset.type = "";
+  bar.style.setProperty("--ai-progress", "0%");
+  bar.parentElement?.setAttribute("aria-valuenow", "0");
+  label.textContent = "";
+}
+
+async function uploadWithProgress(path, body, onProgress) {
+  const response = await fetch(path, { method: "POST", body });
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const data = await response.json();
+    if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
+    return data;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalEvent = null;
+  const consume = (line) => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.type === "progress") {
+      onProgress?.(event);
+      return;
+    }
+    finalEvent = event;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    lines.forEach(consume);
+    if (done) break;
+  }
+  consume(buffer);
+
+  if (!finalEvent) throw new Error("Risposta AI non ricevuta.");
+  if (finalEvent.type === "error") throw new Error(finalEvent.message || "Operazione AI non riuscita.");
+  const data = finalEvent.data || finalEvent;
+  if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
+  return data;
+}
+
 function setTryOnResult(content) {
   const result = document.querySelector("[data-tryon-result]");
   if (result) result.innerHTML = content;
@@ -1481,6 +1551,7 @@ function closeTryOnModal() {
   if (!modal) return;
   modal.hidden = true;
   modal.classList.remove("is-open");
+  resetTryOnProgress();
   tryOnProduct = null;
   if (tryOnPreviewUrl) URL.revokeObjectURL(tryOnPreviewUrl);
   tryOnPreviewUrl = "";
@@ -1498,6 +1569,7 @@ function openTryOnModal(productId) {
   const input = modal.querySelector("[data-tryon-user-image]");
   if (input) input.value = "";
   setTryOnMessage("");
+  resetTryOnProgress();
   setTryOnResult("<p>Carica una tua foto per vedere l'anteprima.</p>");
 }
 
@@ -1532,17 +1604,21 @@ async function generateTryOn() {
   formData.append("productImage", productPrimaryImage(tryOnProduct));
 
   button.disabled = true;
-  setTryOnMessage("Generazione try-on in corso...");
+  setTryOnProgress(4, "Invio foto al server");
+  setTryOnMessage("Invio foto al server...");
   setTryOnResult("<p>Sto preparando l'anteprima AI...</p>");
 
   try {
-    const response = await fetch("/api/try-on", { method: "POST", body: formData });
-    const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || "Try-on non riuscito.");
+    const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
+      setTryOnProgress(event.progress, event.message);
+      setTryOnMessage(event.message);
+    });
+    setTryOnProgress(100, "Anteprima pronta", "success");
     setTryOnResult(`<img src="${escapeHtml(data.image)}" alt="Anteprima try-on AI">`);
     setTryOnMessage("Anteprima pronta.", "success");
     sendTrack("try_on_generated", { product: tryOnProduct.name });
   } catch (error) {
+    setTryOnProgress(100, "Generazione non riuscita", "error");
     setTryOnResult("<p>Non siamo riusciti a generare l'anteprima.</p>");
     setTryOnMessage(error.message || "Try-on non disponibile.", "error");
   } finally {

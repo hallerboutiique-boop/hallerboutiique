@@ -510,6 +510,44 @@
   color: #ff8585;
 }
 
+.ai-progress {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 7px;
+}
+
+.ai-progress[hidden] {
+  display: none;
+}
+
+.ai-progress-track {
+  height: 7px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.ai-progress-track i {
+  display: block;
+  width: var(--ai-progress, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gold);
+  box-shadow: 0 0 16px rgba(var(--gold-rgb), 0.62);
+  transition: width 260ms ease;
+}
+
+.ai-progress[data-type="error"] .ai-progress-track i {
+  background: #ff8585;
+  box-shadow: 0 0 16px rgba(255, 133, 133, 0.45);
+}
+
+.ai-progress span {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
 .product-admin-search,
 .product-editor-form label {
   display: grid;
@@ -2766,6 +2804,10 @@ body.motion-enabled .product-actions .buy-action:hover {
 .tryon-generate:disabled {
   opacity: 0.62;
   cursor: progress;
+}
+
+.tryon-dialog .ai-progress {
+  margin-top: -2px;
 }
 
 .tryon-message {

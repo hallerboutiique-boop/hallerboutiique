@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=admin-crop-1">
+    <link rel="stylesheet" href="styles.css?v=admin-progress-1">
   </head>
   <body>
     <header class="site-header">
@@ -154,6 +154,12 @@
                 <i data-lucide="sparkles"></i>
                 <span>Crea prodotto con AI</span>
               </button>
+              <div class="ai-progress" data-ai-product-progress hidden>
+                <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento analisi AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                  <i data-ai-product-progress-bar></i>
+                </div>
+                <span data-ai-product-progress-label></span>
+              </div>
               <small data-ai-product-status>La bozza resta modificabile prima del salvataggio.</small>
             </section>
             <div class="product-admin-layout">
@@ -332,6 +338,6 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="admin.js?v=admin-crop-1"></script>
+    <script src="admin.js?v=admin-progress-1"></script>
   </body>
 </html>

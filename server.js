@@ -171,6 +171,36 @@ function json(res, status, body, headers = {}) {
   res.end(payload);
 }
 
+function createProgressStream(res) {
+  let ended = false;
+  res.writeHead(200, {
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+  });
+  res.flushHeaders?.();
+
+  const send = (body) => {
+    if (!ended) res.write(`${JSON.stringify(body)}\n`);
+  };
+
+  return {
+    update(progress, message) {
+      send({ type: "progress", progress: Math.max(0, Math.min(100, Math.round(progress))), message });
+    },
+    done(data) {
+      send({ type: "result", data });
+      ended = true;
+      res.end();
+    },
+    fail(message) {
+      send({ type: "error", message });
+      ended = true;
+      res.end();
+    },
+  };
+}
+
 function redirect(res, location, headers = {}) {
   res.writeHead(302, { Location: location, ...headers });
   res.end();
@@ -1292,7 +1322,7 @@ async function handleAdminProductImages(req, res) {
   json(res, 200, { ok: true, images: saved, product });
 }
 
-async function handleAdminAiProduct(req, res) {
+async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
   if (req.method !== "POST") return notFound(res);
   if (!openaiApiKey) {
@@ -1318,27 +1348,32 @@ async function handleAdminAiProduct(req, res) {
   const ext = imageExtension(image.filename, image.contentType);
   if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato per AI. Usa JPG, PNG o WebP.");
 
+  const progress = streamProgress ? createProgressStream(res) : null;
+  progress?.update(24, "Foto ricevuta");
   await fs.mkdir(uploadsDir, { recursive: true });
   const name = `ai-product-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
   await fs.writeFile(path.join(uploadsDir, name), image.data);
   const imageUrl = `/uploads/${name}`;
   const mime = image.contentType || (ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg");
   const dataUrl = `data:${mime};base64,${image.data.toString("base64")}`;
+  progress?.update(42, "Foto preparata");
 
   try {
+    progress?.update(58, "Ricerca e descrizione AI in corso");
     const rawSuggestion = await analyzeProductImageWithAi(dataUrl);
+    progress?.update(90, "Dati prodotto ricevuti");
     const suggestion = cleanAiSuggestion(rawSuggestion, imageUrl);
-    json(res, 200, { ok: true, image: imageUrl, suggestion });
+    const result = { ok: true, image: imageUrl, suggestion };
+    if (progress) return progress.done(result);
+    json(res, 200, result);
   } catch (error) {
-    json(res, 502, {
-      ok: false,
-      message: `AI non disponibile: ${cleanTrackingString(error.message, 220)}`,
-      image: imageUrl,
-    });
+    const message = `AI non disponibile: ${cleanTrackingString(error.message, 220)}`;
+    if (progress) return progress.fail(message);
+    json(res, 502, { ok: false, message, image: imageUrl });
   }
 }
 
-async function handleTryOn(req, res) {
+async function handleTryOn(req, res, { streamProgress = false } = {}) {
   if (req.method !== "POST") return notFound(res);
   if (!openaiApiKey) {
     return json(res, 503, {
@@ -1363,6 +1398,8 @@ async function handleTryOn(req, res) {
   const ext = imageExtension(image.filename, image.contentType);
   if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato. Usa JPG, PNG o WebP.");
 
+  const progress = streamProgress ? createProgressStream(res) : null;
+  progress?.update(24, "Foto ricevuta");
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
   const productImageSrc = fieldValue(parts, "productImage", 260);
@@ -1374,13 +1411,17 @@ async function handleTryOn(req, res) {
   };
 
   try {
+    progress?.update(46, "Prodotto preparato");
+    progress?.update(60, "Generazione try-on AI in corso");
     const generated = await generateTryOnImage({ userImage, productImage, productName, category });
-    json(res, 200, { ok: true, image: generated });
+    progress?.update(92, "Anteprima ricevuta");
+    const result = { ok: true, image: generated };
+    if (progress) return progress.done(result);
+    json(res, 200, result);
   } catch (error) {
-    json(res, 502, {
-      ok: false,
-      message: `Try-on non disponibile: ${cleanTrackingString(error.message, 220)}`,
-    });
+    const message = `Try-on non disponibile: ${cleanTrackingString(error.message, 220)}`;
+    if (progress) return progress.fail(message);
+    json(res, 502, { ok: false, message });
   }
 }
 
@@ -1947,7 +1988,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
-  if (url.pathname === "/api/try-on") return handleTryOn(req, res);
+  if (url.pathname === "/api/try-on") return handleTryOn(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/login") return handleLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {
@@ -1963,7 +2004,9 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
-  if (url.pathname === "/api/admin/ai-product") return handleAdminAiProduct(req, res);
+  if (url.pathname === "/api/admin/ai-product") {
+    return handleAdminAiProduct(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
+  }
   if (url.pathname === "/api/admin/product-images") return handleAdminProductImages(req, res);
   if (url.pathname === "/api/admin/products") return handleAdminProducts(req, res);
   return notFound(res);

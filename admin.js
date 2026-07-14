@@ -18,6 +18,9 @@ const productPreviews = document.querySelector("[data-product-previews]");
 const aiProductImage = document.querySelector("[data-ai-product-image]");
 const aiProductButton = document.querySelector("[data-ai-product-button]");
 const aiProductStatus = document.querySelector("[data-ai-product-status]");
+const aiProductProgress = document.querySelector("[data-ai-product-progress]");
+const aiProductProgressBar = document.querySelector("[data-ai-product-progress-bar]");
+const aiProductProgressLabel = document.querySelector("[data-ai-product-progress-label]");
 const productCropDialog = document.querySelector("[data-product-crop-dialog]");
 const productCropStage = document.querySelector("[data-product-crop-stage]");
 const productCropImage = document.querySelector("[data-product-crop-image]");
@@ -53,6 +56,45 @@ async function uploadApi(path, body) {
   const response = await fetch(path, { method: "POST", body });
   const data = await response.json();
   if (!response.ok || data.ok === false) throw new Error(data.message || "Upload non riuscito.");
+  return data;
+}
+
+async function uploadApiWithProgress(path, body, onProgress) {
+  const response = await fetch(path, { method: "POST", body });
+  const reader = response.body?.getReader();
+  if (!reader) {
+    const data = await response.json();
+    if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
+    return data;
+  }
+
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalEvent = null;
+  const consume = (line) => {
+    if (!line.trim()) return;
+    const event = JSON.parse(line);
+    if (event.type === "progress") {
+      onProgress?.(event);
+      return;
+    }
+    finalEvent = event;
+  };
+
+  while (true) {
+    const { done, value } = await reader.read();
+    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() || "";
+    lines.forEach(consume);
+    if (done) break;
+  }
+  consume(buffer);
+
+  if (!finalEvent) throw new Error("Risposta AI non ricevuta.");
+  if (finalEvent.type === "error") throw new Error(finalEvent.message || "Operazione AI non riuscita.");
+  const data = finalEvent.data || finalEvent;
+  if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
   return data;
 }
 
@@ -109,6 +151,16 @@ function setAiProductStatus(message, type = "") {
   if (!aiProductStatus) return;
   aiProductStatus.textContent = message || "";
   aiProductStatus.dataset.type = type;
+}
+
+function setAiProductProgress(progress, message = "", type = "") {
+  if (!aiProductProgress || !aiProductProgressBar || !aiProductProgressLabel) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+  aiProductProgress.hidden = false;
+  aiProductProgress.dataset.type = type;
+  aiProductProgressBar.style.setProperty("--ai-progress", `${value}%`);
+  aiProductProgressBar.parentElement?.setAttribute("aria-valuenow", String(value));
+  aiProductProgressLabel.textContent = message;
 }
 
 function formatAdminProductPrice(value) {
@@ -312,18 +364,24 @@ async function createAiProductFromImage(image) {
   const formData = new FormData();
   formData.append("image", image.blob, image.name);
   aiProductButton.disabled = true;
-  setAiProductStatus("Analisi AI in corso...");
+  setAiProductProgress(4, "Invio foto al server");
+  setAiProductStatus("Invio foto al server...");
   setProductMessage("");
   try {
-    const data = await uploadApi("/api/admin/ai-product", formData);
+    const data = await uploadApiWithProgress("/api/admin/ai-product?progress=1", formData, (event) => {
+      setAiProductProgress(event.progress, event.message);
+      setAiProductStatus(event.message);
+    });
     const suggestion = {
       ...(data.suggestion || {}),
       images: data.suggestion?.images || (data.image ? [data.image] : []),
     };
     fillAiProductDraft(suggestion);
+    setAiProductProgress(100, "Bozza prodotto pronta", "success");
     setAiProductStatus("Bozza AI pronta. Controlla i dati e premi Salva prodotto.", "success");
     setProductMessage("Bozza prodotto creata con AI.", "success");
   } catch (error) {
+    setAiProductProgress(100, "Analisi non riuscita", "error");
     setAiProductStatus(error.message, "error");
     setProductMessage(error.message, "error");
   } finally {
