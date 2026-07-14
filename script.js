@@ -9,6 +9,45 @@ let motionEventsBound = false;
 let motionScrollFrame = 0;
 let motionScrollDirection = "down";
 let lastMotionScrollY = window.scrollY;
+let siteLanguage = localStorage.getItem("haller-language") || "it";
+
+const translations = {
+  it: {
+    "meta-description": "Haller Boutique: lusso, qualita e stile.", search: "Cerca", "go-checkout": "Vai al checkout", "change-language": "Cambia lingua", "main-menu": "Menu principale", home: "Home", "new-arrivals": "Nuovi arrivi", men: "Uomo", women: "Donna", "hero-title": "Lusso qualita stile", "hero-description": "Scopri le ultime novita<br>delle migliori marche.", "discover-now": "Scopri ora", "payment-title": "Pagamento alla consegna e crypto", "payment-description": "Contrassegno o crypto<br>in sicurezza", "support-title": "Assistenza H24", "support-description": "Siamo sempre<br>disponibili", "location-banner": "Consenti localizzazione per scoprire tempi di consegna in tempo reale.", selection: "Selezione", info: "Info", "whatsapp-support": "Assistenza WhatsApp", shipping: "Spedizioni", terms: "Termini e condizioni", "follow-social": "Seguici sui nostri social", copyright: "Copyright 2017 Haller Boutique. Tutti i diritti riservati.", sizes: "Taglie", price: "Prezzo", "add-cart": "Aggiungi al carrello", "buy-now": "Acquista ora", "try-on": "Indossa", "image-placeholder": "Immagine in arrivo"
+  },
+  en: {
+    "meta-description": "Haller Boutique: luxury, quality and style.", search: "Search", "go-checkout": "Go to checkout", "change-language": "Change language", "main-menu": "Main menu", home: "Home", "new-arrivals": "New arrivals", men: "Men", women: "Women", "hero-title": "Luxury quality style", "hero-description": "Discover the latest arrivals<br>from the finest brands.", "discover-now": "Discover now", "payment-title": "Cash on delivery and crypto", "payment-description": "Cash on delivery or crypto<br>with confidence", "support-title": "24/7 Support", "support-description": "We are always<br>here for you", "location-banner": "Allow location to discover real-time delivery times.", selection: "Selection", info: "Info", "whatsapp-support": "WhatsApp support", shipping: "Shipping", terms: "Terms and conditions", "follow-social": "Follow us on social media", copyright: "Copyright 2017 Haller Boutique. All rights reserved.", sizes: "Sizes", price: "Price", "add-cart": "Add to cart", "buy-now": "Buy now", "try-on": "Try it on", "image-placeholder": "Image coming soon"
+  },
+  fr: {
+    "meta-description": "Haller Boutique : luxe, qualite et style.", search: "Rechercher", "go-checkout": "Aller au paiement", "change-language": "Changer de langue", "main-menu": "Menu principal", home: "Accueil", "new-arrivals": "Nouveautes", men: "Homme", women: "Femme", "hero-title": "Luxe qualite style", "hero-description": "Decouvrez les dernieres nouveautes<br>des meilleures marques.", "discover-now": "Decouvrir", "payment-title": "Paiement a la livraison et crypto", "payment-description": "Paiement a la livraison ou crypto<br>en toute securite", "support-title": "Assistance 24h/24", "support-description": "Nous sommes toujours<br>disponibles", "location-banner": "Autorisez la localisation pour connaitre les delais de livraison en temps reel.", selection: "Selection", info: "Infos", "whatsapp-support": "Assistance WhatsApp", shipping: "Livraison", terms: "Conditions generales", "follow-social": "Suivez-nous sur les reseaux sociaux", copyright: "Copyright 2017 Haller Boutique. Tous droits reserves.", sizes: "Tailles", price: "Prix", "add-cart": "Ajouter au panier", "buy-now": "Acheter", "try-on": "Essayer", "image-placeholder": "Image bientot disponible"
+  },
+  de: {
+    "meta-description": "Haller Boutique: Luxus, Qualitat und Stil.", search: "Suchen", "go-checkout": "Zur Kasse", "change-language": "Sprache andern", "main-menu": "Hauptmenu", home: "Startseite", "new-arrivals": "Neu eingetroffen", men: "Herren", women: "Damen", "hero-title": "Luxus Qualitat Stil", "hero-description": "Entdecken Sie die neuesten Artikel<br>der besten Marken.", "discover-now": "Jetzt entdecken", "payment-title": "Nachnahme und Krypto", "payment-description": "Nachnahme oder Krypto<br>sicher bezahlen", "support-title": "Support rund um die Uhr", "support-description": "Wir sind immer<br>fur Sie da", "location-banner": "Erlauben Sie den Standort, um Lieferzeiten in Echtzeit zu sehen.", selection: "Auswahl", info: "Info", "whatsapp-support": "WhatsApp-Support", shipping: "Versand", terms: "Allgemeine Geschaftsbedingungen", "follow-social": "Folgen Sie uns auf Social Media", copyright: "Copyright 2017 Haller Boutique. Alle Rechte vorbehalten.", sizes: "Grossen", price: "Preis", "add-cart": "In den Warenkorb", "buy-now": "Jetzt kaufen", "try-on": "Anprobieren", "image-placeholder": "Bild folgt"
+  },
+  es: {
+    "meta-description": "Haller Boutique: lujo, calidad y estilo.", search: "Buscar", "go-checkout": "Ir al pago", "change-language": "Cambiar idioma", "main-menu": "Menu principal", home: "Inicio", "new-arrivals": "Novedades", men: "Hombre", women: "Mujer", "hero-title": "Lujo calidad estilo", "hero-description": "Descubre las ultimas novedades<br>de las mejores marcas.", "discover-now": "Descubrir ahora", "payment-title": "Pago contra reembolso y cripto", "payment-description": "Contra reembolso o cripto<br>con seguridad", "support-title": "Asistencia 24/7", "support-description": "Siempre estamos<br>disponibles", "location-banner": "Permite la ubicacion para ver los plazos de entrega en tiempo real.", selection: "Seleccion", info: "Info", "whatsapp-support": "Asistencia WhatsApp", shipping: "Envios", terms: "Terminos y condiciones", "follow-social": "Siguenos en redes sociales", copyright: "Copyright 2017 Haller Boutique. Todos los derechos reservados.", sizes: "Tallas", price: "Precio", "add-cart": "Anadir al carrito", "buy-now": "Comprar ahora", "try-on": "Probar", "image-placeholder": "Imagen proximamente"
+  }
+};
+
+function translate(key) {
+  return translations[siteLanguage]?.[key] || translations.it[key] || key;
+}
+
+function translatePage() {
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = translate(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-html]").forEach((element) => {
+    element.innerHTML = translate(element.dataset.i18nHtml);
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", translate(element.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll("[data-i18n-content]").forEach((element) => {
+    element.setAttribute("content", translate(element.dataset.i18nContent));
+  });
+  document.title = siteLanguage === "it" ? "Haller Boutique" : `Haller Boutique | ${translate("new-arrivals")}`;
+}
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
@@ -970,7 +1009,7 @@ function createSizesMarkup(product) {
 
   return `
     <div class="product-sizes" aria-label="Taglie disponibili">
-      <span>Taglie</span>
+      <span>${translate("sizes")}</span>
       <div>${sizes.map((size) => `<button type="button">${size}</button>`).join("")}</div>
     </div>
   `;
@@ -1070,7 +1109,7 @@ function createProductMediaMarkup(product) {
   if (gallery.length === 0) {
     return `
       <div class="image-placeholder">
-        <span>Placeholder immagine</span>
+        <span>${translate("image-placeholder")}</span>
       </div>
     `;
   }
@@ -1095,7 +1134,7 @@ function productPrimaryImage(product) {
 
 function createTryOnMarkup(product) {
   if (product.sizeType !== "clothing") return "";
-  return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">Indossa</button>`;
+  return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
 function createProductCard(product) {
@@ -1107,14 +1146,14 @@ function createProductCard(product) {
       </div>
       <div class="product-body">
         <h4>${escapeHtml(product.name)}</h4>
-        <div class="product-prices" aria-label="Prezzo">
+        <div class="product-prices" aria-label="${translate("price")}">
           <span class="price-original">${escapeHtml(product.original)}</span>
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
         ${createSizesMarkup(product)}
         <div class="product-actions">
-          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}">Aggiungi al carrello</button>
-          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}">Acquista ora</button>
+          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}">${translate("add-cart")}</button>
+          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
         </div>
       </div>
@@ -2062,11 +2101,14 @@ if (languagePicker) {
 
   const applyLanguage = (language) => {
     const selectedLanguage = languageLabels[language] ? language : "it";
+    siteLanguage = selectedLanguage;
     document.documentElement.lang = selectedLanguage;
     languageOptions.forEach((option) => {
       option.setAttribute("aria-checked", String(option.dataset.languageOption === selectedLanguage));
     });
-    languageToggle.setAttribute("aria-label", `Lingua: ${languageLabels[selectedLanguage]}`);
+    translatePage();
+    languageToggle.setAttribute("aria-label", `${translate("change-language")}: ${languageLabels[selectedLanguage]}`);
+    renderCatalog();
   };
 
   const closeLanguageMenu = () => {

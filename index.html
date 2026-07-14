@@ -4,20 +4,20 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Haller Boutique</title>
-    <meta name="description" content="Haller Boutique: lusso, qualita e stile.">
+    <meta name="description" content="Haller Boutique: lusso, qualita e stile." data-i18n-content="meta-description">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=aurora-neon-chat-1">
+    <link rel="stylesheet" href="styles.css?v=standard-cursor-translations-1">
   </head>
   <body>
     <header class="site-header">
       <div class="header-bar">
         <div class="header-tools">
-          <button class="icon-button search-button" type="button" aria-label="Cerca">
+          <button class="icon-button search-button" type="button" aria-label="Cerca" data-i18n-aria-label="search">
             <i data-lucide="search"></i>
           </button>
-          <a class="icon-button cart-button" href="checkout.html" aria-label="Vai al checkout">
+          <a class="icon-button cart-button" href="checkout.html" aria-label="Vai al checkout" data-i18n-aria-label="go-checkout">
             <i data-lucide="shopping-bag"></i>
             <span>0</span>
           </a>
@@ -31,7 +31,7 @@
             <i data-lucide="user-round"></i>
           </a>
           <div class="language-picker" data-language-picker>
-            <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false" aria-controls="language-menu">
+            <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" data-i18n-aria-label="change-language" aria-expanded="false" aria-controls="language-menu">
               <i data-lucide="globe"></i>
             </button>
             <div class="language-menu" id="language-menu" role="menu" aria-label="Seleziona lingua">
@@ -45,11 +45,11 @@
         </div>
       </div>
 
-      <nav class="main-nav" aria-label="Menu principale">
-        <a class="active" href="#">Home</a>
-        <a href="#selezione">Nuovi arrivi</a>
-        <a href="#uomo">Uomo <i data-lucide="chevron-down"></i></a>
-        <a href="#donna">Donna <i data-lucide="chevron-down"></i></a>
+      <nav class="main-nav" aria-label="Menu principale" data-i18n-aria-label="main-menu">
+        <a class="active" href="#" data-i18n="home">Home</a>
+        <a href="#selezione" data-i18n="new-arrivals">Nuovi arrivi</a>
+        <a href="#uomo"><span data-i18n="men">Uomo</span> <i data-lucide="chevron-down"></i></a>
+        <a href="#donna"><span data-i18n="women">Donna</span> <i data-lucide="chevron-down"></i></a>
       </nav>
     </header>
 
@@ -58,17 +58,17 @@
         <article class="hero-slide hero-slide-man has-copy is-active" aria-label="Lusso qualita stile">
           <img src="assets/hero-man.png?v=tryon-ai-products-1" alt="Haller Boutique, lusso qualita stile">
           <div class="promo-copy">
-            <h1>Lusso qualit&agrave; stile</h1>
-            <p>Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
-            <a href="#selezione">Scopri ora</a>
+            <h1 data-i18n="hero-title">Lusso qualit&agrave; stile</h1>
+            <p data-i18n-html="hero-description">Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
+            <a href="#selezione" data-i18n="discover-now">Scopri ora</a>
           </div>
         </article>
         <article class="hero-slide hero-slide-woman has-copy" aria-label="Nuova selezione donna">
           <img src="assets/hero-woman.jpg?v=tryon-ai-products-1" alt="Modella Haller Boutique davanti al Duomo">
           <div class="promo-copy">
-            <h1>Lusso qualit&agrave; stile</h1>
-            <p>Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
-            <a href="#selezione">Scopri ora</a>
+            <h1 data-i18n="hero-title">Lusso qualit&agrave; stile</h1>
+            <p data-i18n-html="hero-description">Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
+            <a href="#selezione" data-i18n="discover-now">Scopri ora</a>
           </div>
         </article>
       </section>
@@ -77,27 +77,27 @@
         <article>
           <i data-lucide="hand-coins"></i>
           <div>
-            <h2>Pagamento alla consegna e crypto</h2>
-            <p>Contrassegno o crypto<br>in sicurezza</p>
+            <h2 data-i18n="payment-title">Pagamento alla consegna e crypto</h2>
+            <p data-i18n-html="payment-description">Contrassegno o crypto<br>in sicurezza</p>
           </div>
         </article>
         <article>
           <i data-lucide="headphones"></i>
           <div>
-            <h2>Assistenza H24</h2>
-            <p>Siamo sempre<br>disponibili</p>
+            <h2 data-i18n="support-title">Assistenza H24</h2>
+            <p data-i18n-html="support-description">Siamo sempre<br>disponibili</p>
           </div>
         </article>
       </section>
 
       <button class="location-delivery-banner" type="button" data-location-delivery-banner onclick="if(window.HallerLocation){window.HallerLocation.requestFromBanner(event);}else{this.querySelector('span').textContent='Autorizza la posizione nel popup del browser.';}">
         <i data-lucide="map-pin"></i>
-        <span>Consenti localizzazione per scoprire tempi di consegna in tempo reale.</span>
+        <span data-i18n="location-banner">Consenti localizzazione per scoprire tempi di consegna in tempo reale.</span>
       </button>
 
       <section class="catalog" id="selezione" aria-label="Selezione Haller Boutique">
         <header class="catalog-intro">
-          <h2><span>Selezione</span> <span>Haller Boutique</span></h2>
+          <h2><span data-i18n="selection">Selezione</span> <span>Haller Boutique</span></h2>
         </header>
         <div data-catalog></div>
       </section>
@@ -105,10 +105,10 @@
 
     <footer class="site-footer" id="contatti">
       <section class="footer-links">
-        <h2>Info</h2>
-        <a href="https://wa.me/393512757160" target="_blank" rel="noopener noreferrer">Assistenza WhatsApp</a>
-        <a href="spedizioni.html">Spedizioni</a>
-        <a href="termini.html">Termini e condizioni</a>
+        <h2 data-i18n="info">Info</h2>
+        <a href="https://wa.me/393512757160" target="_blank" rel="noopener noreferrer" data-i18n="whatsapp-support">Assistenza WhatsApp</a>
+        <a href="spedizioni.html" data-i18n="shipping">Spedizioni</a>
+        <a href="termini.html" data-i18n="terms">Termini e condizioni</a>
         <a href="privacy.html">Privacy Policy</a>
       </section>
 
@@ -116,7 +116,7 @@
         <div class="logo footer-logo" aria-label="Haller Boutique">
           <img src="assets/logo-original.png" alt="Haller Boutique" draggable="false">
         </div>
-        <p class="social-heading">Seguici sui nostri social</p>
+        <p class="social-heading" data-i18n="follow-social">Seguici sui nostri social</p>
         <div class="social-links" aria-label="Social">
           <a href="https://www.instagram.com/ha.ll.er_boutique_?igsh=ZXg3dHBsYXhod2Qx&utm_source=qr" aria-label="Instagram" target="_blank" rel="noopener noreferrer">
             <svg class="instagram-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -136,11 +136,11 @@
             </svg>
           </a>
         </div>
-        <p>&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
+        <p data-i18n="copyright">&copy; 2017 Haller Boutique. Tutti i diritti riservati.</p>
       </section>
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="script.js?v=aurora-online-launcher-1"></script>
+    <script src="script.js?v=translations-1"></script>
   </body>
 </html>

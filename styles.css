@@ -1597,29 +1597,6 @@ body {
   }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  body {
-    cursor: url("assets/cursor-bag.svg?v=4") 20 8, auto;
-  }
-
-  a,
-  button,
-  .icon-button,
-  .product-card,
-  [role="button"] {
-    cursor: url("assets/cursor-bag.svg?v=4") 20 8, pointer;
-  }
-
-  input,
-  textarea {
-    cursor: text;
-  }
-
-  select {
-    cursor: default;
-  }
-}
-
 a {
   color: inherit;
   text-decoration: none;
