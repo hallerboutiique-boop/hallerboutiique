@@ -1590,6 +1590,30 @@ body {
   letter-spacing: 0;
 }
 
+@media (hover: hover) and (pointer: fine) {
+  html,
+  body {
+    cursor: url("assets/cursor-bag.svg") 16 8, auto;
+  }
+
+  a,
+  button,
+  select,
+  summary,
+  label[for],
+  .icon-button,
+  .product-card,
+  [role="button"] {
+    cursor: url("assets/cursor-bag.svg") 16 8, pointer;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    cursor: text;
+  }
+}
+
 @supports (overflow: clip) {
   html,
   body {
