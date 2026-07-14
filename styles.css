@@ -2043,6 +2043,121 @@ body.motion-enabled .benefits article:hover {
   stroke-width: 1.5;
 }
 
+.benefit-icon {
+  position: relative;
+  display: grid;
+  flex: 0 0 52px;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+}
+
+.benefit-icon > svg {
+  position: relative;
+  z-index: 1;
+}
+
+.benefit-coin {
+  position: absolute;
+  z-index: 2;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255, 230, 177, 0.94);
+  border-radius: 50%;
+  background: var(--gold-hot);
+  box-shadow: 0 0 9px rgba(var(--gold-rgb), 0.82);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.benefit-coin-one {
+  top: -9px;
+  left: 28px;
+}
+
+.benefit-coin-two {
+  top: -15px;
+  left: 15px;
+}
+
+.benefit-coin-three {
+  top: -5px;
+  left: 39px;
+}
+
+body.motion-enabled .benefit-payment-icon .benefit-coin {
+  animation: payment-coin-drop 3.2s cubic-bezier(0.22, 0.75, 0.36, 1) infinite;
+}
+
+body.motion-enabled .benefit-payment-icon .benefit-coin-two {
+  animation-delay: 0.72s;
+}
+
+body.motion-enabled .benefit-payment-icon .benefit-coin-three {
+  animation-delay: 1.42s;
+}
+
+body.motion-enabled .benefit-support-icon > svg {
+  transform-origin: center;
+  animation: support-headset-vibrate 4s ease-in-out infinite;
+}
+
+body.motion-enabled .benefit-support:hover .benefit-support-icon > svg {
+  animation-duration: 0.62s;
+  animation-iteration-count: infinite;
+}
+
+@keyframes payment-coin-drop {
+  0%,
+  22% {
+    opacity: 0;
+    transform: translate3d(5px, -13px, 0) scale(0.52);
+  }
+
+  30% {
+    opacity: 1;
+  }
+
+  58% {
+    opacity: 1;
+    transform: translate3d(-3px, 27px, 0) scale(1);
+  }
+
+  64%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-5px, 30px, 0) scale(0.76);
+  }
+}
+
+@keyframes support-headset-vibrate {
+  0%,
+  72%,
+  100% {
+    transform: translateX(0) rotate(0);
+  }
+
+  76% {
+    transform: translateX(-1px) rotate(-2deg);
+  }
+
+  80% {
+    transform: translateX(2px) rotate(2deg);
+  }
+
+  84% {
+    transform: translateX(-2px) rotate(-2deg);
+  }
+
+  88% {
+    transform: translateX(1px) rotate(1deg);
+  }
+
+  92% {
+    transform: translateX(0) rotate(0);
+  }
+}
+
 .benefits h2 {
   margin: 0;
   text-transform: uppercase;
@@ -2396,10 +2511,13 @@ body.motion-enabled .benefits article:hover {
 
 .social-links a {
   display: inline-grid;
+  position: relative;
   width: 36px;
   height: 36px;
   place-items: center;
   color: var(--gold);
+  border-radius: 50%;
+  transition: color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
 }
 
 .social-links svg {
@@ -2408,6 +2526,38 @@ body.motion-enabled .benefits article:hover {
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1), filter 220ms ease;
+}
+
+body.motion-enabled .social-links a:hover,
+body.motion-enabled .social-links a:focus-visible {
+  color: var(--gold-hot);
+  background: rgba(var(--gold-rgb), 0.13);
+  box-shadow: 0 0 18px rgba(var(--gold-rgb), 0.35);
+  transform: translateY(-4px);
+}
+
+body.motion-enabled .social-links a:hover svg,
+body.motion-enabled .social-links a:focus-visible svg {
+  filter: drop-shadow(0 0 7px rgba(var(--gold-rgb), 0.8));
+  transform: scale(1.13) rotate(-7deg);
+}
+
+body.motion-enabled .social-links a:nth-child(2):hover svg,
+body.motion-enabled .social-links a:nth-child(2):focus-visible svg {
+  transform: scale(1.13) rotate(7deg);
+}
+
+body.motion-enabled .social-links a:nth-child(3):hover svg,
+body.motion-enabled .social-links a:nth-child(3):focus-visible svg {
+  transform: scale(1.13) translate3d(2px, -2px, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .benefit-payment-icon .benefit-coin,
+  .benefit-support-icon > svg {
+    animation: none !important;
+  }
 }
 
 .brand-icon {
