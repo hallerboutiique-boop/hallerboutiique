@@ -986,6 +986,7 @@ const productImageGalleries = {
     "assets/products/nike-air-force-louis-vuitton-red-1.png",
     "assets/products/nike-air-force-louis-vuitton-red-2.png",
   ],
+  "Polo Gucci": ["assets/products/polo-gucci-1.png"],
 };
 
 function withProductImageVersion(src) {
