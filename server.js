@@ -844,8 +844,8 @@ function buildTryOnForm({ userImage, productName, category }) {
     "prompt",
     [
       "Create a realistic virtual try-on preview for an ecommerce fashion site.",
-      "Use the image as the customer photo and keep the person's identity, face, body shape, pose and background natural.",
-      `Dress the person with this Haller Boutique item: ${productName || "fashion product"}.`,
+      "The reference image is split into two panels: the left panel is the customer and the right panel is the exact Haller Boutique garment from the catalog.",
+      "Keep the customer's identity, face, body shape, pose and background natural. Put the exact garment from the right panel on the customer, preserving its color, logo, print, cut and visible details.",
       `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
       "Only change the outfit area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
       "Return a premium, realistic square preview suitable for a product try-on modal.",
@@ -1377,7 +1377,7 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   };
 
   try {
-    progress?.update(46, "Prodotto preparato");
+    progress?.update(46, "Capo reale del catalogo preparato");
     progress?.update(60, "Generazione try-on AI in corso");
     const generated = await generateTryOnImage({ userImage, productName, category });
     progress?.update(92, "Anteprima ricevuta");

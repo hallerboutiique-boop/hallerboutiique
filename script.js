@@ -1585,6 +1585,55 @@ function previewTryOnUserImage(event) {
   setTryOnMessage("");
 }
 
+function loadTryOnReferenceImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("Immagine del prodotto non disponibile."));
+    image.src = src;
+  });
+}
+
+function drawTryOnReferenceImage(context, image, x, y, width, height, background) {
+  context.fillStyle = background;
+  context.fillRect(x, y, width, height);
+  const ratio = Math.min(width / image.naturalWidth, height / image.naturalHeight);
+  const drawWidth = image.naturalWidth * ratio;
+  const drawHeight = image.naturalHeight * ratio;
+  context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+async function createTryOnReference(userFile, productImage) {
+  const customerUrl = URL.createObjectURL(userFile);
+  try {
+    const [customer, product] = await Promise.all([
+      loadTryOnReferenceImage(customerUrl),
+      loadTryOnReferenceImage(productImage),
+    ]);
+    const canvas = document.createElement("canvas");
+    canvas.width = 1536;
+    canvas.height = 1086;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("Preparazione immagine non disponibile.");
+
+    context.fillStyle = "#111111";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawTryOnReferenceImage(context, customer, 0, 62, 1000, 1024, "#151515");
+    drawTryOnReferenceImage(context, product, 1000, 62, 536, 1024, "#ffffff");
+    context.fillStyle = "#ffffff";
+    context.font = "600 25px Montserrat, Arial, sans-serif";
+    context.fillText("PERSONA", 24, 40);
+    context.fillText("CAPO REALE DEL CATALOGO", 1040, 40);
+
+    const blob = await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("Preparazione immagine non riuscita."))), "image/png");
+    });
+    return blob;
+  } finally {
+    URL.revokeObjectURL(customerUrl);
+  }
+}
+
 async function generateTryOn() {
   const modal = ensureTryOnModal();
   const input = modal.querySelector("[data-tryon-user-image]");
@@ -1596,19 +1645,20 @@ async function generateTryOn() {
     return;
   }
 
-  const formData = new FormData();
-  formData.append("userImage", file);
-  formData.append("productId", tryOnProduct.id || "");
-  formData.append("productName", tryOnProduct.name || "");
-  formData.append("category", tryOnProduct.category || "");
-  formData.append("productImage", productPrimaryImage(tryOnProduct));
-
   button.disabled = true;
-  setTryOnProgress(4, "Invio foto al server");
-  setTryOnMessage("Invio foto al server...");
+  setTryOnProgress(4, "Preparazione del capo reale");
+  setTryOnMessage("Preparazione del capo reale...");
   setTryOnResult("<p>Sto preparando l'anteprima AI...</p>");
 
   try {
+    const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct));
+    const formData = new FormData();
+    formData.append("userImage", referenceImage, "try-on-reference.png");
+    formData.append("productId", tryOnProduct.id || "");
+    formData.append("productName", tryOnProduct.name || "");
+    formData.append("category", tryOnProduct.category || "");
+    setTryOnProgress(16, "Foto cliente e capo del catalogo pronti");
+    setTryOnMessage("Invio foto al server...");
     const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
       setTryOnProgress(event.progress, event.message);
       setTryOnMessage(event.message);
