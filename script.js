@@ -2139,3 +2139,155 @@ if (discountButton && discountInput && discountMessage) {
 }
 
 setupCheckoutPayments();
+
+const chatProfileKey = "hallerBoutiqueChatProfile";
+let chatHistory = [];
+
+function readChatProfile() {
+  try {
+    const profile = JSON.parse(localStorage.getItem(chatProfileKey));
+    return profile && typeof profile === "object" ? profile : null;
+  } catch {
+    return null;
+  }
+}
+
+function getChatCatalog() {
+  return getAllProducts().map((product) => ({
+    name: product.name,
+    category: product.category,
+    collection: product.collection,
+    description: product.description,
+    finalPrice: product.finalPrice,
+    sizes: getSizes(product.sizeType),
+  }));
+}
+
+function appendChatMessage(messages, role, text) {
+  messages.insertAdjacentHTML("beforeend", `<p class="site-chat-message site-chat-message-${role}">${escapeHtml(text)}</p>`);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function setupSiteChat() {
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `
+      <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique">
+        <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale">
+          <i data-lucide="message-circle"></i>
+        </button>
+        <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
+          <header class="site-chat-header">
+            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Niva, assistente virtuale" draggable="false">
+            <div><strong>Niva</strong><span>Assistente virtuale</span></div>
+            <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale"><i data-lucide="x"></i></button>
+          </header>
+          <form class="site-chat-profile" data-chat-profile>
+            <p>Prima di iniziare, lasciami i tuoi dati per seguirti meglio.</p>
+            <div class="site-chat-profile-grid">
+              <label>Nome<input name="firstName" autocomplete="given-name" required></label>
+              <label>Cognome<input name="lastName" autocomplete="family-name" required></label>
+            </div>
+            <label>Email<input name="email" type="email" autocomplete="email" required></label>
+            <label>Cellulare <em>facoltativo</em><input name="phone" type="tel" autocomplete="tel"></label>
+            <small>I dati vengono usati solo per offrirti assistenza in questa conversazione.</small>
+            <button type="submit">Inizia la chat</button>
+          </form>
+          <div class="site-chat-conversation" data-chat-conversation hidden>
+            <div class="site-chat-messages" data-chat-messages aria-live="polite"></div>
+            <div class="site-chat-actions">
+              <button type="button" data-chat-prompt="Mi aiuti a scegliere la taglia?">Taglie</button>
+              <button type="button" data-chat-prompt="Vorrei sapere dove si trova il mio ordine. Il mio codice e HB-">Segui ordine</button>
+            </div>
+            <form class="site-chat-composer" data-chat-composer>
+              <input data-chat-input maxlength="900" placeholder="Scrivi qui..." autocomplete="off" required>
+              <button type="submit" aria-label="Invia messaggio"><i data-lucide="send"></i></button>
+            </form>
+          </div>
+        </div>
+      </section>
+    `
+  );
+
+  const root = document.querySelector("[data-site-chat]");
+  const panel = root.querySelector("[data-chat-panel]");
+  const profileForm = root.querySelector("[data-chat-profile]");
+  const conversation = root.querySelector("[data-chat-conversation]");
+  const messages = root.querySelector("[data-chat-messages]");
+  const composer = root.querySelector("[data-chat-composer]");
+  const input = root.querySelector("[data-chat-input]");
+  let profile = readChatProfile();
+
+  const showConversation = () => {
+    profileForm.hidden = true;
+    conversation.hidden = false;
+    if (!messages.children.length) appendChatMessage(messages, "assistant", `Ciao ${profile.firstName}, sono Niva, l'assistente virtuale di Haller Boutique. Come posso aiutarti?`);
+  };
+
+  root.querySelectorAll("[data-chat-toggle]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const isOpen = panel.hidden;
+      panel.hidden = !isOpen;
+      root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", String(isOpen));
+      if (isOpen && profile) showConversation();
+    });
+  });
+
+  if (profile) {
+    ["firstName", "lastName", "email", "phone"].forEach((name) => {
+      const field = profileForm.elements.namedItem(name);
+      if (field) field.value = profile[name] || "";
+    });
+  }
+
+  profileForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const values = Object.fromEntries(new FormData(profileForm));
+    profile = {
+      firstName: String(values.firstName || "").trim(),
+      lastName: String(values.lastName || "").trim(),
+      email: String(values.email || "").trim(),
+      phone: String(values.phone || "").trim(),
+    };
+    localStorage.setItem(chatProfileKey, JSON.stringify(profile));
+    showConversation();
+    input.focus();
+  });
+
+  const sendMessage = async (message) => {
+    const text = String(message || "").trim();
+    if (!text || !profile) return;
+    appendChatMessage(messages, "user", text);
+    chatHistory.push({ role: "user", content: text });
+    input.value = "";
+    input.disabled = true;
+    appendChatMessage(messages, "assistant", "Un attimo, controllo.");
+    const pending = messages.lastElementChild;
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1), catalog: getChatCatalog() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || "Non riesco a rispondere ora.");
+      pending.textContent = data.reply;
+      chatHistory.push({ role: "assistant", content: data.reply });
+    } catch (error) {
+      pending.textContent = error.message || "Non riesco a rispondere ora.";
+    } finally {
+      input.disabled = false;
+      input.focus();
+      messages.scrollTop = messages.scrollHeight;
+    }
+  };
+
+  composer.addEventListener("submit", (event) => {
+    event.preventDefault();
+    sendMessage(input.value);
+  });
+  root.querySelectorAll("[data-chat-prompt]").forEach((button) => button.addEventListener("click", () => sendMessage(button.dataset.chatPrompt)));
+  if (window.lucide) window.lucide.createIcons();
+}
+
+setupSiteChat();

@@ -1167,6 +1167,91 @@ async function handleProducts(req, res) {
   json(res, 200, { ok: true, items: data.items, custom: data.custom.map(mergeCustomProduct) });
 }
 
+function cleanChatMessage(value) {
+  return cleanTrackingString(value, 900);
+}
+
+function cleanChatCatalog(catalog) {
+  if (!Array.isArray(catalog)) return [];
+  return catalog
+    .slice(0, 80)
+    .map((product) => ({
+      name: cleanTrackingString(product?.name, 120),
+      category: cleanTrackingString(product?.category, 80),
+      collection: cleanTrackingString(product?.collection, 100),
+      description: cleanTrackingString(product?.description, 300),
+      price: cleanTrackingString(product?.finalPrice, 40),
+      sizes: Array.isArray(product?.sizes) ? product.sizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12) : [],
+    }))
+    .filter((product) => product.name);
+}
+
+async function handleSiteChat(req, res) {
+  if (req.method !== "POST") return notFound(res);
+  const body = await parseBody(req);
+  const profile = body.profile && typeof body.profile === "object" ? body.profile : {};
+  const firstName = cleanTrackingString(profile.firstName, 80);
+  const lastName = cleanTrackingString(profile.lastName, 80);
+  const email = cleanEmail(profile.email);
+  const phone = cleanTrackingString(profile.phone, 40);
+  const message = cleanChatMessage(body.message);
+  if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(email)) {
+    return badRequest(res, "Inserisci nome, cognome e un indirizzo email valido per continuare.");
+  }
+  if (!message) return badRequest(res, "Scrivi un messaggio per iniziare la conversazione.");
+
+  const catalog = cleanChatCatalog(body.catalog);
+  const history = Array.isArray(body.history)
+    ? body.history
+        .slice(-8)
+        .map((item) => ({ role: item?.role === "assistant" ? "assistant" : "user", content: cleanChatMessage(item?.content) }))
+        .filter((item) => item.content)
+    : [];
+  const orderCode = message.match(/\bHB-[A-Z0-9-]{5,80}\b/i)?.[0];
+  let orderContext = "Nessun codice ordine fornito.";
+  if (orderCode) {
+    const orders = await readOrders();
+    const order = orders.find((item) => String(item.orderCode || "").toUpperCase() === orderCode.toUpperCase() && cleanEmail(item.customer?.email) === email);
+    orderContext = order
+      ? `Ordine ${order.orderCode}: stato ${order.status || "in lavorazione"}, creato il ${new Date(order.createdAt).toLocaleDateString("it-IT")}, totale ${order.total || "non disponibile"}.`
+      : `Non e stato trovato un ordine ${orderCode} associato a questa email.`;
+  }
+
+  const catalogText = catalog.length
+    ? catalog.map((product) => `- ${product.name} | ${product.category} | ${product.collection} | ${product.price} | taglie: ${product.sizes.join(", ") || "da verificare"} | ${product.description}`).join("\n")
+    : "Catalogo momentaneamente non disponibile.";
+
+  if (!openaiApiKey) {
+    return json(res, 503, { ok: false, message: "Assistente virtuale temporaneamente non disponibile." });
+  }
+
+  try {
+    const data = await callOpenAiResponse({
+      model: openaiProductModel,
+      input: [
+        {
+          role: "system",
+          content: [
+            "Sei Niva, assistente virtuale di Haller Boutique. Dichiara in modo naturale che sei l'assistente virtuale se ti viene chiesto chi sei; non fingere mai di essere una persona.",
+            "Scrivi in italiano, con tono caldo, brillante e leggermente spiritoso, ma senza errori volontari. Risposte brevi e concrete, massimo 5 frasi.",
+            "Usa esclusivamente le informazioni del catalogo e dell'ordine qui sotto. Non inventare disponibilita, spedizioni, promesse o sconti. Per le taglie dai indicazioni generali e invita a contattare WhatsApp quando serve conferma.",
+            `Cliente: ${firstName} ${lastName}; email: ${email}; telefono facoltativo: ${phone || "non fornito"}.`,
+            `Contesto ordine: ${orderContext}`,
+            `Catalogo Haller Boutique:\n${catalogText}`,
+          ].join("\n\n"),
+        },
+        ...history.map((item) => ({ role: item.role, content: item.content })),
+        { role: "user", content: message },
+      ],
+      max_output_tokens: 350,
+    });
+    const reply = cleanChatMessage(responseOutputText(data)) || "Mi e sfuggito un dettaglio. Puoi riscriverlo un attimo?";
+    json(res, 200, { ok: true, reply });
+  } catch (error) {
+    json(res, 502, { ok: false, message: `Assistente virtuale non disponibile: ${cleanTrackingString(error.message, 180)}` });
+  }
+}
+
 async function handleAdminProducts(req, res) {
   if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
   const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
@@ -1954,6 +2039,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
+  if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
   if (url.pathname === "/api/try-on") return handleTryOn(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/login") return handleLogin(req, res);
