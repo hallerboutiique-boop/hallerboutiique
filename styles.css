@@ -2106,7 +2106,7 @@ body.motion-enabled .benefits article:hover {
 
 .site-footer {
   display: grid;
-  grid-template-columns: 1fr minmax(440px, 1.78fr);
+  grid-template-columns: minmax(170px, 0.72fr) minmax(160px, 0.62fr) minmax(0, 1.5fr);
   width: min(88.3vw, 1357px);
   margin: 34px auto 0;
   padding-bottom: 22px;
@@ -2132,7 +2132,10 @@ body.motion-enabled .benefits article:hover {
 }
 
 .footer-trustpilot {
-  display: none;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1px 20px 0;
 }
 
 .trustpilot-badge {
@@ -2141,29 +2144,35 @@ body.motion-enabled .benefits article:hover {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: min(100%, 180px);
-  min-height: 96px;
-  padding: 14px;
-  border: 1px solid rgba(0, 182, 122, 0.78);
-  border-radius: 6px;
-  background: rgba(0, 182, 122, 0.12);
+  width: min(100%, 190px);
+  min-height: 0;
+  padding: 0 0 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(0, 182, 122, 0.52);
+  border-radius: 0;
+  background: transparent;
   color: #fff;
   font-size: 11px !important;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.35;
   text-align: center;
-  transition: background 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, transform 160ms ease;
 }
 
 .trustpilot-badge:hover {
-  background: rgba(0, 182, 122, 0.22);
-  transform: translateY(-1px);
+  border-color: #00b67a;
+  background: transparent;
+  transform: translateY(-2px);
 }
 
 .trustpilot-badge img {
   display: block;
-  width: 116px;
+  width: 144px;
   height: auto;
+}
+
+.trustpilot-badge span {
+  color: rgba(255, 255, 255, 0.72);
 }
 
 .footer-links a {
@@ -4096,6 +4105,7 @@ body.motion-enabled .product-actions .buy-action:hover {
     min-height: 0;
     padding: 0;
     border: 0;
+    border-bottom: 0;
     border-radius: 0;
     background: transparent;
   }
