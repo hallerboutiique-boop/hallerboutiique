@@ -2129,14 +2129,6 @@ body.motion-enabled .benefits article:hover {
 }
 
 .footer-links {
-  display: grid;
-  grid-template-columns: max-content 62px;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-}
-
-.footer-info-copy {
   display: flex;
   flex-direction: column;
   gap: 11px;
@@ -2151,35 +2143,11 @@ body.motion-enabled .benefits article:hover {
   font-weight: 800;
 }
 
-.footer-info-copy a {
+.footer-links a {
   width: fit-content;
   color: var(--text);
   font-size: 18px;
   line-height: 1.05;
-}
-
-.footer-whatsapp {
-  display: inline-grid;
-  width: 62px;
-  height: 62px;
-  place-items: center;
-  border-radius: 50%;
-  color: #ffffff;
-  background: #25d366;
-  box-shadow: 0 0 0 4px rgba(37, 211, 102, 0.15), 0 8px 20px rgba(37, 211, 102, 0.32);
-  transition: transform 180ms ease, box-shadow 180ms ease;
-}
-
-.footer-whatsapp:hover,
-.footer-whatsapp:focus-visible {
-  transform: scale(1.08);
-  box-shadow: 0 0 0 6px rgba(37, 211, 102, 0.2), 0 10px 24px rgba(37, 211, 102, 0.42);
-}
-
-.footer-whatsapp svg {
-  width: 39px;
-  height: 39px;
-  fill: currentColor;
 }
 
 .footer-center {
@@ -3966,18 +3934,7 @@ body.motion-enabled .product-actions .buy-action:hover {
   .footer-links {
     width: 100%;
     min-width: 0;
-    grid-template-columns: max-content 56px;
     gap: 10px;
-  }
-
-  .footer-whatsapp {
-    width: 56px;
-    height: 56px;
-  }
-
-  .footer-whatsapp svg {
-    width: 35px;
-    height: 35px;
   }
 
   .footer-center {
