@@ -1936,22 +1936,8 @@ body.motion-enabled .hero-slide.is-active .promo-copy {
   text-shadow: 0 4px 28px rgba(0, 0, 0, 0.94);
 }
 
-.promo-copy .hero-title-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  line-height: 0.94;
-}
-
-.hero-title-diamond {
-  display: block;
-  width: 9px;
-  height: 9px;
-  flex: 0 0 9px;
-  background: var(--gold);
-  box-shadow: 0 0 14px rgba(var(--gold-rgb), 0.72);
-  transform: rotate(45deg);
+.promo-copy .hero-title-stacked {
+  line-height: 0.98;
 }
 
 .promo-copy p {
@@ -4419,15 +4405,8 @@ body.motion-enabled .product-actions .buy-action:hover {
     line-height: 1.08;
   }
 
-  .promo-copy .hero-title-stack {
-    gap: 6px;
-    line-height: 0.98;
-  }
-
-  .hero-title-diamond {
-    width: 6px;
-    height: 6px;
-    flex-basis: 6px;
+  .promo-copy .hero-title-stacked {
+    line-height: 1.02;
   }
 
   .promo-copy p {
