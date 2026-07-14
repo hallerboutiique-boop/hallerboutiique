@@ -829,31 +829,13 @@ function imageMimeFromExtension(ext) {
   return "image/jpeg";
 }
 
-async function readLocalProductImage(src) {
-  const value = cleanTrackingString(src, 260);
-  if (!value || /^https?:\/\//i.test(value)) return null;
-  const pathname = value.startsWith("/") ? value : `/${value}`;
-  const safePath = safeStaticPath(pathname.split("?")[0]);
-  if (!safePath) return null;
-  try {
-    const data = await fs.readFile(safePath);
-    const ext = path.extname(safePath).toLowerCase();
-    const mime = contentTypes[ext]?.split(";")[0] || imageMimeFromExtension(ext);
-    return { data, mime, filename: `product${ext || ".jpg"}` };
-  } catch {
-    return null;
-  }
-}
-
 function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
 }
 
-function buildTryOnForm({ userImage, productImage, productName, category, arrayField }) {
+function buildTryOnForm({ userImage, productName, category }) {
   const form = new FormData();
-  const imageField = productImage && arrayField ? "image[]" : "image";
-  appendImageFormData(form, imageField, userImage);
-  if (productImage) appendImageFormData(form, imageField, productImage);
+  appendImageFormData(form, "image", userImage);
   form.append("model", openaiTryOnModel);
   form.append("size", "1024x1024");
   form.append("input_fidelity", "high");
@@ -861,10 +843,8 @@ function buildTryOnForm({ userImage, productImage, productName, category, arrayF
     "prompt",
     [
       "Create a realistic virtual try-on preview for an ecommerce fashion site.",
-      "Use the first image as the customer photo and keep the person's identity, face, body shape, pose and background natural.",
-      productImage
-        ? "Use the second image as the exact Haller Boutique product reference for the clothing style, color and visible details."
-        : `Dress the person with this Haller Boutique item: ${productName || "fashion product"}.`,
+      "Use the image as the customer photo and keep the person's identity, face, body shape, pose and background natural.",
+      `Dress the person with this Haller Boutique item: ${productName || "fashion product"}.`,
       `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
       "Only change the outfit area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
       "Return a premium, realistic square preview suitable for a product try-on modal.",
@@ -905,20 +885,7 @@ async function requestTryOnEdit(form) {
 }
 
 async function generateTryOnImage(input) {
-  const attempts = [
-    buildTryOnForm({ ...input, arrayField: true }),
-    buildTryOnForm({ ...input, arrayField: false }),
-  ];
-  let lastError;
-  for (const form of attempts) {
-    try {
-      return await requestTryOnEdit(form);
-    } catch (error) {
-      lastError = error;
-      if (error.status && error.status !== 400) break;
-    }
-  }
-  throw lastError || new Error("Try-on non disponibile.");
+  return requestTryOnEdit(buildTryOnForm(input));
 }
 
 function signPayload(payload) {
@@ -1402,8 +1369,6 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   progress?.update(24, "Foto ricevuta");
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
-  const productImageSrc = fieldValue(parts, "productImage", 260);
-  const productImage = await readLocalProductImage(productImageSrc);
   const userImage = {
     data: image.data,
     mime: image.contentType || imageMimeFromExtension(ext),
@@ -1413,7 +1378,7 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   try {
     progress?.update(46, "Prodotto preparato");
     progress?.update(60, "Generazione try-on AI in corso");
-    const generated = await generateTryOnImage({ userImage, productImage, productName, category });
+    const generated = await generateTryOnImage({ userImage, productName, category });
     progress?.update(92, "Anteprima ricevuta");
     const result = { ok: true, image: generated };
     if (progress) return progress.done(result);
