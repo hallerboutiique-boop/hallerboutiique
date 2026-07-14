@@ -705,6 +705,7 @@ function requestLocationFromBanner(event) {
   event?.preventDefault?.();
   if (event?.hallerLocationHandled) return;
   if (event) event.hallerLocationHandled = true;
+  if (document.querySelector("[data-cookie-banner]")) return;
 
   const current = readConsent() || {};
   const nextConsent = {

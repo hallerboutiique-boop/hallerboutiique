@@ -1387,7 +1387,7 @@
   position: fixed;
   right: 18px;
   bottom: 18px;
-  z-index: 30;
+  z-index: 100;
   display: grid;
   width: min(720px, calc(100vw - 36px));
   gap: 16px;
@@ -2036,7 +2036,7 @@ body.motion-enabled .benefits article:hover {
 
 .location-delivery-banner {
   position: relative;
-  z-index: 35;
+  z-index: 1;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
@@ -2054,6 +2054,10 @@ body.motion-enabled .benefits article:hover {
   box-shadow: 0 14px 34px rgba(0, 0, 0, 0.42), 0 0 24px rgba(var(--gold-rgb), 0.12);
   font-family: inherit;
   cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 
 .location-delivery-banner svg {
@@ -3995,6 +3999,8 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   .location-delivery-banner {
+    position: relative;
+    z-index: 1;
     grid-template-columns: 1fr;
     justify-items: center;
     min-height: 92px;
