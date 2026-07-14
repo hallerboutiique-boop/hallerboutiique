@@ -52,6 +52,7 @@ const publicFiles = new Set([
   "/privacy.html",
   "/styles.css",
   "/script.js",
+  "/i18n.js",
   "/account.js",
   "/admin.js",
 ]);
