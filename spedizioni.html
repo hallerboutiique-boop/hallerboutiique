@@ -14,6 +14,10 @@
     <header class="legal-header">
       <a class="legal-back" href="index.html" aria-label="Torna al negozio"><i data-lucide="arrow-left"></i><span>Torna al negozio</span></a>
       <a class="legal-brand" href="index.html" aria-label="Haller Boutique home"><img src="assets/logo-original.png" alt="Haller Boutique"></a>
+      <div class="language-picker legal-language-picker" data-language-picker>
+        <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false"><i data-lucide="globe"></i></button>
+        <div class="language-menu" role="menu"><button type="button" data-language-option="it" aria-label="Italiano">🇮🇹</button><button type="button" data-language-option="en" aria-label="English">🇬🇧</button><button type="button" data-language-option="fr" aria-label="Francais">🇫🇷</button><button type="button" data-language-option="de" aria-label="Deutsch">🇩🇪</button><button type="button" data-language-option="es" aria-label="Espanol">🇪🇸</button></div>
+      </div>
     </header>
     <main class="legal-content">
       <p class="legal-eyebrow">Informazioni acquisto</p>
@@ -41,6 +45,7 @@
       </section>
     </main>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="i18n.js?v=sitewide-language-1"></script>
     <script>lucide.createIcons();</script>
   </body>
 </html>
