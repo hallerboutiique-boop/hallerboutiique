@@ -2325,6 +2325,10 @@ body.motion-enabled .benefits article:hover {
   height: 36px;
 }
 
+.trustpilot-icon {
+  fill: #00b67a;
+}
+
 .footer-center p {
   margin: 21px 0 0;
   color: var(--gold);
