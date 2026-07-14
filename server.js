@@ -20,6 +20,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
+const openaiTryOnTimeoutMs = 120000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
@@ -855,7 +856,7 @@ function buildTryOnForm({ userImage, productName, category }) {
 
 async function requestTryOnEdit(form) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
+  const timeout = setTimeout(() => controller.abort(), openaiTryOnTimeoutMs);
   try {
     const response = await fetch("https://api.openai.com/v1/images/edits", {
       method: "POST",
