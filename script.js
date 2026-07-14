@@ -2178,8 +2178,8 @@ function setupSiteChat() {
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Niva, assistente virtuale" draggable="false">
-            <div><strong>Niva</strong><span>Assistente virtuale</span></div>
+            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" draggable="false">
+            <div><strong>Aurora</strong><span>Assistente online</span></div>
             <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale"><i data-lucide="x"></i></button>
           </header>
           <form class="site-chat-profile" data-chat-profile>
@@ -2221,7 +2221,7 @@ function setupSiteChat() {
   const showConversation = () => {
     profileForm.hidden = true;
     conversation.hidden = false;
-    if (!messages.children.length) appendChatMessage(messages, "assistant", `Ciao ${profile.firstName}, sono Niva, l'assistente virtuale di Haller Boutique. Come posso aiutarti?`);
+    if (!messages.children.length) appendChatMessage(messages, "assistant", `Ciao ${profile.firstName}, sono Aurora, l'assistente virtuale di Haller Boutique. Come posso aiutarti?`);
   };
 
   root.querySelectorAll("[data-chat-toggle]").forEach((button) => {
