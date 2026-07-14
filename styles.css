@@ -2175,6 +2175,22 @@ body.motion-enabled .benefits article:hover {
   color: rgba(255, 255, 255, 0.72);
 }
 
+@media (min-width: 861px) {
+  .footer-trustpilot {
+    align-items: flex-start;
+  }
+
+  .trustpilot-badge,
+  .footer-logo {
+    box-sizing: border-box;
+    height: 100px;
+  }
+
+  .trustpilot-badge img {
+    max-width: 100%;
+  }
+}
+
 .footer-links a {
   width: fit-content;
   color: var(--text);
