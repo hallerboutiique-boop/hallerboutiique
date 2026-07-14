@@ -2868,7 +2868,7 @@ body.motion-enabled .product-actions .buy-action:hover {
 
 .site-chat-header {
   display: grid;
-  grid-template-columns: 46px 1fr 36px;
+  grid-template-columns: 62px 1fr 36px;
   align-items: center;
   gap: 11px;
   padding: 14px;
@@ -2877,8 +2877,8 @@ body.motion-enabled .product-actions .buy-action:hover {
 }
 
 .site-chat-header img {
-  width: 46px;
-  height: 46px;
+  width: 62px;
+  height: 62px;
   object-fit: cover;
   border: 2px solid var(--gold);
   border-radius: 50%;
@@ -3055,6 +3055,15 @@ body.motion-enabled .product-actions .buy-action:hover {
     bottom: 70px;
     width: min(390px, calc(100vw - 24px));
     max-height: calc(100vh - 96px);
+  }
+
+  .site-chat-header {
+    grid-template-columns: 54px 1fr 36px;
+  }
+
+  .site-chat-header img {
+    width: 54px;
+    height: 54px;
   }
 }
 
