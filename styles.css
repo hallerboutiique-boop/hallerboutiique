@@ -2831,21 +2831,55 @@ body.motion-enabled .product-actions .buy-action:hover {
 }
 
 .site-chat-launcher {
-  display: grid;
-  width: 62px;
+  position: relative;
+  display: flex;
+  min-width: 62px;
   height: 62px;
-  place-items: center;
-  color: #090909;
-  border: 1px solid rgba(255, 255, 255, 0.38);
-  border-radius: 50%;
-  background: var(--gold);
+  align-items: center;
+  gap: 9px;
+  padding: 3px 15px 3px 3px;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.84);
+  border-radius: 32px;
+  background: #101010;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42), 0 0 0 5px rgba(var(--gold-rgb), 0.14);
   cursor: pointer;
 }
 
-.site-chat-launcher svg {
-  width: 29px;
-  height: 29px;
+.site-chat-launcher img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border: 2px solid var(--gold);
+  border-radius: 50%;
+}
+
+.site-chat-online-copy {
+  display: grid;
+  gap: 1px;
+  padding-right: 5px;
+  text-align: left;
+}
+
+.site-chat-online-copy strong {
+  font-size: 13px;
+}
+
+.site-chat-online-copy small {
+  color: #66e88d;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.site-chat-online-dot {
+  position: absolute;
+  bottom: 5px;
+  left: 45px;
+  width: 12px;
+  height: 12px;
+  border: 2px solid #101010;
+  border-radius: 50%;
+  background: #4ade80;
 }
 
 .site-chat-panel {
@@ -3047,8 +3081,17 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   .site-chat-launcher {
-    width: 56px;
+    min-width: 56px;
     height: 56px;
+  }
+
+  .site-chat-launcher img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .site-chat-online-dot {
+    left: 40px;
   }
 
   .site-chat-panel {

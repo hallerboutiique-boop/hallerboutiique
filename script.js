@@ -2174,7 +2174,9 @@ function setupSiteChat() {
     `
       <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique">
         <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale">
-          <i data-lucide="message-circle"></i>
+          <img src="assets/chat-assistant-avatar.png" alt="Aurora online" draggable="false">
+          <span class="site-chat-online-copy"><strong>Aurora</strong><small>Online</small></span>
+          <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
