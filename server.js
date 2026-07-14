@@ -13,6 +13,8 @@ const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
 const productsFile = path.join(dataDir, "products.json");
 const uploadsDir = path.join(dataDir, "uploads");
+const tryOnDir = path.join(dataDir, "try-on");
+const tryOnArchiveFile = path.join(dataDir, "try-on.json");
 const port = Number(process.env.PORT || 8080);
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
@@ -21,6 +23,7 @@ const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 120000;
+const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
@@ -79,7 +82,9 @@ async function ensureStorage() {
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
   await ensureJsonFile(productsFile, { items: {}, custom: [] });
+  await ensureJsonFile(tryOnArchiveFile, []);
   await fs.mkdir(uploadsDir, { recursive: true });
+  await fs.mkdir(tryOnDir, { recursive: true });
 }
 
 async function ensureJsonFile(filePath, fallback) {
@@ -136,6 +141,31 @@ async function writeProductOverrides(data) {
     items: data.items && typeof data.items === "object" ? data.items : {},
     custom: Array.isArray(data.custom) ? data.custom : [],
   });
+}
+
+async function readTryOnArchive() {
+  const data = await readJson(tryOnArchiveFile, []);
+  return Array.isArray(data) ? data : [];
+}
+
+async function pruneTryOnArchive() {
+  const records = await readTryOnArchive();
+  const now = Date.now();
+  const active = [];
+  const expired = [];
+
+  records.forEach((record) => {
+    if (new Date(record.expiresAt || 0).getTime() > now) active.push(record);
+    else expired.push(record);
+  });
+
+  await Promise.all(
+    expired.flatMap((record) => [record.sourceFile, record.previewFile].filter(Boolean)).map((name) =>
+      fs.unlink(path.join(tryOnDir, path.basename(name))).catch(() => undefined)
+    )
+  );
+  if (expired.length > 0) await writeJson(tryOnArchiveFile, active);
+  return active;
 }
 
 async function readAnalytics() {
@@ -1041,6 +1071,43 @@ function imageExtension(filename, contentType) {
   return byType[String(contentType || "").toLowerCase()] || "";
 }
 
+function imageDataFromDataUrl(value) {
+  const match = String(value || "").match(/^data:(image\/(?:png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/i);
+  if (!match) return null;
+  const ext = imageExtension("preview", match[1]);
+  if (!ext) return null;
+  return { data: Buffer.from(match[2], "base64"), ext };
+}
+
+async function archiveTryOn({ customerImage, generated, productId, productName, category }) {
+  const sourceExt = imageExtension(customerImage.filename, customerImage.contentType);
+  if (!sourceExt || sourceExt === ".svg" || customerImage.data.length === 0) return null;
+
+  const id = `tryon_${Date.now()}_${randomBytes(6).toString("hex")}`;
+  const sourceFile = `${id}-source${sourceExt}`;
+  const preview = imageDataFromDataUrl(generated);
+  const previewFile = preview ? `${id}-preview${preview.ext}` : "";
+  await fs.mkdir(tryOnDir, { recursive: true });
+  await fs.writeFile(path.join(tryOnDir, sourceFile), customerImage.data);
+  if (previewFile) await fs.writeFile(path.join(tryOnDir, previewFile), preview.data);
+
+  const createdAt = new Date().toISOString();
+  const record = {
+    id,
+    createdAt,
+    expiresAt: new Date(Date.now() + tryOnRetentionMs).toISOString(),
+    productId: cleanTrackingString(productId, 120),
+    productName: cleanTrackingString(productName, 180),
+    category: cleanTrackingString(category, 120),
+    sourceFile,
+    previewFile,
+  };
+  const records = await pruneTryOnArchive();
+  records.unshift(record);
+  await writeJson(tryOnArchiveFile, records.slice(0, 100));
+  return record;
+}
+
 function origin(req) {
   if (process.env.PUBLIC_SITE_URL) return process.env.PUBLIC_SITE_URL.replace(/\/$/, "");
   const proto = req.headers["x-forwarded-proto"] || "https";
@@ -1458,6 +1525,8 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   progress?.update(24, "Foto ricevuta");
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
+  const saveTryOn = fieldValue(parts, "saveTryOn", 10) === "yes";
+  const customerImage = parts.find((part) => part.name === "customerImage" && part.filename);
   const userImage = {
     data: image.data,
     mime: image.contentType || imageMimeFromExtension(ext),
@@ -1469,13 +1538,59 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
     progress?.update(60, "Generazione try-on AI in corso");
     const generated = await generateTryOnImage({ userImage, productName, category });
     progress?.update(92, "Anteprima ricevuta");
-    const result = { ok: true, image: generated };
+    const archived = saveTryOn && customerImage ? await archiveTryOn({ customerImage, generated, productId: fieldValue(parts, "productId", 120), productName, category }) : null;
+    const result = { ok: true, image: generated, saved: Boolean(archived) };
     if (progress) return progress.done(result);
     json(res, 200, result);
   } catch (error) {
     const message = `Try-on non disponibile: ${cleanTrackingString(error.message, 220)}`;
     if (progress) return progress.fail(message);
     json(res, 502, { ok: false, message });
+  }
+}
+
+async function handleAdminTryOnArchive(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  if (req.method !== "GET") return notFound(res);
+  const items = await pruneTryOnArchive();
+  return json(res, 200, {
+    ok: true,
+    items: items.slice(0, 50).map((item) => ({
+      id: item.id,
+      createdAt: item.createdAt,
+      expiresAt: item.expiresAt,
+      productId: item.productId,
+      productName: item.productName,
+      category: item.category,
+      sourceUrl: `/api/admin/try-on/${item.id}/source`,
+      previewUrl: item.previewFile ? `/api/admin/try-on/${item.id}/preview` : "",
+    })),
+  });
+}
+
+async function handleAdminTryOnImage(req, res, url) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  if (req.method !== "GET") return notFound(res);
+  const match = url.pathname.match(/^\/api\/admin\/try-on\/(tryon_[a-z0-9_]+)\/(source|preview)$/i);
+  if (!match) return notFound(res);
+  const items = await pruneTryOnArchive();
+  const item = items.find((entry) => entry.id === match[1]);
+  const fileName = match[2] === "source" ? item?.sourceFile : item?.previewFile;
+  if (!fileName) return notFound(res);
+
+  const filePath = path.join(tryOnDir, path.basename(fileName));
+  try {
+    const image = await fs.readFile(filePath);
+    const ext = path.extname(filePath).toLowerCase();
+    res.writeHead(200, {
+      "Content-Type": contentTypes[ext] || "application/octet-stream",
+      "Content-Length": image.length,
+      "Cache-Control": "no-store, private",
+      "X-Content-Type-Options": "nosniff",
+    });
+    res.end(image);
+  } catch {
+    return notFound(res);
   }
 }
 
@@ -2059,6 +2174,8 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
+  if (url.pathname === "/api/admin/try-on") return handleAdminTryOnArchive(req, res);
+  if (url.pathname.startsWith("/api/admin/try-on/")) return handleAdminTryOnImage(req, res, url);
   if (url.pathname === "/api/admin/ai-product") {
     return handleAdminAiProduct(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
   }

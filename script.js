@@ -1474,7 +1474,7 @@ function ensureTryOnModal() {
           <div class="tryon-heading">
             <p>Try-on AI</p>
             <h2 id="tryon-title" data-tryon-title>Prova il prodotto</h2>
-            <span>Carica una tua foto frontale. La foto serve solo per generare l'anteprima e non viene salvata nel catalogo.</span>
+            <span>Carica una tua foto frontale per generare l'anteprima.</span>
           </div>
           <div class="tryon-layout">
             <label class="tryon-upload">
@@ -1487,6 +1487,10 @@ function ensureTryOnModal() {
               <p>Il risultato comparira qui.</p>
             </div>
           </div>
+          <label class="tryon-save-consent">
+            <input type="checkbox" data-tryon-save-consent>
+            <span>Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.</span>
+          </label>
           <button class="tryon-generate" type="button" data-tryon-generate>Genera prova AI</button>
           <div class="ai-progress" data-tryon-progress hidden>
             <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento try-on AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
@@ -1608,6 +1612,8 @@ function openTryOnModal(productId) {
   if (title) title.textContent = `Prova ${product.name}`;
   const input = modal.querySelector("[data-tryon-user-image]");
   if (input) input.value = "";
+  const saveConsent = modal.querySelector("[data-tryon-save-consent]");
+  if (saveConsent) saveConsent.checked = false;
   setTryOnMessage("");
   resetTryOnProgress();
   setTryOnResult("<p>Carica una tua foto per vedere l'anteprima.</p>");
@@ -1678,6 +1684,7 @@ async function generateTryOn() {
   const modal = ensureTryOnModal();
   const input = modal.querySelector("[data-tryon-user-image]");
   const file = input?.files?.[0];
+  const saveConsent = modal.querySelector("[data-tryon-save-consent]");
   const button = modal.querySelector("[data-tryon-generate]");
   if (!tryOnProduct) return;
   if (!file) {
@@ -1694,6 +1701,10 @@ async function generateTryOn() {
     const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct));
     const formData = new FormData();
     formData.append("userImage", referenceImage, "try-on-reference.png");
+    if (saveConsent?.checked) {
+      formData.append("saveTryOn", "yes");
+      formData.append("customerImage", file, file.name || "try-on-source.jpg");
+    }
     formData.append("productId", tryOnProduct.id || "");
     formData.append("productName", tryOnProduct.name || "");
     formData.append("category", tryOnProduct.category || "");
@@ -1705,7 +1716,7 @@ async function generateTryOn() {
     });
     setTryOnProgress(100, "Anteprima pronta", "success");
     setTryOnResult(`<img src="${escapeHtml(data.image)}" alt="Anteprima try-on AI">`);
-    setTryOnMessage("Anteprima pronta.", "success");
+    setTryOnMessage(data.saved ? "Anteprima pronta e archiviata per 30 giorni." : "Anteprima pronta.", "success");
     sendTrack("try_on_generated", { product: tryOnProduct.name });
   } catch (error) {
     setTryOnProgress(100, "Generazione non riuscita", "error");
