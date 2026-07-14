@@ -2060,41 +2060,84 @@ body.motion-enabled .benefits article:hover {
 .benefit-note {
   position: absolute;
   z-index: 2;
-  width: 22px;
-  height: 13px;
-  border: 1px solid rgba(255, 230, 177, 0.88);
+  display: grid;
+  width: 31px;
+  height: 18px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.76);
   border-radius: 2px;
-  background:
-    linear-gradient(90deg, transparent 44%, rgba(255, 235, 191, 0.68) 45% 55%, transparent 56%),
-    linear-gradient(180deg, rgba(255, 235, 191, 0.28), rgba(170, 108, 57, 0.8));
-  box-shadow: 0 0 9px rgba(var(--gold-rgb), 0.72);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.46), 0 0 9px rgba(var(--gold-rgb), 0.32);
   opacity: 0;
   pointer-events: none;
+}
+
+.benefit-note::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 1px;
 }
 
 .benefit-note::after {
   content: "";
   position: absolute;
-  inset: 3px 4px;
-  border: 1px solid rgba(255, 241, 208, 0.64);
-  border-radius: 1px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 50%;
 }
 
-.benefit-note-one {
-  top: -12px;
-  left: 13px;
+.benefit-note span,
+.benefit-note b {
+  position: absolute;
+  z-index: 1;
+  font-family: Arial, sans-serif;
+  font-weight: 800;
+  line-height: 1;
 }
 
-.benefit-note-two {
+.benefit-note span {
+  top: 3px;
+  left: 4px;
+  font-size: 4px;
+  letter-spacing: 0.2px;
+}
+
+.benefit-note b {
+  font-size: 9px;
+}
+
+.benefit-note-euro {
+  color: #eef6ff;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 8%, transparent 8% 92%, rgba(255, 255, 255, 0.16) 92%),
+    linear-gradient(135deg, #1b4f97, #3d83c2 52%, #174278);
+}
+
+.benefit-note-dollar {
+  color: #f4fff4;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.16) 0 8%, transparent 8% 92%, rgba(255, 255, 255, 0.14) 92%),
+    linear-gradient(135deg, #285b42, #5a9672 52%, #224c37);
+}
+
+.benefit-note-euro {
+  top: -10px;
+  left: 3px;
+}
+
+.benefit-note-dollar {
   top: -20px;
-  left: 22px;
+  left: 18px;
 }
 
 body.motion-enabled .benefit-payment-icon .benefit-note {
   animation: payment-note-place 3.8s cubic-bezier(0.22, 0.75, 0.36, 1) infinite;
 }
 
-body.motion-enabled .benefit-payment-icon .benefit-note-two {
+body.motion-enabled .benefit-payment-icon .benefit-note-dollar {
   animation-delay: 0.42s;
 }
 
