@@ -1901,10 +1901,13 @@ body.motion-enabled .main-nav a:not(.active):focus-visible {
 .promo-copy {
   position: absolute;
   z-index: 2;
-  left: clamp(54px, 5.6vw, 86px);
-  top: 39%;
-  width: min(48vw, 690px);
+  left: 0;
+  top: 31%;
+  display: grid;
+  justify-items: center;
+  width: 50%;
   opacity: 1;
+  text-align: center;
   transform: none;
 }
 
