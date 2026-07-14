@@ -2120,6 +2120,44 @@ body.motion-enabled .benefits article:hover {
   font-weight: 800;
 }
 
+.footer-info-heading {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.footer-info-heading h2 {
+  margin: 0;
+}
+
+.trustpilot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 28px;
+  padding: 5px 8px;
+  border: 1px solid rgba(0, 182, 122, 0.78);
+  border-radius: 4px;
+  background: rgba(0, 182, 122, 0.12);
+  color: #fff;
+  font-size: 10px !important;
+  font-weight: 700;
+  line-height: 1;
+  transition: background 160ms ease, transform 160ms ease;
+}
+
+.trustpilot-badge:hover {
+  background: rgba(0, 182, 122, 0.22);
+  transform: translateY(-1px);
+}
+
+.trustpilot-badge img {
+  display: block;
+  width: 75px;
+  height: auto;
+}
+
 .footer-links a {
   width: fit-content;
   color: var(--text);
@@ -2323,10 +2361,6 @@ body.motion-enabled .benefits article:hover {
 .telegram-icon {
   width: 36px;
   height: 36px;
-}
-
-.trustpilot-icon {
-  fill: #00b67a;
 }
 
 .footer-center p {
