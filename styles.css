@@ -2133,9 +2133,9 @@ body.motion-enabled .benefits article:hover {
 
 .footer-trustpilot {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding: 1px 20px 0;
+  padding: 0 20px;
 }
 
 .trustpilot-badge {
@@ -2144,7 +2144,7 @@ body.motion-enabled .benefits article:hover {
   align-items: center;
   justify-content: center;
   gap: 10px;
-  width: min(100%, 190px);
+  width: min(100%, 220px);
   min-height: 0;
   padding: 0 0 12px;
   border: 0;
@@ -2167,7 +2167,7 @@ body.motion-enabled .benefits article:hover {
 
 .trustpilot-badge img {
   display: block;
-  width: 144px;
+  width: 178px;
   height: auto;
 }
 
