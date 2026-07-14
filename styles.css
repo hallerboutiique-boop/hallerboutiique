@@ -2057,20 +2057,20 @@ body.motion-enabled .benefits article:hover {
   z-index: 1;
 }
 
-.benefit-banknotes {
-  position: absolute;
-  z-index: 2;
-  top: -3px;
-  left: 2px;
-  width: 48px;
-  height: 48px;
+.benefit-payment-icons {
+  display: flex;
+  flex: 0 0 72px;
+  align-items: center;
+  gap: 6px;
+  width: 72px;
+  height: 52px;
   color: var(--gold);
-  pointer-events: none;
-  transform-origin: 50% 68%;
 }
 
-body.motion-enabled .benefit-payment-icon .benefit-banknotes {
-  animation: banknotes-rustle 3.1s ease-in-out infinite;
+.benefit-payment-icons svg {
+  width: 33px;
+  height: 33px;
+  stroke-width: 1.65;
 }
 
 body.motion-enabled .benefit-support-icon > svg {
@@ -2081,25 +2081,6 @@ body.motion-enabled .benefit-support-icon > svg {
 body.motion-enabled .benefit-support:hover .benefit-support-icon > svg {
   animation-duration: 0.62s;
   animation-iteration-count: infinite;
-}
-
-@keyframes banknotes-rustle {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) rotate(-3deg);
-  }
-
-  28% {
-    transform: translate3d(1px, -2px, 0) rotate(2deg);
-  }
-
-  46% {
-    transform: translate3d(-1px, 0, 0) rotate(-1deg);
-  }
-
-  62% {
-    transform: translate3d(1px, -1px, 0) rotate(2deg);
-  }
 }
 
 @keyframes support-headset-vibrate {
@@ -2526,7 +2507,6 @@ body.motion-enabled .social-links a:nth-child(3):focus-visible svg {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .benefit-payment-icon .benefit-banknotes,
   .benefit-support-icon > svg {
     animation: none !important;
   }
