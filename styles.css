@@ -2130,8 +2130,9 @@ body.motion-enabled .benefits article:hover {
 
 .footer-links {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: max-content 62px;
   align-items: center;
+  justify-content: center;
   gap: 20px;
 }
 
@@ -3965,6 +3966,7 @@ body.motion-enabled .product-actions .buy-action:hover {
   .footer-links {
     width: 100%;
     min-width: 0;
+    grid-template-columns: max-content 56px;
     gap: 10px;
   }
 
