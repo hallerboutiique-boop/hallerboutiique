@@ -2226,12 +2226,20 @@ function setupSiteChat() {
     if (!messages.children.length) appendChatMessage(messages, "assistant", `Ciao ${profile.firstName}, sono Aurora, l'assistente virtuale di Haller Boutique. Come posso aiutarti?`);
   };
 
+  const openChat = () => {
+    panel.hidden = false;
+    root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", "true");
+    if (profile) showConversation();
+  };
+
   root.querySelectorAll("[data-chat-toggle]").forEach((button) => {
     button.addEventListener("click", () => {
       const isOpen = panel.hidden;
-      panel.hidden = !isOpen;
-      root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", String(isOpen));
-      if (isOpen && profile) showConversation();
+      if (isOpen) openChat();
+      else {
+        panel.hidden = true;
+        root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", "false");
+      }
     });
   });
 
@@ -2289,6 +2297,11 @@ function setupSiteChat() {
     sendMessage(input.value);
   });
   root.querySelectorAll("[data-chat-prompt]").forEach((button) => button.addEventListener("click", () => sendMessage(button.dataset.chatPrompt)));
+  document.querySelectorAll("[data-open-chat]").forEach((link) => link.addEventListener("click", (event) => {
+    event.preventDefault();
+    openChat();
+  }));
+  if (new URLSearchParams(window.location.search).get("chat") === "1") openChat();
   if (window.lucide) window.lucide.createIcons();
 }
 
