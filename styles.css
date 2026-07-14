@@ -4082,20 +4082,24 @@ body.motion-enabled .product-actions .buy-action:hover {
 
   .footer-trustpilot {
     justify-content: center;
-    padding: 22px 0 0;
+    padding: 18px 0 0;
   }
 
   .trustpilot-badge {
-    flex-direction: row;
-    width: fit-content;
-    min-height: 36px;
-    padding: 6px 9px;
-    gap: 7px;
-    font-size: 9px !important;
+    width: auto;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
   }
 
   .trustpilot-badge img {
-    width: 76px;
+    width: 92px;
+  }
+
+  .trustpilot-badge span {
+    display: none;
   }
 }
 
