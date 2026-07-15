@@ -7,7 +7,7 @@ ENV DATA_DIR=/data
 
 COPY package.json server.js ./
 COPY index.html checkout.html account.html admin.html termini.html spedizioni.html privacy.html ./
-COPY styles.css script.js account.js admin.js ./
+COPY styles.css script.js i18n.js account.js admin.js ./
 COPY assets ./assets
 
 EXPOSE 8080
