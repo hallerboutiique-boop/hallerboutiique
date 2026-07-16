@@ -1434,15 +1434,11 @@ function renderCatalogNavigation() {
   });
 }
 
-function renderCatalogTiles(products, type, gender, category = "") {
-  const values = type === "category" ? [...new Set(products.map((product) => product.category))] : getBrands(products);
+function renderCatalogTiles(products, gender, category) {
+  const values = getBrands(products);
   return values.map((value) => {
-    const product = type === "category"
-      ? products.find((entry) => entry.category === value && productPrimaryImage(entry)) || products.find((entry) => entry.category === value)
-      : products.find((entry) => getProductBrand(entry) === value && productPrimaryImage(entry)) || products.find((entry) => getProductBrand(entry) === value);
-    const attributes = type === "category"
-      ? `data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(value)}"`
-      : `data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}" data-catalog-brand="${escapeHtml(value)}"`;
+    const product = products.find((entry) => getProductBrand(entry) === value && productPrimaryImage(entry)) || products.find((entry) => getProductBrand(entry) === value);
+    const attributes = `data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}" data-catalog-brand="${escapeHtml(value)}"`;
     return `<button class="catalog-browse-tile" type="button" data-catalog-filter ${attributes}>${productPreviewMarkup(product)}<strong>${escapeHtml(value)}</strong></button>`;
   }).join("");
 }
@@ -1468,13 +1464,11 @@ function renderCatalog() {
   const title = catalogState.productIds.length
     ? translate("catalog-search-results")
     : `${translate("catalog-viewing")} ${catalogState.gender === "donna" ? translate("women") : translate("men")}`;
-  const categoryTiles = !catalogState.productIds.length ? renderCatalogTiles(baseProducts, "category", catalogState.gender) : "";
-  const brandTiles = catalogState.category ? renderCatalogTiles(categoryProducts, "brand", catalogState.gender, catalogState.category) : "";
+  const brandTiles = catalogState.category ? renderCatalogTiles(categoryProducts, catalogState.gender, catalogState.category) : "";
 
   catalogRoot.innerHTML = `
     <section class="catalog-browse">
       <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || catalogState.category || translate("catalog-all-products"))}</h3></header>
-      ${categoryTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-category")}</h4><div class="catalog-browse-tile-grid">${categoryTiles}</div></section>` : ""}
       ${brandTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-brand")}</h4><div class="catalog-browse-tile-grid">${brandTiles}<button class="catalog-browse-tile catalog-browse-all" type="button" data-catalog-filter data-catalog-gender="${catalogState.gender}" data-catalog-category="${escapeHtml(catalogState.category)}"><span>${translate("catalog-all-brands")}</span></button></div></section>` : ""}
       <div class="catalog-results-heading"><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
       <div class="product-grid">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
