@@ -3,6 +3,8 @@ const heroSlider = document.querySelector(".hero-slider");
 let active = 0;
 let tryOnProduct = null;
 let tryOnPreviewUrl = "";
+let bundleTryOnPreviewUrl = "";
+let bundleTryOnItems = [];
 let revealObserver = null;
 let siteMotionEnabled = false;
 let motionEventsBound = false;
@@ -128,6 +130,26 @@ const interfaceTranslations = {
 };
 
 Object.entries(interfaceTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
+const bundleTryOnTranslations = {
+  it: {
+    "bundle-tryon-kicker": "Try-on bundle AI", "bundle-tryon-title": "Prova tutto il carrello", "bundle-tryon-description": "Una foto, un outfit completo con capi, scarpe e borse del tuo carrello.", "bundle-tryon-upload": "Carica la tua foto", "bundle-tryon-result-empty": "L'outfit completo comparira qui.", "bundle-tryon-generate": "Genera outfit completo", "bundle-tryon-progress": "Avanzamento try-on bundle AI", "bundle-tryon-empty": "Aggiungi almeno un articolo al carrello per creare il tuo outfit.", "bundle-tryon-loaded": "Foto caricata. Il bundle e pronto.", "bundle-tryon-preparing": "Preparazione di tutti gli articoli", "bundle-tryon-inputs-ready": "Foto cliente e bundle del carrello pronti", "bundle-tryon-ready": "Outfit completo pronto"
+  },
+  en: {
+    "bundle-tryon-kicker": "AI bundle try-on", "bundle-tryon-title": "Try on your whole cart", "bundle-tryon-description": "One photo, one complete outfit with the clothing, shoes and bags in your cart.", "bundle-tryon-upload": "Upload your photo", "bundle-tryon-result-empty": "Your complete outfit will appear here.", "bundle-tryon-generate": "Generate complete outfit", "bundle-tryon-progress": "AI bundle try-on progress", "bundle-tryon-empty": "Add at least one item to your cart to create your outfit.", "bundle-tryon-loaded": "Photo uploaded. Your bundle is ready.", "bundle-tryon-preparing": "Preparing every item", "bundle-tryon-inputs-ready": "Customer photo and cart bundle are ready", "bundle-tryon-ready": "Complete outfit ready"
+  },
+  fr: {
+    "bundle-tryon-kicker": "Essayage bundle IA", "bundle-tryon-title": "Essayez tout votre panier", "bundle-tryon-description": "Une photo, une tenue complete avec les vetements, chaussures et sacs de votre panier.", "bundle-tryon-upload": "Importer votre photo", "bundle-tryon-result-empty": "Votre tenue complete apparaitra ici.", "bundle-tryon-generate": "Generer la tenue complete", "bundle-tryon-progress": "Progression de l'essayage bundle IA", "bundle-tryon-empty": "Ajoutez au moins un article au panier pour creer votre tenue.", "bundle-tryon-loaded": "Photo importee. Votre bundle est pret.", "bundle-tryon-preparing": "Preparation de tous les articles", "bundle-tryon-inputs-ready": "Photo client et bundle du panier prets", "bundle-tryon-ready": "Tenue complete prete"
+  },
+  de: {
+    "bundle-tryon-kicker": "KI-Bundle-Anprobe", "bundle-tryon-title": "Den ganzen Warenkorb anprobieren", "bundle-tryon-description": "Ein Foto, ein komplettes Outfit mit Kleidung, Schuhen und Taschen aus Ihrem Warenkorb.", "bundle-tryon-upload": "Foto hochladen", "bundle-tryon-result-empty": "Ihr komplettes Outfit erscheint hier.", "bundle-tryon-generate": "Komplettes Outfit erstellen", "bundle-tryon-progress": "Fortschritt der KI-Bundle-Anprobe", "bundle-tryon-empty": "Legen Sie mindestens einen Artikel in den Warenkorb, um Ihr Outfit zu erstellen.", "bundle-tryon-loaded": "Foto hochgeladen. Ihr Bundle ist bereit.", "bundle-tryon-preparing": "Alle Artikel werden vorbereitet", "bundle-tryon-inputs-ready": "Kundenfoto und Warenkorb-Bundle sind bereit", "bundle-tryon-ready": "Komplettes Outfit bereit"
+  },
+  es: {
+    "bundle-tryon-kicker": "Prueba bundle con IA", "bundle-tryon-title": "Prueba todo tu carrito", "bundle-tryon-description": "Una foto, un conjunto completo con la ropa, zapatos y bolsos de tu carrito.", "bundle-tryon-upload": "Sube tu foto", "bundle-tryon-result-empty": "Tu conjunto completo aparecera aqui.", "bundle-tryon-generate": "Generar conjunto completo", "bundle-tryon-progress": "Progreso de la prueba bundle con IA", "bundle-tryon-empty": "Anade al menos un articulo al carrito para crear tu conjunto.", "bundle-tryon-loaded": "Foto subida. Tu bundle esta listo.", "bundle-tryon-preparing": "Preparando todos los articulos", "bundle-tryon-inputs-ready": "Foto del cliente y bundle del carrito listos", "bundle-tryon-ready": "Conjunto completo listo"
+  }
+};
+
+Object.entries(bundleTryOnTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
@@ -1204,9 +1226,11 @@ async function loadProductOverrides() {
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
     renderCatalog();
+    renderBundleTryOn();
   } catch {
     productOverrides = {};
     customProducts = [];
+    renderBundleTryOn();
   }
 }
 
@@ -1242,7 +1266,6 @@ function productPrimaryImage(product) {
 }
 
 function createTryOnMarkup(product) {
-  if (product.sizeType !== "clothing") return "";
   return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
@@ -1314,9 +1337,14 @@ function saveCheckoutItem(productName) {
   }
 
   const item = {
+    id: product.id,
     name: product.name,
     price: product.finalPrice,
     original: product.original,
+    category: product.category,
+    collection: product.collection,
+    sizeType: product.sizeType,
+    image: productPrimaryImage(product),
     savedAt: new Date().toISOString(),
   };
 
@@ -1758,13 +1786,30 @@ function drawTryOnReferenceImage(context, image, x, y, width, height, background
   context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
 }
 
-async function createTryOnReference(userFile, productImage) {
+function drawTryOnReferenceText(context, text, x, y, width, maxLines = 4) {
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  const lines = [];
+  let line = "";
+  words.forEach((word) => {
+    const next = line ? `${line} ${word}` : word;
+    if (context.measureText(next).width <= width || !line) {
+      line = next;
+    } else {
+      lines.push(line);
+      line = word;
+    }
+  });
+  if (line) lines.push(line);
+  lines.slice(0, maxLines).forEach((value, index) => context.fillText(value, x, y + index * 34));
+}
+
+async function createTryOnReference(userFile, productImage, productName) {
   const customerUrl = URL.createObjectURL(userFile);
   try {
-    const [customer, product] = await Promise.all([
-      loadTryOnReferenceImage(customerUrl),
-      loadTryOnReferenceImage(productImage),
-    ]);
+    const customer = await loadTryOnReferenceImage(customerUrl);
+    const product = productImage
+      ? await loadTryOnReferenceImage(withProductImageVersion(productImage)).catch(() => null)
+      : null;
     const canvas = document.createElement("canvas");
     canvas.width = 1536;
     canvas.height = 1086;
@@ -1774,7 +1819,15 @@ async function createTryOnReference(userFile, productImage) {
     context.fillStyle = "#111111";
     context.fillRect(0, 0, canvas.width, canvas.height);
     drawTryOnReferenceImage(context, customer, 0, 62, 1000, 1024, "#151515");
-    drawTryOnReferenceImage(context, product, 1000, 62, 536, 1024, "#ffffff");
+    if (product) {
+      drawTryOnReferenceImage(context, product, 1000, 62, 536, 1024, "#ffffff");
+    } else {
+      context.fillStyle = "#f4f4f4";
+      context.fillRect(1000, 62, 536, 1024);
+      context.fillStyle = "#111111";
+      context.font = "700 30px Montserrat, Arial, sans-serif";
+      drawTryOnReferenceText(context, productName, 1040, 480, 456, 5);
+    }
     context.fillStyle = "#ffffff";
     context.font = "600 25px Montserrat, Arial, sans-serif";
     context.fillText("PERSONA", 24, 40);
@@ -1807,7 +1860,7 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct));
+    const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct), tryOnProduct.name);
     const formData = new FormData();
     formData.append("userImage", referenceImage, "try-on-reference.png");
     if (saveConsent?.checked) {
@@ -1835,6 +1888,239 @@ async function generateTryOn() {
   } finally {
     button.disabled = false;
   }
+}
+
+function getBundleTryOnItems() {
+  const cartItems = readCartItems();
+  const checkoutItem = readCheckoutItem();
+  const sourceItems = cartItems.length > 0 ? cartItems : checkoutItem?.name ? [checkoutItem] : [];
+  const products = getAllProducts();
+  const seen = new Set();
+
+  return sourceItems
+    .map((item) => {
+      const product = products.find((candidate) =>
+        (item.id && candidate.id === item.id)
+        || candidate.name === item.name
+        || candidate.baseName === item.name
+      );
+      const id = product?.id || item.id || slugifyProduct(item.name);
+      return {
+        id,
+        name: product?.name || item.name || translate("checkout-to-confirm"),
+        category: product?.category || item.category || "fashion",
+        sizeType: product?.sizeType || item.sizeType || "none",
+        image: product ? productPrimaryImage(product) : item.image || "",
+      };
+    })
+    .filter((item) => {
+      const key = item.id || item.name;
+      if (!item.name || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .slice(0, 12);
+}
+
+function setBundleTryOnResult(content) {
+  const result = document.querySelector("[data-bundle-tryon-result]");
+  if (result) result.innerHTML = content;
+}
+
+function setBundleTryOnMessage(message, type = "") {
+  const root = document.querySelector("[data-bundle-tryon-message]");
+  if (!root) return;
+  root.textContent = message || "";
+  root.dataset.type = type;
+}
+
+function setBundleTryOnProgress(progress, message = "", type = "") {
+  const root = document.querySelector("[data-bundle-tryon-progress]");
+  const bar = document.querySelector("[data-bundle-tryon-progress-bar]");
+  const label = document.querySelector("[data-bundle-tryon-progress-label]");
+  if (!root || !bar || !label) return;
+  const value = Math.max(0, Math.min(100, Math.round(Number(progress) || 0)));
+  root.hidden = false;
+  root.dataset.type = type;
+  bar.style.setProperty("--ai-progress", `${value}%`);
+  bar.parentElement?.setAttribute("aria-valuenow", String(value));
+  label.textContent = message;
+}
+
+function resetBundleTryOnProgress() {
+  const root = document.querySelector("[data-bundle-tryon-progress]");
+  const bar = document.querySelector("[data-bundle-tryon-progress-bar]");
+  const label = document.querySelector("[data-bundle-tryon-progress-label]");
+  if (!root || !bar || !label) return;
+  root.hidden = true;
+  root.dataset.type = "";
+  bar.style.setProperty("--ai-progress", "0%");
+  bar.parentElement?.setAttribute("aria-valuenow", "0");
+  label.textContent = "";
+}
+
+function updateBundleTryOnButtonState() {
+  const input = document.querySelector("[data-bundle-tryon-user-image]");
+  const button = document.querySelector("[data-bundle-tryon-generate]");
+  if (!button) return;
+  button.disabled = button.dataset.loading === "true" || bundleTryOnItems.length === 0 || !input?.files?.[0];
+}
+
+function renderBundleTryOn() {
+  const root = document.querySelector("[data-bundle-tryon-products]");
+  if (!root) return;
+  bundleTryOnItems = getBundleTryOnItems();
+
+  if (bundleTryOnItems.length === 0) {
+    root.innerHTML = `<p class="bundle-tryon-empty">${escapeHtml(translate("bundle-tryon-empty"))}</p>`;
+  } else {
+    root.innerHTML = bundleTryOnItems.map((item, index) => `
+      <article class="bundle-tryon-product">
+        <span class="bundle-tryon-number">${index + 1}</span>
+        ${item.image
+          ? `<img src="${escapeHtml(withProductImageVersion(item.image))}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">`
+          : `<span class="bundle-tryon-product-placeholder"><i data-lucide="image-off"></i></span>`}
+        <strong>${escapeHtml(item.name)}</strong>
+      </article>
+    `).join("");
+  }
+  updateBundleTryOnButtonState();
+  if (window.lucide) window.lucide.createIcons();
+}
+
+async function createBundleTryOnReference(userFile, items) {
+  const customerUrl = URL.createObjectURL(userFile);
+  try {
+    const customer = await loadTryOnReferenceImage(customerUrl);
+    const productImages = await Promise.all(items.map((item) =>
+      item.image ? loadTryOnReferenceImage(withProductImageVersion(item.image)).catch(() => null) : Promise.resolve(null)
+    ));
+    const canvas = document.createElement("canvas");
+    canvas.width = 1536;
+    canvas.height = 1086;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error(translate("tryon-unavailable"));
+
+    context.fillStyle = "#111111";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    drawTryOnReferenceImage(context, customer, 0, 62, 880, 1024, "#151515");
+    context.fillStyle = "#ffffff";
+    context.font = "600 25px Montserrat, Arial, sans-serif";
+    context.fillText("PERSONA", 24, 40);
+    context.fillText("ARTICOLI DEL CARRELLO", 920, 40);
+
+    const columns = items.length === 1 ? 1 : 2;
+    const rows = Math.max(1, Math.ceil(items.length / columns));
+    const panelWidth = 656 / columns;
+    const panelHeight = 1024 / rows;
+    items.forEach((item, index) => {
+      const column = index % columns;
+      const row = Math.floor(index / columns);
+      const x = 880 + column * panelWidth;
+      const y = 62 + row * panelHeight;
+      const image = productImages[index];
+      context.strokeStyle = "#d7aa43";
+      context.lineWidth = 3;
+      context.strokeRect(x + 1.5, y + 1.5, panelWidth - 3, panelHeight - 3);
+      if (image) {
+        drawTryOnReferenceImage(context, image, x + 4, y + 4, panelWidth - 8, panelHeight - 8, "#ffffff");
+      } else {
+        context.fillStyle = "#f4f4f4";
+        context.fillRect(x + 4, y + 4, panelWidth - 8, panelHeight - 8);
+        context.fillStyle = "#111111";
+        context.font = "700 20px Montserrat, Arial, sans-serif";
+        drawTryOnReferenceText(context, item.name, x + 24, y + 62, panelWidth - 48, 4);
+      }
+      context.fillStyle = "#d7aa43";
+      context.fillRect(x + 12, y + 12, 42, 42);
+      context.fillStyle = "#050505";
+      context.font = "800 22px Montserrat, Arial, sans-serif";
+      context.fillText(String(index + 1), x + 25, y + 41);
+    });
+
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error(translate("tryon-unavailable")))), "image/png");
+    });
+  } finally {
+    URL.revokeObjectURL(customerUrl);
+  }
+}
+
+function previewBundleTryOnUserImage(event) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  if (bundleTryOnPreviewUrl) URL.revokeObjectURL(bundleTryOnPreviewUrl);
+  bundleTryOnPreviewUrl = URL.createObjectURL(file);
+  setBundleTryOnResult(`
+    <img src="${bundleTryOnPreviewUrl}" alt="${escapeHtml(translate("tryon-loaded-alt"))}">
+    <span>${escapeHtml(translate("bundle-tryon-loaded"))}</span>
+  `);
+  setBundleTryOnMessage("");
+  resetBundleTryOnProgress();
+  updateBundleTryOnButtonState();
+}
+
+async function generateBundleTryOn() {
+  const input = document.querySelector("[data-bundle-tryon-user-image]");
+  const saveConsent = document.querySelector("[data-bundle-tryon-save-consent]");
+  const button = document.querySelector("[data-bundle-tryon-generate]");
+  const file = input?.files?.[0];
+  bundleTryOnItems = getBundleTryOnItems();
+  if (!file) {
+    setBundleTryOnMessage(translate("tryon-upload-first"), "error");
+    return;
+  }
+  if (bundleTryOnItems.length === 0) {
+    setBundleTryOnMessage(translate("bundle-tryon-empty"), "error");
+    return;
+  }
+
+  button.dataset.loading = "true";
+  updateBundleTryOnButtonState();
+  setBundleTryOnProgress(4, translate("bundle-tryon-preparing"));
+  setBundleTryOnMessage(translate("bundle-tryon-preparing"));
+  setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
+
+  try {
+    const referenceImage = await createBundleTryOnReference(file, bundleTryOnItems);
+    const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }) => ({ id, name, category, sizeType }));
+    const formData = new FormData();
+    formData.append("userImage", referenceImage, "bundle-try-on-reference.png");
+    formData.append("mode", "bundle");
+    formData.append("bundleItems", JSON.stringify(bundleData));
+    formData.append("productId", bundleData.map((item) => item.id).join(","));
+    formData.append("productName", bundleData.map((item) => item.name).join(" + "));
+    formData.append("category", "bundle");
+    formData.append("language", siteLanguage);
+    if (saveConsent?.checked) {
+      formData.append("saveTryOn", "yes");
+      formData.append("customerImage", file, file.name || "bundle-try-on-source.jpg");
+    }
+    setBundleTryOnProgress(16, translate("bundle-tryon-inputs-ready"));
+    const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
+      setBundleTryOnProgress(event.progress, event.message);
+      setBundleTryOnMessage(event.message);
+    });
+    setBundleTryOnProgress(100, translate("bundle-tryon-ready"), "success");
+    setBundleTryOnResult(`<img src="${escapeHtml(data.image)}" alt="${escapeHtml(translate("bundle-tryon-ready"))}">`);
+    setBundleTryOnMessage(data.saved ? translate("tryon-ready-saved") : translate("bundle-tryon-ready"), "success");
+    sendTrack("bundle_try_on_generated", { product: bundleData.map((item) => item.name).join("; ") });
+  } catch (error) {
+    setBundleTryOnProgress(100, translate("tryon-generation-failed"), "error");
+    setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-result-failed"))}</p>`);
+    setBundleTryOnMessage(error.message || translate("tryon-unavailable"), "error");
+  } finally {
+    button.dataset.loading = "false";
+    updateBundleTryOnButtonState();
+  }
+}
+
+function setupBundleTryOn() {
+  const root = document.querySelector("[data-bundle-tryon]");
+  if (!root) return;
+  root.querySelector("[data-bundle-tryon-user-image]")?.addEventListener("change", previewBundleTryOnUserImage);
+  root.querySelector("[data-bundle-tryon-generate]")?.addEventListener("click", generateBundleTryOn);
+  renderBundleTryOn();
 }
 
 function createOrderCode() {
@@ -2168,6 +2454,7 @@ async function confirmCheckoutOrder(button) {
     window.localStorage.removeItem(cartItemsKey);
     window.localStorage.removeItem(cartKey);
     updateCartCount(0);
+    renderBundleTryOn();
 
     const note = document.querySelector("[data-checkout-note]");
     if (note) {
@@ -2225,6 +2512,7 @@ function applySiteLanguage(language) {
       ? translate("tryon-product-name").replace("{product}", tryOnProduct.name)
       : translate("tryon-product");
   }
+  renderBundleTryOn();
 }
 
 applySiteLanguage(siteLanguage);
@@ -2275,6 +2563,7 @@ if (discountButton && discountInput && discountMessage) {
 }
 
 setupCheckoutPayments();
+setupBundleTryOn();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";
 let chatHistory = [];

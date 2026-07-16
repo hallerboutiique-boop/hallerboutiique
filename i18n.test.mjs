@@ -37,3 +37,25 @@ test("all pages use the cache-busted unified language script", async () => {
     assert.doesNotMatch(html, /sitewide-language-[1234]/, file);
   }
 });
+
+test("checkout exposes a multilingual bundle try-on", async () => {
+  const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
+  assert.match(checkout, /data-bundle-tryon/);
+  assert.match(checkout, /script\.js\?v=tryon-bundle-1/);
+  assert.match(script, /function createBundleTryOnReference/);
+  assert.match(script, /formData\.append\("mode", "bundle"\)/);
+  assert.match(script, /formData\.append\("bundleItems", JSON\.stringify\(bundleData\)\)/);
+  for (const language of ["it", "en", "fr", "de", "es"]) {
+    assert.match(script, new RegExp(`\\n  ${language}: \\{[\\s\\S]*?"bundle-tryon-title"`));
+  }
+});
+
+test("try-on supports clothing, shoes and bags", async () => {
+  const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  assert.doesNotMatch(script, /product\.sizeType !== "clothing"/);
+  assert.match(script, /image: productPrimaryImage\(product\)/);
+  assert.match(server, /function cleanTryOnBundleItems/);
+  assert.match(server, /put sneakers or shoes on the feet/);
+  assert.match(server, /place bags in the customer's hand/);
+  assert.match(server, /Do not omit, replace or duplicate any numbered item/);
+});

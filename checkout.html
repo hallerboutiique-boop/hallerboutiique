@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=sitewide-bag-cursor-1">
+    <link rel="stylesheet" href="styles.css?v=tryon-bundle-2">
   </head>
   <body>
     <header class="site-header">
@@ -257,6 +257,45 @@
           <p class="checkout-note" data-checkout-note>Nessun pagamento online richiesto in questa fase.</p>
         </aside>
       </section>
+
+      <section class="bundle-tryon" data-bundle-tryon aria-labelledby="bundle-tryon-title">
+        <div class="bundle-tryon-heading">
+          <p data-i18n="bundle-tryon-kicker">Try-on bundle AI</p>
+          <h2 id="bundle-tryon-title" data-i18n="bundle-tryon-title">Prova tutto il carrello</h2>
+          <span data-i18n="bundle-tryon-description">Una foto, un outfit completo con capi, scarpe e borse del tuo carrello.</span>
+        </div>
+
+        <div class="bundle-tryon-products" data-bundle-tryon-products aria-live="polite"></div>
+
+        <div class="bundle-tryon-workspace">
+          <label class="bundle-tryon-upload">
+            <input type="file" accept="image/png,image/jpeg,image/webp" data-bundle-tryon-user-image>
+            <i data-lucide="upload-cloud"></i>
+            <strong data-i18n="bundle-tryon-upload">Carica la tua foto</strong>
+            <span>JPG, PNG o WebP</span>
+          </label>
+          <div class="bundle-tryon-result" data-bundle-tryon-result>
+            <i data-lucide="sparkles"></i>
+            <p data-i18n="bundle-tryon-result-empty">L'outfit completo comparira qui.</p>
+          </div>
+        </div>
+
+        <label class="tryon-save-consent bundle-tryon-consent">
+          <input type="checkbox" data-bundle-tryon-save-consent>
+          <span data-i18n="tryon-consent">Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.</span>
+        </label>
+        <button class="bundle-tryon-generate" type="button" data-bundle-tryon-generate>
+          <i data-lucide="wand-sparkles"></i>
+          <span data-i18n="bundle-tryon-generate">Genera outfit completo</span>
+        </button>
+        <div class="ai-progress" data-bundle-tryon-progress hidden>
+          <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento try-on bundle AI" data-i18n-aria-label="bundle-tryon-progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <i data-bundle-tryon-progress-bar></i>
+          </div>
+          <span data-bundle-tryon-progress-label></span>
+        </div>
+        <p class="bundle-tryon-message" data-bundle-tryon-message aria-live="polite"></p>
+      </section>
     </main>
 
     <footer class="checkout-footer">
@@ -265,6 +304,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="script.js?v=sitewide-language-5"></script>
+    <script src="script.js?v=tryon-bundle-1"></script>
   </body>
 </html>
