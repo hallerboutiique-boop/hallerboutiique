@@ -891,7 +891,7 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
     appendImageFormData(form, "image", userImage);
   }
   form.append("model", openaiTryOnModel);
-  form.append("size", "1024x1024");
+  form.append("size", bundleItems.length > 0 ? "1024x1536" : "1024x1024");
   if (openaiTryOnModel !== "gpt-image-2") form.append("input_fidelity", "high");
   const bundlePrompt = bundleItems.length > 0
     ? [
@@ -901,8 +901,10 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
         "Dress and style the customer with every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any item.",
         "Layer garments naturally. Put tops, trousers and outerwear on the body; put sneakers or shoes on both feet; place bags in the customer's hand, over the shoulder or across the body; place accessories in their natural position.",
         "Use each original product photo as the authoritative visual reference. Preserve the exact color, logo, print, material, cut, proportions, shape and visible details of every product.",
-        "Use a head-to-toe composition with both feet and every bag fully visible. Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions or add unrelated products or logos.",
-        "Return one premium, photorealistic square outfit preview. Do not return a collage, split screen, labels or product panels.",
+        "Catalog photos may also show boxes, packaging, shopping bags, cards, mannequins, stands or background props. Ignore them completely and never add them to the result unless the mapped cart item is itself a bag.",
+        "Use a full-length portrait composition with the customer visible from head to toe, both feet unobstructed and every actual bag fully visible. If the customer photo crops the lower legs or feet, extend the frame naturally while preserving the visible person and scene.",
+        "Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions or add unrelated products, props or logos.",
+        "Return one premium, photorealistic portrait outfit preview. Do not return a collage, split screen, labels or product panels.",
       ].join(" ")
     : [
         "Create a realistic virtual try-on preview for an ecommerce fashion site.",

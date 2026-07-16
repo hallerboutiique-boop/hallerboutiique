@@ -99,6 +99,9 @@ test("bundle try-on sends untouched customer and product image files separately"
   assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image\[\]", image\)\)/);
   assert.match(server, /Input image 1 is the customer's original, unmodified photo/);
   assert.match(server, /Use each original product photo as the authoritative visual reference/);
+  assert.match(server, /bundleItems\.length > 0 \? "1024x1536" : "1024x1024"/);
+  assert.match(server, /Catalog photos may also show boxes, packaging/);
+  assert.match(server, /visible from head to toe, both feet unobstructed/);
 });
 
 test("product images keep their full composition", async () => {
