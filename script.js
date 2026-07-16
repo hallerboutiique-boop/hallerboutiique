@@ -161,6 +161,16 @@ const catalogTranslations = {
 
 Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
+const catalogSearchTranslations = {
+  it: { "catalog-search-count": "{count} modelli trovati", "catalog-search-shoes": "Scarpe", "catalog-search-bags": "Borse" },
+  en: { "catalog-search-count": "{count} styles found", "catalog-search-shoes": "Shoes", "catalog-search-bags": "Bags" },
+  fr: { "catalog-search-count": "{count} modeles trouves", "catalog-search-shoes": "Chaussures", "catalog-search-bags": "Sacs" },
+  de: { "catalog-search-count": "{count} Modelle gefunden", "catalog-search-shoes": "Schuhe", "catalog-search-bags": "Taschen" },
+  es: { "catalog-search-count": "{count} modelos encontrados", "catalog-search-shoes": "Zapatos", "catalog-search-bags": "Bolsos" },
+};
+
+Object.entries(catalogSearchTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
 }
@@ -1495,6 +1505,102 @@ function renderLastStockCatalog() {
   if (window.lucide) window.lucide.createIcons();
 }
 
+const catalogSearchAliasGroups = [
+  { categories: ["tshirt"], terms: ["tshirt", "maglia", "maglietta", "shirt", "tee", "top", "camiseta"] },
+  { categories: ["tracksuits", "two piece sets"], terms: ["tuta", "tracksuit", "completo", "coordinato", "survetement", "trainingsanzug", "chandal"] },
+  { categories: ["jackets"], terms: ["giacca", "jacket", "veste", "jacke", "chaqueta"] },
+  { categories: ["long denim", "denim shorts", "shorts"], terms: ["jeans", "denim", "pantalone", "pantaloni", "pants", "trousers", "pantalon", "short"] },
+  { categories: ["borse"], terms: ["borsa", "borse", "bag", "bags", "sac", "sacs", "tasche", "bolso", "bolsos", "accessori", "accessory", "accessories", "accessoires", "zubehor", "accesorios"] },
+  { categories: ["sneakers"], terms: ["scarpa", "scarpe", "shoe", "shoes", "sneaker", "sneakers", "chaussure", "chaussures", "schuh", "schuhe", "zapato", "zapatos"] },
+];
+
+function normalizeCatalogSearchText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/t[\s-]*shirts?/g, "tshirt")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function getCatalogSearchGenderTerms(gender) {
+  if (gender === "donna") return ["donna", "women", "woman", "female", "femme", "damen", "mujer"];
+  if (gender === "uomo") return ["uomo", "men", "man", "male", "homme", "herren", "hombre"];
+  return [];
+}
+
+function getCatalogSearchRecord(product) {
+  const name = normalizeCatalogSearchText(product.name);
+  const brand = normalizeCatalogSearchText(getProductBrand(product));
+  const category = normalizeCatalogSearchText(product.category);
+  const collection = normalizeCatalogSearchText(product.collection);
+  const description = normalizeCatalogSearchText(product.description);
+  const gender = getProductGender(product);
+  const aliases = catalogSearchAliasGroups
+    .filter((group) => group.categories.some((categoryName) => category.includes(categoryName)))
+    .flatMap((group) => group.terms)
+    .map(normalizeCatalogSearchText);
+  const sizeTerms = product.sizeType === "sneakers"
+    ? ["sneakers", "shoes", "scarpe"]
+    : product.sizeType === "clothing"
+      ? ["clothing", "vestiti", "abbigliamento", "clothes"]
+      : [];
+
+  return {
+    name,
+    brand,
+    category,
+    collection,
+    description,
+    gender: normalizeCatalogSearchText(getCatalogSearchGenderTerms(gender).join(" ")),
+    all: [name, brand, category, collection, description, ...aliases, ...sizeTerms].join(" "),
+  };
+}
+
+function scoreCatalogSearchProduct(product, query) {
+  const record = getCatalogSearchRecord(product);
+  const tokens = query.split(" ").filter(Boolean);
+  if (tokens.length === 0 || !tokens.every((token) => record.all.includes(token) || record.gender.includes(token))) return -1;
+
+  const scoreField = (field, weight) => {
+    if (!field) return 0;
+    if (field === query) return weight * 10;
+    if (field.startsWith(query)) return weight * 6;
+    if (field.includes(query)) return weight * 4;
+    return tokens.reduce((score, token) => score + (field.startsWith(token) ? weight : field.includes(token) ? weight * 0.45 : 0), 0);
+  };
+
+  return scoreField(record.name, 120)
+    + scoreField(record.brand, 90)
+    + scoreField(record.category, 72)
+    + scoreField(record.gender, 58)
+    + scoreField(record.collection, 40)
+    + scoreField(record.description, 20);
+}
+
+function searchCatalogProducts(query) {
+  const normalizedQuery = normalizeCatalogSearchText(query);
+  if (!normalizedQuery) return { products: getHomeFeaturedProducts(), total: 0 };
+
+  const matches = getAllProducts()
+    .map((product) => ({ product, score: scoreCatalogSearchProduct(product, normalizedQuery) }))
+    .filter(({ score }) => score >= 0)
+    .sort((left, right) => right.score - left.score || left.product.name.localeCompare(right.product.name));
+
+  return { products: matches.slice(0, 24).map(({ product }) => product), total: matches.length };
+}
+
+function getCatalogSearchQuickFilters() {
+  return [
+    { query: "uomo", label: translate("men") },
+    { query: "donna", label: translate("women") },
+    { query: "t-shirt", label: "T-shirt" },
+    { query: "scarpe", label: translate("catalog-search-shoes") },
+    { query: "borsa", label: translate("catalog-search-bags") },
+  ];
+}
+
 function ensureCatalogSearch() {
   if (!document.querySelector(".search-button") || document.querySelector("[data-catalog-search-dialog]")) return;
   document.body.insertAdjacentHTML("beforeend", `
@@ -1528,13 +1634,27 @@ function refreshCatalogSearchLanguage() {
 function renderCatalogSearchResults(query = "") {
   const root = document.querySelector("[data-catalog-search-results]");
   if (!root) return;
-  const value = String(query).trim().toLowerCase();
-  const products = value
-    ? getAllProducts().filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
-    : getHomeFeaturedProducts();
-  root.innerHTML = products.length
-    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
-    : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`;
+  const value = String(query).trim();
+  const normalizedValue = normalizeCatalogSearchText(value);
+  const { products, total } = searchCatalogProducts(value);
+  const filters = getCatalogSearchQuickFilters().map(({ query: filterQuery, label }) => {
+    const isActive = normalizeCatalogSearchText(filterQuery) === normalizedValue;
+    return `<button class="catalog-search-filter${isActive ? " is-active" : ""}" type="button" data-catalog-search-query="${escapeHtml(filterQuery)}" aria-pressed="${isActive}">${escapeHtml(label)}</button>`;
+  }).join("");
+  const resultStatus = normalizedValue
+    ? `<p class="catalog-search-status">${escapeHtml(translate("catalog-search-count").replace("{count}", String(total)))}</p>`
+    : "";
+  root.innerHTML = `
+    <div class="catalog-search-filters">${filters}</div>
+    ${resultStatus}
+    ${products.length
+      ? products.map((product) => {
+        const productGender = getProductGender(product);
+        const gender = productGender === "donna" ? translate("women") : productGender === "uomo" ? translate("men") : "";
+        return `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml([gender, product.category, getProductBrand(product)].filter(Boolean).join(" · "))}</small></span></button>`;
+      }).join("")
+      : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}
+  `;
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -2785,6 +2905,7 @@ document.addEventListener("click", (event) => {
   const searchButton = event.target.closest(".search-button");
   const searchClose = event.target.closest("[data-catalog-search-close]");
   const searchResult = event.target.closest("[data-catalog-search-result]");
+  const searchQuickFilter = event.target.closest("[data-catalog-search-query]");
   const navToggle = event.target.closest("[data-catalog-nav-toggle]");
   const catalogFilter = event.target.closest("[data-catalog-filter]");
   const catalogReset = event.target.closest("[data-catalog-reset]");
@@ -2798,11 +2919,21 @@ document.addEventListener("click", (event) => {
     ensureCatalogSearch();
     const dialog = document.querySelector("[data-catalog-search-dialog]");
     if (dialog && !dialog.open) dialog.showModal();
-    renderCatalogSearchResults();
-    window.setTimeout(() => document.querySelector("[data-catalog-search-input]")?.focus(), 0);
+    const input = document.querySelector("[data-catalog-search-input]");
+    renderCatalogSearchResults(input?.value || "");
+    window.setTimeout(() => input?.focus(), 0);
   }
 
   if (searchClose) document.querySelector("[data-catalog-search-dialog]")?.close();
+
+  if (searchQuickFilter) {
+    const input = document.querySelector("[data-catalog-search-input]");
+    const query = searchQuickFilter.dataset.catalogSearchQuery || "";
+    if (input) input.value = query;
+    renderCatalogSearchResults(query);
+    input?.focus();
+    return;
+  }
 
   if (searchResult) {
     catalogState = { gender: "", category: "", brand: "", productIds: [searchResult.dataset.catalogSearchResult] };

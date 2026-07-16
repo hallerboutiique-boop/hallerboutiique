@@ -64,6 +64,11 @@ test("catalog navigation, visual search and private last-stock handling are pres
   assert.match(lastStock, /data-last-stock-catalog/);
   assert.match(script, /function renderCatalogNavigation\(\)/);
   assert.match(script, /function ensureCatalogSearch\(\)/);
+  assert.match(script, /function searchCatalogProducts\(query\)/);
+  assert.match(script, /function normalizeCatalogSearchText\(value\)/);
+  assert.match(script, /maglietta/);
+  assert.match(script, /scarpe/);
+  assert.match(script, /data-catalog-search-query/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
   assert.match(script, /isLastAvailable/);
   assert.match(admin, /name="sizes"/);

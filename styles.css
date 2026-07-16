@@ -2240,6 +2240,41 @@ body.motion-enabled .main-nav a:not(.active):focus-visible {
   font: inherit;
 }
 
+.catalog-search-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.catalog-search-filter {
+  min-height: 34px;
+  padding: 0 12px;
+  color: var(--text);
+  border: 1px solid var(--panel-line);
+  border-radius: 6px;
+  background: #101010;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.catalog-search-filter:hover,
+.catalog-search-filter:focus-visible,
+.catalog-search-filter.is-active {
+  color: #050505;
+  border-color: var(--gold);
+  background: var(--gold);
+  outline: none;
+}
+
+.catalog-search-status {
+  margin: -3px 0 0;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .catalog-search-results {
   display: grid;
   max-height: min(54vh, 510px);
