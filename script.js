@@ -2311,62 +2311,41 @@ function renderBundleTryOn() {
   if (window.lucide) window.lucide.createIcons();
 }
 
-async function createBundleTryOnReference(userFile, items) {
-  const customerUrl = URL.createObjectURL(userFile);
+const bundleTryOnImageExtensions = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
+function bundleTryOnImageFilename(src, index, extension) {
+  let filename = "";
   try {
-    const customer = await loadTryOnReferenceImage(customerUrl);
-    const productImages = await Promise.all(items.map((item) =>
-      item.image ? loadTryOnReferenceImage(withProductImageVersion(item.image)).catch(() => null) : Promise.resolve(null)
-    ));
-    const canvas = document.createElement("canvas");
-    canvas.width = 1536;
-    canvas.height = 1086;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error(translate("tryon-unavailable"));
-
-    context.fillStyle = "#111111";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    drawTryOnReferenceImage(context, customer, 0, 62, 880, 1024, "#151515");
-    context.fillStyle = "#ffffff";
-    context.font = "600 25px Montserrat, Arial, sans-serif";
-    context.fillText("PERSONA", 24, 40);
-    context.fillText("ARTICOLI DEL CARRELLO", 920, 40);
-
-    const columns = items.length === 1 ? 1 : 2;
-    const rows = Math.max(1, Math.ceil(items.length / columns));
-    const panelWidth = 656 / columns;
-    const panelHeight = 1024 / rows;
-    items.forEach((item, index) => {
-      const column = index % columns;
-      const row = Math.floor(index / columns);
-      const x = 880 + column * panelWidth;
-      const y = 62 + row * panelHeight;
-      const image = productImages[index];
-      context.strokeStyle = "#d7aa43";
-      context.lineWidth = 3;
-      context.strokeRect(x + 1.5, y + 1.5, panelWidth - 3, panelHeight - 3);
-      if (image) {
-        drawTryOnReferenceImage(context, image, x + 4, y + 4, panelWidth - 8, panelHeight - 8, "#ffffff");
-      } else {
-        context.fillStyle = "#f4f4f4";
-        context.fillRect(x + 4, y + 4, panelWidth - 8, panelHeight - 8);
-        context.fillStyle = "#111111";
-        context.font = "700 20px Montserrat, Arial, sans-serif";
-        drawTryOnReferenceText(context, item.name, x + 24, y + 62, panelWidth - 48, 4);
-      }
-      context.fillStyle = "#d7aa43";
-      context.fillRect(x + 12, y + 12, 42, 42);
-      context.fillStyle = "#050505";
-      context.font = "800 22px Montserrat, Arial, sans-serif";
-      context.fillText(String(index + 1), x + 25, y + 41);
-    });
-
-    return await new Promise((resolve, reject) => {
-      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error(translate("tryon-unavailable")))), "image/png");
-    });
-  } finally {
-    URL.revokeObjectURL(customerUrl);
+    filename = decodeURIComponent(new URL(src, window.location.href).pathname.split("/").pop() || "");
+  } catch {
+    filename = "";
   }
+  filename = filename.replace(/[^a-z0-9._-]/gi, "_");
+  return /\.(?:jpe?g|png|webp)$/i.test(filename) ? filename : `product-${index + 1}.${extension}`;
+}
+
+async function loadOriginalBundleProductImage(item, index) {
+  if (!item.image) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
+  const response = await fetch(withProductImageVersion(item.image), { credentials: "same-origin" });
+  if (!response.ok) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
+
+  const blob = await response.blob();
+  const responseType = String(blob.type || response.headers.get("content-type") || "").split(";")[0].toLowerCase();
+  const sourceExtension = String(item.image).match(/\.(jpe?g|png|webp)(?:[?#]|$)/i)?.[1]?.toLowerCase();
+  const extension = bundleTryOnImageExtensions[responseType] || (sourceExtension === "jpeg" ? "jpg" : sourceExtension);
+  if (!extension || blob.size === 0) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
+
+  const mime = responseType in bundleTryOnImageExtensions
+    ? responseType
+    : extension === "jpg" ? "image/jpeg" : `image/${extension}`;
+  return {
+    blob: blob.type === mime ? blob : blob.slice(0, blob.size, mime),
+    filename: bundleTryOnImageFilename(item.image, index, extension),
+  };
 }
 
 function previewBundleTryOnUserImage(event) {
@@ -2405,10 +2384,11 @@ async function generateBundleTryOn() {
   setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const referenceImage = await createBundleTryOnReference(file, bundleTryOnItems);
+    const originalProductImages = await Promise.all(bundleTryOnItems.map(loadOriginalBundleProductImage));
     const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }) => ({ id, name, category, sizeType }));
     const formData = new FormData();
-    formData.append("userImage", referenceImage, "bundle-try-on-reference.png");
+    formData.append("userImage", file, file.name || "bundle-customer.jpg");
+    originalProductImages.forEach((image) => formData.append("productImage", image.blob, image.filename));
     formData.append("mode", "bundle");
     formData.append("bundleItems", JSON.stringify(bundleData));
     formData.append("productId", bundleData.map((item) => item.id).join(","));
@@ -2417,7 +2397,6 @@ async function generateBundleTryOn() {
     formData.append("language", siteLanguage);
     if (saveConsent?.checked) {
       formData.append("saveTryOn", "yes");
-      formData.append("customerImage", file, file.name || "bundle-try-on-source.jpg");
     }
     setBundleTryOnProgress(16, translate("bundle-tryon-inputs-ready"));
     const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {

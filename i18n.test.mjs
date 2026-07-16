@@ -41,8 +41,11 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=checkout-cart-removal-1/);
-  assert.match(script, /function createBundleTryOnReference/);
+  assert.match(checkout, /script\.js\?v=bundle-original-images-1/);
+  assert.match(script, /function loadOriginalBundleProductImage/);
+  assert.doesNotMatch(script, /function createBundleTryOnReference/);
+  assert.match(script, /formData\.append\("userImage", file/);
+  assert.match(script, /formData\.append\("productImage", image\.blob, image\.filename\)/);
   assert.match(script, /formData\.append\("mode", "bundle"\)/);
   assert.match(script, /formData\.append\("bundleItems", JSON\.stringify\(bundleData\)\)/);
   for (const language of ["it", "en", "fr", "de", "es"]) {
@@ -83,9 +86,19 @@ test("try-on supports clothing, shoes and bags", async () => {
   assert.doesNotMatch(script, /product\.sizeType !== "clothing"/);
   assert.match(script, /image: productPrimaryImage\(product\)/);
   assert.match(server, /function cleanTryOnBundleItems/);
-  assert.match(server, /put sneakers or shoes on the feet/);
-  assert.match(server, /place bags in the customer's hand/);
-  assert.match(server, /Do not omit, replace or duplicate any numbered item/);
+  assert.match(server, /put sneakers or shoes on both feet/i);
+  assert.match(server, /place bags in the customer's hand/i);
+  assert.match(server, /Do not omit, replace, redesign, duplicate or invent any item/);
+});
+
+test("bundle try-on sends untouched customer and product image files separately", async () => {
+  const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadOriginalBundleProductImage\)\)/);
+  assert.doesNotMatch(script, /bundle-try-on-reference\.png/);
+  assert.match(server, /appendImageFormData\(form, "image\[\]", userImage\)/);
+  assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image\[\]", image\)\)/);
+  assert.match(server, /Input image 1 is the customer's original, unmodified photo/);
+  assert.match(server, /Use each original product photo as the authoritative visual reference/);
 });
 
 test("product images keep their full composition", async () => {

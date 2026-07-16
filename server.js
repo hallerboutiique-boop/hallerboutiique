@@ -882,20 +882,26 @@ function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
 }
 
-function buildTryOnForm({ userImage, productName, category, bundleItems = [] }) {
+function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
   const form = new FormData();
-  appendImageFormData(form, "image", userImage);
+  if (bundleItems.length > 0) {
+    appendImageFormData(form, "image[]", userImage);
+    productImages.forEach((image) => appendImageFormData(form, "image[]", image));
+  } else {
+    appendImageFormData(form, "image", userImage);
+  }
   form.append("model", openaiTryOnModel);
   form.append("size", "1024x1024");
-  form.append("input_fidelity", "high");
+  if (openaiTryOnModel !== "gpt-image-2") form.append("input_fidelity", "high");
   const bundlePrompt = bundleItems.length > 0
     ? [
         "Create one realistic full-body virtual try-on preview for an ecommerce fashion checkout.",
-        "The reference board has the customer in the large left panel and numbered cart items in the right panels. Each right panel contains either the exact product photo or its product name.",
-        `Dress and style the customer with every numbered cart item exactly once: ${bundleItems.map((item, index) => `${index + 1}. ${item.name} (${item.category || item.sizeType || "fashion"})`).join("; ")}.`,
-        "Do not omit, replace or duplicate any numbered item. Layer garments naturally. Put tops, trousers and outerwear on the body; put sneakers or shoes on the feet; place bags in the customer's hand, over the shoulder or across the body; place accessories in their natural position.",
-        "Preserve the exact color, logo, print, material, shape and visible details from every product photo. When a panel contains only text, follow the product name and category as closely as possible.",
-        "Use a head-to-toe composition with both feet and every bag fully visible. Keep the customer's identity, face, body shape and natural background. Do not change age or body proportions and do not add unrelated products or logos.",
+        "Input image 1 is the customer's original, unmodified photo. Preserve this person's identity, face, hair, skin, body shape, pose, age and background as closely as possible.",
+        `The remaining input images are the original catalog product photos, in this exact order: ${bundleItems.map((item, index) => `input image ${index + 2} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`).join("; ")}.`,
+        "Dress and style the customer with every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any item.",
+        "Layer garments naturally. Put tops, trousers and outerwear on the body; put sneakers or shoes on both feet; place bags in the customer's hand, over the shoulder or across the body; place accessories in their natural position.",
+        "Use each original product photo as the authoritative visual reference. Preserve the exact color, logo, print, material, cut, proportions, shape and visible details of every product.",
+        "Use a head-to-toe composition with both feet and every bag fully visible. Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions or add unrelated products or logos.",
         "Return one premium, photorealistic square outfit preview. Do not return a collage, split screen, labels or product panels.",
       ].join(" ")
     : [
@@ -1282,11 +1288,11 @@ const siteChatLanguages = {
 };
 
 const tryOnLanguages = {
-  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", received: "Foto ricevuta", prepared: "Capo reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "Tutti gli articoli del carrello sono pronti", bundleGenerating: "Generazione outfit completo in corso", bundlePreview: "Outfit completo ricevuto", unavailable: "Try-on non disponibile." },
-  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", received: "Photo received", prepared: "Real catalog garment prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "Every cart item is ready", bundleGenerating: "Generating the complete outfit", bundlePreview: "Complete outfit received", unavailable: "Try-on is unavailable." },
-  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Tous les articles du panier sont prets", bundleGenerating: "Generation de la tenue complete", bundlePreview: "Tenue complete reçue", unavailable: "L'essayage est indisponible." },
-  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Alle Warenkorbartikel sind bereit", bundleGenerating: "Komplettes Outfit wird erstellt", bundlePreview: "Komplettes Outfit empfangen", unavailable: "Die Anprobe ist nicht verfugbar." },
-  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Todos los articulos del carrito estan listos", bundleGenerating: "Generando el conjunto completo", bundlePreview: "Conjunto completo recibido", unavailable: "La prueba no esta disponible." },
+  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", received: "Foto ricevuta", prepared: "Capo reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "Tutti gli articoli del carrello sono pronti", bundleGenerating: "Generazione outfit completo in corso", bundlePreview: "Outfit completo ricevuto", unavailable: "Try-on non disponibile." },
+  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", received: "Photo received", prepared: "Real catalog garment prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "Every cart item is ready", bundleGenerating: "Generating the complete outfit", bundlePreview: "Complete outfit received", unavailable: "Try-on is unavailable." },
+  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Tous les articles du panier sont prets", bundleGenerating: "Generation de la tenue complete", bundlePreview: "Tenue complete reçue", unavailable: "L'essayage est indisponible." },
+  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Alle Warenkorbartikel sind bereit", bundleGenerating: "Komplettes Outfit wird erstellt", bundlePreview: "Komplettes Outfit empfangen", unavailable: "Die Anprobe ist nicht verfugbar." },
+  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Todos los articulos del carrito estan listos", bundleGenerating: "Generando el conjunto completo", bundlePreview: "Conjunto completo recibido", unavailable: "La prueba no esta disponible." },
 };
 
 function siteChatLanguage(value) {
@@ -1597,20 +1603,34 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   const mode = fieldValue(parts, "mode", 20) === "bundle" ? "bundle" : "single";
   const bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
   if (mode === "bundle" && bundleItems.length === 0) return badRequest(res, copy.unavailable);
+  const productImages = mode === "bundle"
+    ? parts.filter((part) => part.name === "productImage" && part.filename).map((part, index) => {
+        const productExt = imageExtension(part.filename, part.contentType);
+        if (!productExt || productExt === ".svg" || part.data.length === 0) return null;
+        return {
+          data: part.data,
+          mime: imageMimeFromExtension(productExt),
+          filename: `product-${index + 1}${productExt}`,
+        };
+      })
+    : [];
+  if (mode === "bundle" && (productImages.length !== bundleItems.length || productImages.some((item) => !item))) {
+    return badRequest(res, copy.bundleImages);
+  }
   const progress = streamProgress ? createProgressStream(res) : null;
   progress?.update(24, copy.received);
   const saveTryOn = fieldValue(parts, "saveTryOn", 10) === "yes";
-  const customerImage = parts.find((part) => part.name === "customerImage" && part.filename);
+  const customerImage = parts.find((part) => part.name === "customerImage" && part.filename) || (mode === "bundle" ? image : null);
   const userImage = {
     data: image.data,
-    mime: image.contentType || imageMimeFromExtension(ext),
+    mime: imageMimeFromExtension(ext),
     filename: `customer${ext}`,
   };
 
   try {
     progress?.update(46, mode === "bundle" ? copy.bundlePrepared : copy.prepared);
     progress?.update(60, mode === "bundle" ? copy.bundleGenerating : copy.generating);
-    const generated = await generateTryOnImage({ userImage, productName, category, bundleItems });
+    const generated = await generateTryOnImage({ userImage, productImages, productName, category, bundleItems });
     progress?.update(92, mode === "bundle" ? copy.bundlePreview : copy.preview);
     const archived = saveTryOn && customerImage ? await archiveTryOn({ customerImage, generated, productId: fieldValue(parts, "productId", 120), productName, category }) : null;
     const result = { ok: true, image: generated, saved: Boolean(archived), mode };
