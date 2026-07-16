@@ -345,10 +345,12 @@ function createCroppedProductImage() {
   });
 }
 
-async function uploadCroppedProductImage(image, productId, position, total) {
+async function uploadProductImage(image, productId, position, total) {
+  const file = image?.blob || image;
+  const filename = image?.name || "prodotto.jpg";
   const formData = new FormData();
   formData.append("productId", productId);
-  formData.append("images", image.blob, image.name);
+  formData.append("images", file, filename);
   setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
   setProductMessage("");
   const data = await uploadApi("/api/admin/product-images", formData);
@@ -358,6 +360,22 @@ async function uploadCroppedProductImage(image, productId, position, total) {
   await loadProducts();
   const product = adminProducts.find((entry) => entry.id === productId);
   if (product) fillProductForm(product);
+}
+
+async function uploadProductImageFiles(files, productId) {
+  try {
+    for (const [index, file] of files.entries()) {
+      await uploadProductImage(file, productId, index + 1, files.length);
+    }
+    setProductUploadStatus(`${files.length} foto intere collegate al prodotto.`);
+    setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
+  } catch (error) {
+    setProductUploadStatus("Upload non riuscito.");
+    setProductMessage(error.message, "error");
+  } finally {
+    if (productImageButton) productImageButton.disabled = false;
+    if (productImageUpload) productImageUpload.value = "";
+  }
 }
 
 async function createAiProductFromImage(image) {
@@ -408,7 +426,7 @@ async function handleCroppedProductImage(image, source) {
   const queue = productUploadQueue;
   if (!queue) return;
   try {
-    await uploadCroppedProductImage(image, source.productId, queue.index + 1, queue.files.length);
+    await uploadProductImage(image, source.productId, queue.index + 1, queue.files.length);
   } catch (error) {
     setProductUploadStatus("Upload non riuscito.");
     setProductMessage(error.message, "error");
@@ -1291,17 +1309,8 @@ productImageUpload?.addEventListener("change", () => {
   if (!productId || files.length === 0) return;
 
   setProductMessage("");
-  productUploadQueue = { files, productId, index: 0 };
   productImageButton.disabled = true;
-  try {
-    openNextProductCrop();
-  } catch (error) {
-    productUploadQueue = null;
-    productImageButton.disabled = false;
-    setProductUploadStatus("Ritaglio non disponibile.");
-    setProductMessage(error.message, "error");
-    productImageUpload.value = "";
-  }
+  uploadProductImageFiles(files, productId);
 });
 
 aiProductButton?.addEventListener("click", () => {
@@ -1311,12 +1320,7 @@ aiProductButton?.addEventListener("click", () => {
 aiProductImage?.addEventListener("change", () => {
   const file = aiProductImage.files?.[0];
   if (!file) return;
-  try {
-    openProductCropper(file, { type: "ai" });
-  } catch (error) {
-    setAiProductStatus(error.message, "error");
-    aiProductImage.value = "";
-  }
+  createAiProductFromImage({ blob: file, name: file.name });
 });
 
 document.querySelectorAll("[data-admin-tab]").forEach((tab) => {

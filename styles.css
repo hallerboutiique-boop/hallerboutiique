@@ -632,7 +632,7 @@
 .admin-product-thumb img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .admin-product-thumb svg {
@@ -694,7 +694,7 @@
 .product-preview-item img {
   width: 100%;
   aspect-ratio: 4 / 5;
-  object-fit: cover;
+  object-fit: contain;
   border: 1px solid var(--panel-line);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.46);
@@ -1992,7 +1992,7 @@ body.motion-enabled .main-nav a:not(.active):focus-visible {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .catalog-preview-empty {
@@ -3074,15 +3074,15 @@ body.motion-enabled .product-card:hover {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 68%;
+  object-fit: contain;
+  object-position: center;
   z-index: 0;
   transition: transform 420ms ease, filter 420ms ease;
 }
 
 body.motion-enabled .product-card:hover .product-image {
   filter: saturate(1.08) contrast(1.04);
-  transform: translateY(var(--product-image-y, 0px)) scale(1.065);
+  transform: none;
 }
 
 .discount-badge {

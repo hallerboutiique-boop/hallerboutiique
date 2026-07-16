@@ -82,3 +82,12 @@ test("try-on supports clothing, shoes and bags", async () => {
   assert.match(server, /place bags in the customer's hand/);
   assert.match(server, /Do not omit, replace or duplicate any numbered item/);
 });
+
+test("product images keep their full composition", async () => {
+  const [styles, admin] = await Promise.all([readFile("styles.css", "utf8"), readFile("admin.js", "utf8")]);
+  assert.match(styles, /\.product-image\s*\{[\s\S]*?object-fit:\s*contain/);
+  assert.match(styles, /\.catalog-search-preview img[\s\S]*?object-fit:\s*contain/);
+  assert.match(admin, /async function uploadProductImageFiles\(files, productId\)/);
+  assert.match(admin, /formData\.append\("images", file, filename\)/);
+  assert.match(admin, /uploadProductImageFiles\(files, productId\)/);
+});
