@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const htmlFiles = ["index.html", "account.html", "checkout.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
+const htmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-disponibili.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
 
 test("one language controller owns every picker", async () => {
   const [i18n, script] = await Promise.all([readFile("i18n.js", "utf8"), readFile("script.js", "utf8")]);
@@ -41,13 +41,36 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=tryon-bundle-1/);
+  assert.match(checkout, /script\.js\?v=catalog-navigation-1/);
   assert.match(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("mode", "bundle"\)/);
   assert.match(script, /formData\.append\("bundleItems", JSON\.stringify\(bundleData\)\)/);
   for (const language of ["it", "en", "fr", "de", "es"]) {
     assert.match(script, new RegExp(`\\n  ${language}: \\{[\\s\\S]*?"bundle-tryon-title"`));
   }
+});
+
+test("catalog navigation, visual search and private last-stock handling are present", async () => {
+  const [index, lastStock, admin, script, server] = await Promise.all([
+    readFile("index.html", "utf8"),
+    readFile("ultimi-disponibili.html", "utf8"),
+    readFile("admin.html", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+  ]);
+  assert.match(index, /data-catalog-nav-toggle="uomo"/);
+  assert.match(index, /data-catalog-nav-toggle="donna"/);
+  assert.match(index, /ultimi-disponibili\.html/);
+  assert.match(lastStock, /data-last-stock-catalog/);
+  assert.match(script, /function renderCatalogNavigation\(\)/);
+  assert.match(script, /function ensureCatalogSearch\(\)/);
+  assert.match(script, /function renderLastStockCatalog\(\)/);
+  assert.match(script, /isLastAvailable/);
+  assert.match(admin, /name="sizes"/);
+  assert.match(admin, /name="inventory"/);
+  assert.match(server, /function cleanProductInventory/);
+  assert.match(server, /const \{ inventory, \.\.\.publicProduct \}/);
+  assert.match(server, /async function reduceProductInventory/);
 });
 
 test("try-on supports clothing, shoes and bags", async () => {

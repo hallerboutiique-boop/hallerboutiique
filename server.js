@@ -46,6 +46,7 @@ const publicFiles = new Set([
   "/index.html",
   "/checkout.html",
   "/account.html",
+  "/ultimi-disponibili.html",
   "/admin.html",
   "/spedizioni.html",
   "/termini.html",
@@ -621,6 +622,17 @@ function cleanProductImages(images) {
     .slice(0, 8);
 }
 
+function cleanProductSizes(sizes) {
+  const source = Array.isArray(sizes) ? sizes : String(sizes || "").split(/[\n,;]+/);
+  return [...new Set(source.map((size) => cleanTrackingString(size, 12)).filter(Boolean))].slice(0, 20);
+}
+
+function cleanProductInventory(inventory) {
+  if (inventory === "" || inventory === null || inventory === undefined) return null;
+  const value = Number(inventory);
+  return Number.isInteger(value) && value >= 0 ? value : null;
+}
+
 function cleanProductPatch(body) {
   const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
   return {
@@ -632,6 +644,8 @@ function cleanProductPatch(body) {
     collection: cleanTrackingString(body.collection, 80),
     category: cleanTrackingString(body.category, 80),
     sizeType,
+    sizes: cleanProductSizes(body.sizes),
+    inventory: cleanProductInventory(body.inventory),
     images: cleanProductImages(body.images),
     updatedAt: new Date().toISOString(),
   };
@@ -1247,7 +1261,12 @@ async function handleAdminUsers(req, res) {
 
 async function handleProducts(req, res) {
   const data = await readProductOverrides();
-  json(res, 200, { ok: true, items: data.items, custom: data.custom.map(mergeCustomProduct) });
+  const toPublicProduct = (product) => {
+    const { inventory, ...publicProduct } = product || {};
+    return { ...publicProduct, isLastAvailable: inventory === 1 };
+  };
+  const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
+  json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) });
 }
 
 function cleanChatMessage(value) {
@@ -1830,6 +1849,7 @@ function cleanProducts(products) {
     const price = cleanTrackingString(product.price, 40);
     const quantity = Math.max(1, Math.min(99, Number.parseInt(product.quantity || 1, 10) || 1));
     return {
+      id: cleanTrackingString(product.id, 120),
       name: cleanTrackingString(product.name, 180) || "Prodotto",
       price,
       size: cleanTrackingString(product.size || product.variant, 40),
@@ -1837,6 +1857,22 @@ function cleanProducts(products) {
       value: parseEuro(price) * quantity,
     };
   });
+}
+
+async function reduceProductInventory(products) {
+  const overrides = await readProductOverrides();
+  let changed = false;
+
+  for (const ordered of products) {
+    if (!ordered.id) continue;
+    const customIndex = overrides.custom.findIndex((product) => product.id === ordered.id);
+    const product = customIndex === -1 ? overrides.items[ordered.id] : overrides.custom[customIndex];
+    if (!product || !Number.isInteger(product.inventory) || product.inventory < 0) continue;
+    product.inventory = Math.max(0, product.inventory - ordered.quantity);
+    changed = true;
+  }
+
+  if (changed) await writeProductOverrides(overrides);
 }
 
 async function handleCreateOrder(req, res) {
@@ -1885,6 +1921,7 @@ async function handleCreateOrder(req, res) {
   const orders = await readOrders();
   orders.push(order);
   await writeOrders(orders.slice(-2000));
+  await reduceProductInventory(products);
 
   const analytics = await readAnalytics();
   const session = analytics.sessions[sessionId];

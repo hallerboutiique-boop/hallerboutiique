@@ -748,6 +748,8 @@ function fillProductForm(product) {
   productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
   productForm.elements.discount.value = product.discount || "";
   productForm.elements.sizeType.value = product.sizeType || "none";
+  productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
+  productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
   renderProductPreviews(product.images || []);
   setProductMessage("");
@@ -766,6 +768,8 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.finalPrice.value = "";
   productForm.elements.discount.value = "";
   productForm.elements.sizeType.value = suggestion.sizeType || "none";
+  productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
+  productForm.elements.inventory.value = "";
   productForm.elements.images.value = Array.isArray(suggestion.images) ? suggestion.images.join("\n") : "";
   renderProductPreviews(suggestion.images || []);
   renderAdminProducts();
@@ -804,7 +808,7 @@ function renderAdminProducts() {
           <span class="admin-product-text">
             <strong>${escapeHtml(product.name)}</strong>
             <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)}${product.custom ? " · custom" : ""}</small>
+            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${Number.isInteger(product.inventory) ? `${product.inventory} in inventario` : "inventario da definire"}${product.custom ? " · custom" : ""}</small>
           </span>
         </button>
       `;

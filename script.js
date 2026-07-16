@@ -151,6 +151,16 @@ const bundleTryOnTranslations = {
 
 Object.entries(bundleTryOnTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
+const catalogTranslations = {
+  it: { "last-stock-nav": "Ultimi disponibili", "last-stock-warning": "Ultimo disponibile", "catalog-choose-category": "Scegli una categoria", "catalog-choose-brand": "Scegli una marca", "catalog-all-brands": "Tutte le marche", "catalog-all-products": "Tutti i modelli", "catalog-viewing": "Stai guardando", "catalog-search-title": "Cerca nel catalogo", "catalog-search-placeholder": "Modello, categoria o marca", "catalog-search-empty": "Nessun modello trovato.", "catalog-search-results": "Risultati ricerca", "catalog-close": "Chiudi", "catalog-last-title": "Ultimi disponibili", "catalog-last-description": "Gli articoli con un solo pezzo rimasto, organizzati per categoria e marca.", "catalog-last-empty": "Non ci sono ultimi pezzi da mostrare.", "catalog-back": "Torna alla selezione" },
+  en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-back": "Back to selection" },
+  fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-back": "Retour a la selection" },
+  de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-back": "Zuruck zur Auswahl" },
+  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-back": "Volver a la seleccion" }
+};
+
+Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
 }
@@ -185,6 +195,7 @@ const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 let productOverrides = {};
 let customProducts = [];
+let catalogState = { gender: "", category: "", brand: "", productIds: [] };
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
@@ -1121,7 +1132,11 @@ function showSlide(index) {
   }
 }
 
-function getSizes(sizeType) {
+function getSizes(productOrSizeType) {
+  if (productOrSizeType && typeof productOrSizeType === "object" && Array.isArray(productOrSizeType.sizes) && productOrSizeType.sizes.length) {
+    return productOrSizeType.sizes;
+  }
+  const sizeType = typeof productOrSizeType === "object" ? productOrSizeType.sizeType : productOrSizeType;
   if (sizeType === "clothing") {
     return clothingSizes;
   }
@@ -1132,7 +1147,7 @@ function getSizes(sizeType) {
 }
 
 function createSizesMarkup(product) {
-  const sizes = getSizes(product.sizeType);
+  const sizes = getSizes(product);
 
   if (sizes.length === 0) {
     return "";
@@ -1141,7 +1156,7 @@ function createSizesMarkup(product) {
   return `
     <div class="product-sizes" aria-label="${translate("sizes-available")}">
       <span>${translate("sizes")}</span>
-      <div>${sizes.map((size) => `<button type="button">${size}</button>`).join("")}</div>
+      <div>${sizes.map((size) => `<button type="button" data-size-option data-product-size="${escapeHtml(size)}">${escapeHtml(size)}</button>`).join("")}</div>
     </div>
   `;
 }
@@ -1196,6 +1211,8 @@ function applyProductOverride(product) {
     finalPrice: normalizeProductPrice(override.finalPrice || product.finalPrice),
     discount: override.discount || product.discount,
     sizeType: override.sizeType || product.sizeType,
+    sizes: Array.isArray(override.sizes) ? override.sizes : product.sizes || [],
+    isLastAvailable: Boolean(override.isLastAvailable),
     images: Array.isArray(override.images) ? override.images : product.images || [],
   };
 }
@@ -1214,6 +1231,8 @@ function normalizeCustomProduct(product) {
     finalPrice: normalizeOptionalProductPrice(product.finalPrice),
     discount: product.discount || "",
     sizeType,
+    sizes: Array.isArray(product.sizes) ? product.sizes : [],
+    isLastAvailable: Boolean(product.isLastAvailable),
     images: Array.isArray(product.images) ? product.images : [],
   };
 }
@@ -1271,9 +1290,9 @@ function createTryOnMarkup(product) {
 
 function createProductCard(product) {
   return `
-    <article class="product-card">
+    <article class="product-card" data-product-card="${escapeHtml(product.id)}">
       <div class="product-media">
-        <span class="discount-badge">${escapeHtml(product.discount)}</span>
+        ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
         ${createProductMediaMarkup(product)}
       </div>
       <div class="product-body">
@@ -1283,9 +1302,10 @@ function createProductCard(product) {
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
         ${createSizesMarkup(product)}
+        ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
         <div class="product-actions">
-          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}">${translate("add-cart")}</button>
-          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}">${translate("buy-now")}</button>
+          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
+          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
         </div>
       </div>
@@ -1329,8 +1349,8 @@ function findProductById(productId) {
   return getAllProducts().find((product) => product.id === productId);
 }
 
-function saveCheckoutItem(productName) {
-  const product = findProduct(productName);
+function saveCheckoutItem(productId, size = "") {
+  const product = findProductById(productId);
 
   if (!product) {
     return null;
@@ -1344,6 +1364,7 @@ function saveCheckoutItem(productName) {
     category: product.category,
     collection: product.collection,
     sizeType: product.sizeType,
+    size,
     image: productPrimaryImage(product),
     savedAt: new Date().toISOString(),
   };
@@ -1352,21 +1373,175 @@ function saveCheckoutItem(productName) {
   return item;
 }
 
-function renderCatalog() {
-  const catalogRoot = document.querySelector("[data-catalog]");
+function getProductGender(product) {
+  const label = `${product.collection || ""} ${product.category || ""}`.toLowerCase();
+  if (label.includes("donna")) return "donna";
+  if (label.includes("uomo")) return "uomo";
+  return "";
+}
 
-  if (!catalogRoot) {
+const catalogBrandNames = ["Alexander McQueen", "Polo Ralph Lauren", "Louis Vuitton", "Stone Island", "Emporio Armani", "Palm Angels", "Balenciaga", "Givenchy", "Moschino", "Dsquared", "Off-White", "Hermes", "Fendi", "Chanel", "Gucci", "Moncler", "Nike", "Nocta", "EA7", "Air Jordan"];
+
+function getProductBrand(product) {
+  const name = String(product.name || "");
+  return catalogBrandNames.find((brand) => name.toLowerCase().includes(brand.toLowerCase())) || name.split(/\s+/).slice(-1)[0] || "Haller Boutique";
+}
+
+function productPreviewMarkup(product, className = "catalog-preview-media") {
+  const image = product && productPrimaryImage(product);
+  return image
+    ? `<span class="${className}"><img src="${withProductImageVersion(image)}" alt="" loading="lazy" decoding="async"></span>`
+    : `<span class="${className} catalog-preview-empty"><i data-lucide="image"></i></span>`;
+}
+
+function getGenderProducts(gender) {
+  return getAllProducts().filter((product) => getProductGender(product) === gender);
+}
+
+function getCategoryProducts(gender, category) {
+  return getGenderProducts(gender).filter((product) => product.category === category);
+}
+
+function getCategoriesForGender(gender) {
+  return [...new Set(getGenderProducts(gender).map((product) => product.category).filter(Boolean))];
+}
+
+function getBrands(products) {
+  return [...new Set(products.map(getProductBrand))].sort((a, b) => a.localeCompare(b));
+}
+
+function closeCatalogNavPanels() {
+  document.querySelectorAll("[data-catalog-nav-panel]").forEach((panel) => {
+    panel.hidden = true;
+  });
+  document.querySelectorAll("[data-catalog-nav-toggle]").forEach((toggle) => toggle.setAttribute("aria-expanded", "false"));
+}
+
+function renderCatalogNavigation() {
+  ["uomo", "donna"].forEach((gender) => {
+    const panel = document.querySelector(`[data-catalog-nav-panel="${gender}"]`);
+    if (!panel) return;
+    const categories = getCategoriesForGender(gender);
+    panel.innerHTML = `
+      <p>${translate("catalog-choose-category")}</p>
+      <div class="catalog-nav-category-grid">
+        ${categories.map((category) => {
+          const product = getCategoryProducts(gender, category).find((entry) => productPrimaryImage(entry)) || getCategoryProducts(gender, category)[0];
+          return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}">${productPreviewMarkup(product, "catalog-nav-preview")}<span>${escapeHtml(category)}</span></button>`;
+        }).join("")}
+      </div>
+    `;
+  });
+}
+
+function renderCatalogTiles(products, type, gender, category = "") {
+  const values = type === "category" ? [...new Set(products.map((product) => product.category))] : getBrands(products);
+  return values.map((value) => {
+    const product = type === "category"
+      ? products.find((entry) => entry.category === value && productPrimaryImage(entry)) || products.find((entry) => entry.category === value)
+      : products.find((entry) => getProductBrand(entry) === value && productPrimaryImage(entry)) || products.find((entry) => getProductBrand(entry) === value);
+    const attributes = type === "category"
+      ? `data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(value)}"`
+      : `data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}" data-catalog-brand="${escapeHtml(value)}"`;
+    return `<button class="catalog-browse-tile" type="button" data-catalog-filter ${attributes}>${productPreviewMarkup(product)}<strong>${escapeHtml(value)}</strong></button>`;
+  }).join("");
+}
+
+function renderCatalog() {
+  renderCatalogNavigation();
+  renderLastStockCatalog();
+  const catalogRoot = document.querySelector("[data-catalog]");
+  if (!catalogRoot) return;
+
+  if (!catalogState.gender && catalogState.productIds.length === 0) {
+    catalogRoot.innerHTML = `<section class="catalog-featured"><div class="product-grid product-grid-featured">${getHomeFeaturedProducts().map(createProductCard).join("")}</div></section>`;
+    refreshScrollReveals(catalogRoot);
+    if (window.lucide) window.lucide.createIcons();
     return;
   }
 
+  const baseProducts = catalogState.productIds.length
+    ? getAllProducts().filter((product) => catalogState.productIds.includes(product.id))
+    : getGenderProducts(catalogState.gender);
+  const categoryProducts = catalogState.category ? baseProducts.filter((product) => product.category === catalogState.category) : baseProducts;
+  const products = catalogState.brand ? categoryProducts.filter((product) => getProductBrand(product) === catalogState.brand) : categoryProducts;
+  const title = catalogState.productIds.length
+    ? translate("catalog-search-results")
+    : `${translate("catalog-viewing")} ${catalogState.gender === "donna" ? translate("women") : translate("men")}`;
+  const categoryTiles = !catalogState.productIds.length ? renderCatalogTiles(baseProducts, "category", catalogState.gender) : "";
+  const brandTiles = catalogState.category ? renderCatalogTiles(categoryProducts, "brand", catalogState.gender, catalogState.category) : "";
+
   catalogRoot.innerHTML = `
-    <section class="catalog-featured">
-      <div class="product-grid product-grid-featured">
-        ${getHomeFeaturedProducts().map(createProductCard).join("")}
-      </div>
+    <section class="catalog-browse">
+      <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || catalogState.category || translate("catalog-all-products"))}</h3></header>
+      ${categoryTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-category")}</h4><div class="catalog-browse-tile-grid">${categoryTiles}</div></section>` : ""}
+      ${brandTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-brand")}</h4><div class="catalog-browse-tile-grid">${brandTiles}<button class="catalog-browse-tile catalog-browse-all" type="button" data-catalog-filter data-catalog-gender="${catalogState.gender}" data-catalog-category="${escapeHtml(catalogState.category)}"><span>${translate("catalog-all-brands")}</span></button></div></section>` : ""}
+      <div class="catalog-results-heading"><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
+      <div class="product-grid">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
     </section>
   `;
   refreshScrollReveals(catalogRoot);
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function renderLastStockCatalog() {
+  const root = document.querySelector("[data-last-stock-catalog]");
+  if (!root) return;
+  const sections = ["uomo", "donna"].map((gender) => {
+    const products = getGenderProducts(gender).filter((product) => product.isLastAvailable);
+    if (!products.length) return "";
+    const categories = [...new Set(products.map((product) => product.category))];
+    return `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${gender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
+      const categoryProducts = products.filter((product) => product.category === category);
+      const brands = getBrands(categoryProducts);
+      return `<section class="last-stock-category"><h3>${escapeHtml(category)}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
+    }).join("")}</section>`;
+  }).join("");
+  root.innerHTML = sections || `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function ensureCatalogSearch() {
+  if (!document.querySelector(".search-button") || document.querySelector("[data-catalog-search-dialog]")) return;
+  document.body.insertAdjacentHTML("beforeend", `
+    <dialog class="catalog-search-dialog" data-catalog-search-dialog aria-label="${translate("catalog-search-title")}">
+      <div class="catalog-search-shell">
+        <header><h2>${translate("catalog-search-title")}</h2><button type="button" data-catalog-search-close aria-label="${translate("catalog-close")}"><i data-lucide="x"></i></button></header>
+        <label><i data-lucide="search"></i><input type="search" data-catalog-search-input placeholder="${translate("catalog-search-placeholder")}" autocomplete="off"></label>
+        <div class="catalog-search-results" data-catalog-search-results></div>
+      </div>
+    </dialog>
+  `);
+  document.querySelector("[data-catalog-search-input]")?.addEventListener("input", (event) => renderCatalogSearchResults(event.target.value));
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function refreshCatalogSearchLanguage() {
+  const previousDialog = document.querySelector("[data-catalog-search-dialog]");
+  if (!previousDialog) return;
+  const wasOpen = previousDialog.open;
+  const query = previousDialog.querySelector("[data-catalog-search-input]")?.value || "";
+  if (wasOpen) previousDialog.close();
+  previousDialog.remove();
+  ensureCatalogSearch();
+  const dialog = document.querySelector("[data-catalog-search-dialog]");
+  const input = dialog?.querySelector("[data-catalog-search-input]");
+  if (input) input.value = query;
+  renderCatalogSearchResults(query);
+  if (dialog && wasOpen) dialog.showModal();
+}
+
+function renderCatalogSearchResults(query = "") {
+  const root = document.querySelector("[data-catalog-search-results]");
+  if (!root) return;
+  const value = String(query).trim().toLowerCase();
+  const products = value
+    ? getAllProducts().filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
+    : getHomeFeaturedProducts();
+  root.innerHTML = products.length
+    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
+    : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`;
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function refreshScrollReveals(root = document) {
@@ -1546,8 +1721,8 @@ function readCartItems() {
   }
 }
 
-function addCheckoutItem(productName) {
-  const item = saveCheckoutItem(productName);
+function addCheckoutItem(productId, size = "") {
+  const item = saveCheckoutItem(productId, size);
 
   if (!item) {
     return readCartItems();
@@ -1567,8 +1742,10 @@ function updateCartCount(count = readCartCount()) {
 }
 
 function addToCart(button) {
+  const productId = button?.dataset.productId || "";
   const productName = button ? button.dataset.addToCart || button.dataset.buyNow : "";
-  const cartItems = productName ? addCheckoutItem(productName) : [];
+  const size = button?.closest("[data-product-card]")?.querySelector("[data-size-option].is-selected")?.dataset.productSize || "";
+  const cartItems = productId ? addCheckoutItem(productId, size) : [];
   const count = cartItems.length > 0 ? cartItems.length : readCartCount() + 1;
   window.localStorage.setItem(cartKey, String(count));
   updateCartCount(count);
@@ -2380,6 +2557,7 @@ function collectCheckoutProducts() {
   const cartItems = readCartItems();
   if (cartItems.length > 0) {
     return cartItems.map((item) => ({
+      id: item.id,
       name: item.name,
       price: item.price,
       size: item.size || "",
@@ -2388,7 +2566,7 @@ function collectCheckoutProducts() {
   }
 
   const item = readCheckoutItem();
-  return item && item.name ? [{ name: item.name, price: item.price, size: item.size || "", quantity: 1 }] : [];
+  return item && item.name ? [{ id: item.id, name: item.name, price: item.price, size: item.size || "", quantity: 1 }] : [];
 }
 
 function checkoutField(name) {
@@ -2506,6 +2684,7 @@ function applySiteLanguage(language) {
   document.documentElement.lang = siteLanguage;
   translatePage();
   renderCatalog();
+  refreshCatalogSearchLanguage();
   const tryOnTitle = document.querySelector("[data-tryon-title]");
   if (tryOnTitle) {
     tryOnTitle.textContent = tryOnProduct
@@ -2516,6 +2695,12 @@ function applySiteLanguage(language) {
 }
 
 applySiteLanguage(siteLanguage);
+ensureCatalogSearch();
+const initialCatalogGender = window.location.hash.replace("#", "");
+if (["uomo", "donna"].includes(initialCatalogGender)) {
+  catalogState = { gender: initialCatalogGender, category: "", brand: "", productIds: [] };
+  renderCatalog();
+}
 window.addEventListener("haller-language-change", (event) => applySiteLanguage(event.detail));
 
 if (slides.length > 0) {
@@ -2525,9 +2710,66 @@ if (slides.length > 0) {
 }
 
 document.addEventListener("click", (event) => {
+  const searchButton = event.target.closest(".search-button");
+  const searchClose = event.target.closest("[data-catalog-search-close]");
+  const searchResult = event.target.closest("[data-catalog-search-result]");
+  const navToggle = event.target.closest("[data-catalog-nav-toggle]");
+  const catalogFilter = event.target.closest("[data-catalog-filter]");
+  const catalogReset = event.target.closest("[data-catalog-reset]");
+  const sizeOption = event.target.closest("[data-size-option]");
   const tryOnButton = event.target.closest("[data-try-on]");
   const addButton = event.target.closest("[data-add-to-cart]");
   const buyButton = event.target.closest("[data-buy-now]");
+
+  if (searchButton) {
+    ensureCatalogSearch();
+    const dialog = document.querySelector("[data-catalog-search-dialog]");
+    if (dialog && !dialog.open) dialog.showModal();
+    renderCatalogSearchResults();
+    window.setTimeout(() => document.querySelector("[data-catalog-search-input]")?.focus(), 0);
+  }
+
+  if (searchClose) document.querySelector("[data-catalog-search-dialog]")?.close();
+
+  if (searchResult) {
+    catalogState = { gender: "", category: "", brand: "", productIds: [searchResult.dataset.catalogSearchResult] };
+    document.querySelector("[data-catalog-search-dialog]")?.close();
+    renderCatalog();
+    document.querySelector("#selezione")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (navToggle) {
+    const panel = document.querySelector(`[data-catalog-nav-panel="${navToggle.dataset.catalogNavToggle}"]`);
+    const shouldOpen = panel?.hidden;
+    closeCatalogNavPanels();
+    if (panel && shouldOpen) {
+      panel.hidden = false;
+      navToggle.setAttribute("aria-expanded", "true");
+    }
+  }
+
+  if (catalogFilter) {
+    catalogState = {
+      gender: catalogFilter.dataset.catalogGender || "",
+      category: catalogFilter.dataset.catalogCategory || "",
+      brand: catalogFilter.dataset.catalogBrand || "",
+      productIds: [],
+    };
+    closeCatalogNavPanels();
+    renderCatalog();
+    document.querySelector("#selezione")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  if (catalogReset) {
+    catalogState = { gender: "", category: "", brand: "", productIds: [] };
+    renderCatalog();
+  }
+
+  if (sizeOption) {
+    const group = sizeOption.closest(".product-sizes");
+    group?.querySelectorAll("[data-size-option]").forEach((option) => option.classList.remove("is-selected"));
+    sizeOption.classList.add("is-selected");
+  }
 
   if (tryOnButton) {
     openTryOnModal(tryOnButton.dataset.tryOn);
@@ -2584,7 +2826,7 @@ function getChatCatalog() {
     collection: product.collection,
     description: product.description,
     finalPrice: product.finalPrice,
-    sizes: getSizes(product.sizeType),
+    sizes: getSizes(product),
   }));
 }
 
