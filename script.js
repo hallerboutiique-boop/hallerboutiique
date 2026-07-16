@@ -152,11 +152,11 @@ const bundleTryOnTranslations = {
 Object.entries(bundleTryOnTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
 const catalogTranslations = {
-  it: { "last-stock-nav": "Ultimi disponibili", "last-stock-warning": "Ultimo disponibile", "catalog-choose-category": "Scegli una categoria", "catalog-choose-brand": "Scegli una marca", "catalog-all-brands": "Tutte le marche", "catalog-all-products": "Tutti i modelli", "catalog-viewing": "Stai guardando", "catalog-search-title": "Cerca nel catalogo", "catalog-search-placeholder": "Modello, categoria o marca", "catalog-search-empty": "Nessun modello trovato.", "catalog-search-results": "Risultati ricerca", "catalog-close": "Chiudi", "catalog-last-title": "Ultimi disponibili", "catalog-last-description": "Gli articoli con un solo pezzo rimasto, organizzati per categoria e marca.", "catalog-last-empty": "Non ci sono ultimi pezzi da mostrare.", "catalog-back": "Torna alla selezione" },
-  en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-back": "Back to selection" },
-  fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-back": "Retour a la selection" },
-  de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-back": "Zuruck zur Auswahl" },
-  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-back": "Volver a la seleccion" }
+  it: { "last-stock-nav": "Ultimi disponibili", "last-stock-warning": "Ultimo disponibile", "catalog-choose-category": "Scegli una categoria", "catalog-choose-brand": "Scegli una marca", "catalog-all-brands": "Tutte le marche", "catalog-all-products": "Tutti i modelli", "catalog-viewing": "Stai guardando", "catalog-search-title": "Cerca nel catalogo", "catalog-search-placeholder": "Modello, categoria o marca", "catalog-search-empty": "Nessun modello trovato.", "catalog-search-results": "Risultati ricerca", "catalog-close": "Chiudi", "catalog-last-title": "Ultimi disponibili", "catalog-last-description": "Gli articoli con un solo pezzo rimasto, organizzati per categoria e marca.", "catalog-last-empty": "Non ci sono ultimi pezzi da mostrare.", "catalog-back": "Torna alla selezione", "remove-cart-item": "Rimuovi dal carrello" },
+  en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-back": "Back to selection", "remove-cart-item": "Remove from cart" },
+  fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-back": "Retour a la selection", "remove-cart-item": "Retirer du panier" },
+  de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-back": "Zuruck zur Auswahl", "remove-cart-item": "Aus dem Warenkorb entfernen" },
+  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-back": "Volver a la seleccion", "remove-cart-item": "Eliminar del carrito" }
 };
 
 Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
@@ -1729,6 +1729,38 @@ function addCheckoutItem(productId, size = "") {
   return cartItems;
 }
 
+function removeCheckoutItem(index) {
+  const cartItems = readCartItems();
+  let removedItem = null;
+
+  if (cartItems.length > 0) {
+    const itemIndex = Number.parseInt(index, 10);
+    if (!Number.isInteger(itemIndex) || itemIndex < 0 || itemIndex >= cartItems.length) return;
+    [removedItem] = cartItems.splice(itemIndex, 1);
+
+    if (cartItems.length > 0) {
+      window.localStorage.setItem(cartItemsKey, JSON.stringify(cartItems));
+      window.localStorage.setItem(checkoutItemKey, JSON.stringify(cartItems[cartItems.length - 1]));
+      window.localStorage.setItem(cartKey, String(cartItems.length));
+    } else {
+      window.localStorage.removeItem(cartItemsKey);
+      window.localStorage.removeItem(checkoutItemKey);
+      window.localStorage.removeItem(cartKey);
+    }
+  } else {
+    removedItem = readCheckoutItem();
+    if (!removedItem?.name) return;
+    window.localStorage.removeItem(checkoutItemKey);
+    window.localStorage.removeItem(cartKey);
+  }
+
+  updateCartCount(cartItems.length);
+  renderBundleTryOn();
+  window.dispatchEvent(new Event("haller-cart-change"));
+  sendTrack("remove_from_cart", { product: removedItem?.name || "" });
+  recordReplay("click", { target: translate("remove-cart-item"), text: removedItem?.name || "", depth: currentScrollDepth() });
+}
+
 function updateCartCount(count = readCartCount()) {
   document.querySelectorAll(".cart-button span").forEach((badge) => {
     badge.textContent = String(count);
@@ -2367,7 +2399,7 @@ function renderCheckoutProductSummary() {
     return;
   }
 
-  root.innerHTML = items.map((item) => {
+  root.innerHTML = items.map((item, index) => {
     const image = getCheckoutItemImage(item);
     const size = String(item.size || "").trim();
     const imageMarkup = image
@@ -2381,6 +2413,7 @@ function renderCheckoutProductSummary() {
           ${size ? `<p>${escapeHtml(translate("sizes"))}: ${escapeHtml(size)}</p>` : ""}
         </div>
         <strong>${escapeHtml(item.price || "")}</strong>
+        <button class="checkout-summary-remove" type="button" data-checkout-remove-index="${index}" aria-label="${escapeHtml(translate("remove-cart-item"))}" title="${escapeHtml(translate("remove-cart-item"))}"><i data-lucide="trash-2"></i></button>
       </article>
     `;
   }).join("");
@@ -2455,12 +2488,6 @@ function setupCheckoutPayments() {
     return;
   }
 
-  renderCheckoutProductSummary();
-
-  if (orderProduct) {
-    orderProduct.textContent = getCheckoutProductText();
-  }
-
   document.querySelectorAll("[data-order-code]").forEach((element) => {
     element.textContent = orderCode;
   });
@@ -2470,6 +2497,12 @@ function setupCheckoutPayments() {
     if (paymentPacket && wallet) {
       paymentPacket.value = buildPaymentPacket(orderCode, wallet);
     }
+  }
+
+  function refreshCheckoutProducts() {
+    renderCheckoutProductSummary();
+    if (orderProduct) orderProduct.textContent = getCheckoutProductText();
+    updatePaymentPacket();
   }
 
   function setCryptoOption(option) {
@@ -2587,6 +2620,8 @@ function setupCheckoutPayments() {
 
   setCryptoOption(selectedCrypto);
   setPaymentMethod(paymentInputs.find((input) => input.checked)?.value || "cod");
+  refreshCheckoutProducts();
+  window.addEventListener("haller-cart-change", refreshCheckoutProducts);
 }
 
 function collectCheckoutProducts() {
@@ -2720,6 +2755,7 @@ function applySiteLanguage(language) {
   document.documentElement.lang = siteLanguage;
   translatePage();
   renderCatalog();
+  renderCheckoutProductSummary();
   refreshCatalogSearchLanguage();
   const tryOnTitle = document.querySelector("[data-tryon-title]");
   if (tryOnTitle) {
@@ -2756,6 +2792,7 @@ document.addEventListener("click", (event) => {
   const tryOnButton = event.target.closest("[data-try-on]");
   const addButton = event.target.closest("[data-add-to-cart]");
   const buyButton = event.target.closest("[data-buy-now]");
+  const checkoutRemoveButton = event.target.closest("[data-checkout-remove-index]");
 
   if (searchButton) {
     ensureCatalogSearch();
@@ -2799,6 +2836,11 @@ document.addEventListener("click", (event) => {
   if (catalogReset) {
     catalogState = { gender: "", category: "", brand: "", productIds: [] };
     renderCatalog();
+  }
+
+  if (checkoutRemoveButton) {
+    removeCheckoutItem(checkoutRemoveButton.dataset.checkoutRemoveIndex);
+    return;
   }
 
   if (sizeOption) {
