@@ -16,7 +16,46 @@
       "Torna alla home": "Volver al inicio", "Home": "Inicio", "Contatti": "Contacto", "Area clienti": "Area de clientes", "Accedi o registrati": "Inicia sesion o registrate", "Accedi": "Iniciar sesion", "Registrati": "Registrarse", "Esci": "Cerrar sesion", "Crea account": "Crear cuenta", "Account attivo": "Cuenta activa", "Accesso rapido": "Acceso rapido", "Continua con": "Continuar con", "Checkout": "Pago", "Pagamento alla consegna o crypto": "Pago contra reembolso o cripto", "Dati cliente": "Datos del cliente", "Nome e cognome": "Nombre completo", "Telefono": "Telefono", "Indirizzo di consegna": "Direccion de entrega", "Indirizzo": "Direccion", "Citta": "Ciudad", "Codice sconto": "Codigo de descuento", "Inserisci codice": "Introduce el codigo", "Applica sconto": "Aplicar descuento", "Pagamento": "Pago", "Contrassegno": "Contra reembolso", "Puoi pagare direttamente al corriere quando ricevi il pacco.": "Puedes pagar directamente al mensajero al recibir el paquete.", "Codice ordine": "Codigo de pedido", "Copia": "Copiar", "Copia indirizzo": "Copiar direccion", "Tracciamento pagamento": "Seguimiento del pago", "TX hash pagamento": "TX hash del pago", "Copia dati pagamento": "Copiar datos de pago", "Conferma ordine": "Confirmar pedido", "Riepilogo": "Resumen", "Prodotto": "Producto", "Metodo di pagamento": "Metodo de pago", "Consegna": "Entrega", "Continua lo shopping": "Seguir comprando", "Pannello riservato": "Area restringida", "Dashboard admin": "Panel de administracion", "Password admin": "Contrasena admin", "Entra": "Entrar", "Aggiorna": "Actualizar", "Metriche": "Metricas", "Ordini": "Pedidos", "Prodotti": "Productos", "Utenti": "Usuarios", "Video": "Videos", "Attivita": "Actividad", "Visite live": "Visitas en directo", "Pagamenti": "Pagos", "Tutti i diritti riservati.": "Todos los derechos reservados."
     }
   };
+  const extraText = {
+    en: {
+      "Account | Haller Boutique": "Account | Haller Boutique", "Account - Haller Boutique": "Account - Haller Boutique", "Checkout | Haller Boutique": "Checkout | Haller Boutique", "Checkout - Haller Boutique": "Checkout - Haller Boutique", "Spedizioni | Haller Boutique": "Shipping | Haller Boutique", "Termini e condizioni | Haller Boutique": "Terms and conditions | Haller Boutique", "Privacy Policy | Haller Boutique": "Privacy Policy | Haller Boutique", "Admin | Haller Boutique": "Admin | Haller Boutique",
+      "Tutti i diritti riservati.": "All rights reserved.", "Operazione in corso...": "Working...", "Operazione non riuscita.": "Operation failed.", "Account creato.": "Account created.", "Accesso effettuato.": "Signed in.", "Cliente": "Customer", "Cellulare non inserito": "Phone number not provided",
+      "Cambia lingua": "Change language", "Menu account": "Account menu", "Accesso e registrazione": "Sign-in and registration", "Minimo 8 caratteri": "At least 8 characters", "© 2017 Haller Boutique. Tutti i diritti riservati.": "© 2017 Haller Boutique. All rights reserved.",
+      "Menu checkout": "Checkout menu", "Checkout ordine": "Order checkout", "Città": "City", "Scegli metodo di pagamento": "Choose a payment method", "Riepilogo ordine": "Order summary", "Il carrello è pronto per i tuoi articoli.": "Your cart is ready for your items.", "Da confermare": "To be confirmed", "18H in Italia": "18H in Italy",
+      "Nessun pagamento online richiesto in questa fase.": "No online payment is required at this stage.", "Nessun prodotto nel riepilogo.": "No products in the summary.", "Inserisci un codice sconto prima di applicarlo.": "Enter a discount code before applying it.", "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine.": "Discount code entered. We will verify it when the order is confirmed.",
+      "Apri assistente virtuale": "Open virtual assistant", "Chiudi assistente virtuale": "Close virtual assistant", "Assistente virtuale Haller Boutique": "Haller Boutique virtual assistant", "Assistente online": "Assistant online", "Prima di iniziare, lasciami i tuoi dati per seguirti meglio.": "Before we start, leave your details so I can assist you better.", "Cellulare": "Phone", "facoltativo": "optional", "I dati vengono usati solo per offrirti assistenza in questa conversazione.": "Your details are used only to assist you in this conversation.", "Inizia la chat": "Start chat", "Taglie": "Sizes", "Segui ordine": "Track order", "Scrivi qui...": "Type here...", "Invia messaggio": "Send message", "Un attimo, controllo.": "One moment, I'm checking.", "Non riesco a rispondere ora.": "I can't reply right now."
+    },
+    fr: {
+      "Account | Haller Boutique": "Compte | Haller Boutique", "Account - Haller Boutique": "Compte - Haller Boutique", "Checkout | Haller Boutique": "Paiement | Haller Boutique", "Checkout - Haller Boutique": "Paiement - Haller Boutique", "Spedizioni | Haller Boutique": "Livraison | Haller Boutique", "Termini e condizioni | Haller Boutique": "Conditions generales | Haller Boutique", "Privacy Policy | Haller Boutique": "Confidentialite | Haller Boutique", "Admin | Haller Boutique": "Admin | Haller Boutique",
+      "Tutti i diritti riservati.": "Tous droits reserves.", "Operazione in corso...": "Operation en cours...", "Operazione non riuscita.": "Echec de l'operation.", "Account creato.": "Compte cree.", "Accesso effettuato.": "Connexion reussie.", "Cliente": "Client", "Cellulare non inserito": "Telephone non renseigne",
+      "Cambia lingua": "Changer de langue", "Menu account": "Menu du compte", "Accesso e registrazione": "Connexion et inscription", "Minimo 8 caratteri": "8 caracteres minimum", "© 2017 Haller Boutique. Tutti i diritti riservati.": "© 2017 Haller Boutique. Tous droits reserves.",
+      "Menu checkout": "Menu de paiement", "Checkout ordine": "Paiement de la commande", "Città": "Ville", "Scegli metodo di pagamento": "Choisir un moyen de paiement", "Riepilogo ordine": "Recapitulatif de la commande", "Il carrello è pronto per i tuoi articoli.": "Votre panier est pret a recevoir vos articles.", "Da confermare": "A confirmer", "18H in Italia": "18H en Italie",
+      "Nessun pagamento online richiesto in questa fase.": "Aucun paiement en ligne n'est requis a ce stade.", "Nessun prodotto nel riepilogo.": "Aucun produit dans le recapitulatif.", "Inserisci un codice sconto prima di applicarlo.": "Saisissez un code promotionnel avant de l'appliquer.", "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine.": "Code promotionnel saisi. Il sera verifie lors de la confirmation.",
+      "Cellulare": "Telephone", "facoltativo": "facultatif", "Taglie": "Tailles", "Segui ordine": "Suivre la commande", "Scrivi qui...": "Ecrivez ici...", "Invia messaggio": "Envoyer le message"
+    },
+    de: {
+      "Account | Haller Boutique": "Konto | Haller Boutique", "Account - Haller Boutique": "Konto - Haller Boutique", "Checkout | Haller Boutique": "Kasse | Haller Boutique", "Checkout - Haller Boutique": "Kasse - Haller Boutique", "Spedizioni | Haller Boutique": "Versand | Haller Boutique", "Termini e condizioni | Haller Boutique": "Allgemeine Geschaftsbedingungen | Haller Boutique", "Privacy Policy | Haller Boutique": "Datenschutz | Haller Boutique", "Admin | Haller Boutique": "Admin | Haller Boutique",
+      "Tutti i diritti riservati.": "Alle Rechte vorbehalten.", "Operazione in corso...": "Vorgang lauft...", "Operazione non riuscita.": "Vorgang fehlgeschlagen.", "Account creato.": "Konto erstellt.", "Accesso effettuato.": "Anmeldung erfolgreich.", "Cliente": "Kunde", "Cellulare non inserito": "Telefonnummer nicht angegeben",
+      "Cambia lingua": "Sprache andern", "Menu account": "Kontomenu", "Accesso e registrazione": "Anmeldung und Registrierung", "Minimo 8 caratteri": "Mindestens 8 Zeichen", "© 2017 Haller Boutique. Tutti i diritti riservati.": "© 2017 Haller Boutique. Alle Rechte vorbehalten.",
+      "Menu checkout": "Kassenmenu", "Checkout ordine": "Bestellung abschliessen", "Città": "Stadt", "Scegli metodo di pagamento": "Zahlungsart auswahlen", "Riepilogo ordine": "Bestellubersicht", "Il carrello è pronto per i tuoi articoli.": "Ihr Warenkorb ist bereit fur Ihre Artikel.", "Da confermare": "Noch zu bestatigen", "18H in Italia": "18H in Italien",
+      "Nessun pagamento online richiesto in questa fase.": "In diesem Schritt ist keine Online-Zahlung erforderlich.", "Nessun prodotto nel riepilogo.": "Keine Produkte in der Zusammenfassung.", "Inserisci un codice sconto prima di applicarlo.": "Geben Sie vor dem Anwenden einen Rabattcode ein.", "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine.": "Rabattcode eingegeben. Er wird bei der Bestatigung gepruft.",
+      "Cellulare": "Telefon", "facoltativo": "optional", "Taglie": "Grossen", "Segui ordine": "Bestellung verfolgen", "Scrivi qui...": "Hier schreiben...", "Invia messaggio": "Nachricht senden"
+    },
+    es: {
+      "Account | Haller Boutique": "Cuenta | Haller Boutique", "Account - Haller Boutique": "Cuenta - Haller Boutique", "Checkout | Haller Boutique": "Pago | Haller Boutique", "Checkout - Haller Boutique": "Pago - Haller Boutique", "Spedizioni | Haller Boutique": "Envios | Haller Boutique", "Termini e condizioni | Haller Boutique": "Terminos y condiciones | Haller Boutique", "Privacy Policy | Haller Boutique": "Privacidad | Haller Boutique", "Admin | Haller Boutique": "Admin | Haller Boutique",
+      "Tutti i diritti riservati.": "Todos los derechos reservados.", "Operazione in corso...": "Operacion en curso...", "Operazione non riuscita.": "La operacion ha fallado.", "Account creato.": "Cuenta creada.", "Accesso effettuato.": "Sesion iniciada.", "Cliente": "Cliente", "Cellulare non inserito": "Telefono no indicado",
+      "Cambia lingua": "Cambiar idioma", "Menu account": "Menu de cuenta", "Accesso e registrazione": "Inicio de sesion y registro", "Minimo 8 caratteri": "Minimo 8 caracteres", "© 2017 Haller Boutique. Tutti i diritti riservati.": "© 2017 Haller Boutique. Todos los derechos reservados.",
+      "Menu checkout": "Menu de pago", "Checkout ordine": "Pago del pedido", "Città": "Ciudad", "Scegli metodo di pagamento": "Elige un metodo de pago", "Riepilogo ordine": "Resumen del pedido", "Il carrello è pronto per i tuoi articoli.": "Tu carrito esta listo para tus articulos.", "Da confermare": "Por confirmar", "18H in Italia": "18H en Italia",
+      "Nessun pagamento online richiesto in questa fase.": "No se requiere pago en linea en esta fase.", "Nessun prodotto nel riepilogo.": "No hay productos en el resumen.", "Inserisci un codice sconto prima di applicarlo.": "Introduce un codigo de descuento antes de aplicarlo.", "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine.": "Codigo de descuento introducido. Se verificara al confirmar el pedido.",
+      "Cellulare": "Telefono", "facoltativo": "opcional", "Taglie": "Tallas", "Segui ordine": "Seguir pedido", "Scrivi qui...": "Escribe aqui...", "Invia messaggio": "Enviar mensaje"
+    }
+  };
+  Object.entries(extraText).forEach(([code, values]) => Object.assign(text[code], values));
+
+  const supportedLanguages = new Set(Object.keys(names));
+  const changeLanguageLabels = { it: "Cambia lingua", en: "Change language", fr: "Changer de langue", de: "Sprache andern", es: "Cambiar idioma" };
   const originals = new WeakMap();
+  const attributeOriginals = new WeakMap();
   const legalOriginals = new WeakMap();
   const legalPages = {
     en: {
@@ -40,41 +79,59 @@
       privacy: `<p class="legal-eyebrow">Datos personales</p><h1>Politica de privacidad</h1><p>Ultima actualizacion: 14 de julio de 2026. Esta informacion describe el tratamiento de datos personales en Haller Boutique.</p><section class="legal-section"><h2>Datos y finalidades</h2><p>Podemos tratar datos de identidad, contacto, entrega, pedidos, asistencia y navegacion para gestionar pedidos, envios, seguridad y obligaciones legales.</p></section><section class="legal-section"><h2>Base legal y conservacion</h2><p>El tratamiento es necesario para el contrato, obligaciones legales y seguridad del servicio. Los datos se conservan solo el tiempo necesario.</p></section><section class="legal-section"><h2>Fotos try-on</h2><p>Solo con autorizacion expresa se conservan la foto y vista previa durante un maximo de 30 dias en un archivo privado de administracion.</p></section><section class="legal-section"><h2>Contacto</h2><p>Para pedidos o datos personales: <a href="index.html?chat=1">Aurora</a>.</p></section>`
     }
   };
-  const language = () => localStorage.getItem(languageKey) || "it";
+  const language = () => {
+    const saved = localStorage.getItem(languageKey) || "it";
+    return supportedLanguages.has(saved) ? saved : "it";
+  };
   const translate = (value) => text[language()]?.[value] || value;
   const apply = () => {
     document.documentElement.lang = language();
+    if (!document.documentElement.dataset.originalTitle) document.documentElement.dataset.originalTitle = document.title;
+    document.title = translate(document.documentElement.dataset.originalTitle);
     const legalPage = document.querySelector("[data-legal-page]");
     if (legalPage) {
       if (!legalOriginals.has(legalPage)) legalOriginals.set(legalPage, legalPage.innerHTML);
-      legalPage.innerHTML = language() === "it"
+      const legalHtml = language() === "it"
         ? legalOriginals.get(legalPage)
         : legalPages[language()]?.[legalPage.dataset.legalPage] || legalOriginals.get(legalPage);
+      if (legalPage.innerHTML !== legalHtml) legalPage.innerHTML = legalHtml;
     }
     const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
     let node;
     while ((node = walker.nextNode())) {
       if (!node.parentElement || ["SCRIPT", "STYLE"].includes(node.parentElement.tagName)) continue;
+      if (node.parentElement.closest("[data-i18n], [data-i18n-html]")) continue;
       const original = originals.get(node) ?? node.nodeValue;
       originals.set(node, original);
       const trimmed = original.trim();
       if (!trimmed) continue;
       const value = translate(trimmed);
-      node.nodeValue = value === trimmed ? original : original.replace(trimmed, value);
+      const nextValue = value === trimmed ? original : original.replace(trimmed, value);
+      if (node.nodeValue !== nextValue) node.nodeValue = nextValue;
     }
-    document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
-      element.placeholder = translate(element.dataset.i18nPlaceholder);
+    document.querySelectorAll("[placeholder], [aria-label], [title]").forEach((element) => {
+      if (element.matches(".language-toggle")) return;
+      if (!attributeOriginals.has(element)) attributeOriginals.set(element, {});
+      const saved = attributeOriginals.get(element);
+      ["placeholder", "aria-label", "title"].forEach((attribute) => {
+        if (!element.hasAttribute(attribute)) return;
+        if (saved[attribute] === undefined) saved[attribute] = element.getAttribute(attribute);
+        if (element.hasAttribute(`data-i18n-${attribute}`)) return;
+        element.setAttribute(attribute, translate(saved[attribute]));
+      });
     });
   };
   const bindPicker = (picker) => {
+    if (picker.dataset.i18nBound === "true") return;
     const toggle = picker.querySelector(".language-toggle");
     const menu = picker.querySelector(".language-menu");
     const options = picker.querySelectorAll("[data-language-option]");
     if (!toggle || !menu) return;
+    picker.dataset.i18nBound = "true";
     const refresh = () => {
       const current = language();
       options.forEach((option) => option.setAttribute("aria-checked", String(option.dataset.languageOption === current)));
-      toggle.setAttribute("aria-label", `Change language: ${names[current]}`);
+      toggle.setAttribute("aria-label", `${changeLanguageLabels[current]}: ${names[current]}`);
     };
     refresh();
     toggle.addEventListener("click", () => {
@@ -89,11 +146,23 @@
       menu.classList.remove("is-open");
       toggle.setAttribute("aria-expanded", "false");
     }));
+    document.addEventListener("click", (event) => {
+      if (!picker.contains(event.target)) {
+        menu.classList.remove("is-open");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
   };
   window.HallerI18n = { apply, translate, language };
-  document.addEventListener("DOMContentLoaded", () => {
+  const init = () => {
     apply();
     document.querySelectorAll("[data-language-picker]").forEach(bindPicker);
-  });
+    const observer = new MutationObserver((mutations) => {
+      if (mutations.some((mutation) => mutation.addedNodes.length > 0 || mutation.type === "characterData")) apply();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
+  if (document.body) init();
+  else document.addEventListener("DOMContentLoaded", init, { once: true });
   window.addEventListener("haller-language-change", apply);
 })();

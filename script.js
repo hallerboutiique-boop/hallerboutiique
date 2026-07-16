@@ -29,8 +29,112 @@ const translations = {
   }
 };
 
+const interfaceTranslations = {
+  it: {
+    "sizes-available": "Taglie disponibili", added: "Aggiunto",
+    "cookie-label": "Preferenze cookie", "cookie-kicker": "Privacy Haller Boutique", "cookie-title": "Cookie, sessione e posizione",
+    "cookie-description": "Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche, replay sessione e posizione precisa del dispositivo per sicurezza, ordini e analisi visite. Password, pagamenti e valori dei campi non vengono registrati.",
+    "cookie-required": "Necessari", "cookie-required-description": "Carrello, checkout, login e preferenza consenso.",
+    "cookie-analytics": "Metriche sito", "cookie-analytics-description": "Visite, dispositivo, browser, pagine, conversione.",
+    "cookie-replay": "Replay sessione", "cookie-replay-description": "Movimenti, click e scroll mascherando gli input.",
+    "cookie-location": "Posizione precisa", "cookie-location-description": "Coordinate GPS, accuratezza in metri e orario, solo se autorizzi il popup del browser.",
+    "cookie-necessary-only": "Solo necessari", "cookie-metrics-only": "Solo metriche", "cookie-customize": "Personalizza", "cookie-save": "Salva preferenze", "cookie-accept-all": "Accetta tutto",
+    "chat-label": "Assistente virtuale Haller Boutique", "chat-open": "Apri assistente virtuale", "chat-close": "Chiudi assistente virtuale",
+    "chat-avatar-alt": "Ritratto di Aurora, assistente virtuale", "chat-online": "Online", "chat-status": "Assistente online",
+    "chat-intro": "Prima di iniziare, lasciami i tuoi dati per seguirti meglio.", "first-name": "Nome", "last-name": "Cognome", email: "Email", phone: "Cellulare", optional: "facoltativo",
+    "chat-privacy": "I dati vengono usati solo per offrirti assistenza in questa conversazione.", "chat-start": "Inizia la chat",
+    "chat-sizes": "Taglie", "chat-track-order": "Segui ordine", "chat-prompt-sizes": "Mi aiuti a scegliere la taglia?", "chat-prompt-order": "Vorrei sapere dove si trova il mio ordine. Il mio codice e HB-",
+    "chat-placeholder": "Scrivi qui...", "chat-send": "Invia messaggio", "chat-greeting": "Ciao {name}, sono Aurora, l'assistente virtuale di Haller Boutique. Come posso aiutarti?", "chat-thinking": "Un attimo, controllo.", "chat-error": "Non riesco a rispondere ora.",
+    "location-help-apple": "Se non vedi il popup, abilita Localizzazione per il browser nelle impostazioni Apple e tocca per riprovare.", "location-help-browser": "Se non vedi il popup, abilita Posizione dalle impostazioni del browser e tocca per riprovare.", "location-https": "Apri il sito in HTTPS per autorizzare la posizione.", "location-unsupported": "Questo browser non supporta la localizzazione. Apri il sito da Safari o Chrome.", "location-authorize": "Autorizza la posizione nel popup del browser.", "location-unavailable": "Posizione non disponibile. Riprova tra poco.", "location-active": "Localizzazione attiva. Tempi di consegna in tempo reale{accuracy}.", "location-denied": "Permesso posizione negato. Clicca sul lucchetto del sito e imposta Posizione su Consenti.", "location-gps": "Posizione non disponibile. Attiva il GPS del dispositivo e tocca per riprovare.", "location-error": "Errore posizione. Tocca per riprovare.", "location-retry": "Posizione non disponibile. Tocca per riprovare.",
+    "checkout-to-confirm": "Da confermare", "checkout-to-fill": "Da compilare", copied: "Copiato", "copy-this-text": "Copia questo testo", "wallet-missing": "Wallet mancante", cod: "Contrassegno", "crypto-note": "Invia pagamento crypto e poi manda TX hash con codice ordine.", "no-online-payment": "Nessun pagamento online richiesto in questa fase.", "confirming-order": "Conferma in corso", "order-not-saved": "Ordine non salvato.", "order-confirmed": "Ordine confermato", "order-confirmed-note": "Ordine {code} confermato. Totale {total}.", "order-save-failed": "Non siamo riusciti a salvare l'ordine.", "discount-applied": "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine.", "discount-empty": "Inserisci un codice sconto prima di applicarlo.",
+    "tryon-close": "Chiudi try-on", "tryon-product": "Prova il prodotto", "tryon-product-name": "Prova {product}", "tryon-description": "Carica una tua foto frontale per generare l'anteprima.", "tryon-upload": "Carica foto", "tryon-result-empty": "Il risultato comparira qui.", "tryon-consent": "Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.", "tryon-generate": "Genera prova AI", "tryon-progress": "Avanzamento try-on AI", "tryon-upload-preview": "Carica una tua foto per vedere l'anteprima.", "tryon-loaded-alt": "Foto caricata per try-on", "tryon-loaded": "Foto caricata. Premi Genera prova AI.", "tryon-image-missing": "Immagine del prodotto non disponibile.", "tryon-upload-first": "Carica prima una tua foto.", "tryon-preparing": "Preparazione del capo reale", "tryon-preparing-ai": "Sto preparando l'anteprima AI...", "tryon-inputs-ready": "Foto cliente e capo del catalogo pronti", "tryon-sending": "Invio foto al server...", "tryon-ready": "Anteprima pronta", "tryon-ready-saved": "Anteprima pronta e archiviata per 30 giorni.", "tryon-generation-failed": "Generazione non riuscita", "tryon-result-failed": "Non siamo riusciti a generare l'anteprima.", "tryon-unavailable": "Try-on non disponibile."
+  },
+  en: {
+    "sizes-available": "Available sizes", added: "Added",
+    "cookie-label": "Cookie preferences", "cookie-kicker": "Haller Boutique privacy", "cookie-title": "Cookies, sessions and location",
+    "cookie-description": "We use essential cookies to operate the site. With your consent, we can collect analytics, session replays and precise device location for security, orders and visit analysis. Passwords, payments and form values are never recorded.",
+    "cookie-required": "Essential", "cookie-required-description": "Cart, checkout, sign-in and consent preference.",
+    "cookie-analytics": "Site analytics", "cookie-analytics-description": "Visits, device, browser, pages and conversion.",
+    "cookie-replay": "Session replay", "cookie-replay-description": "Movements, clicks and scrolling with inputs masked.",
+    "cookie-location": "Precise location", "cookie-location-description": "GPS coordinates, accuracy and time, only after you approve the browser prompt.",
+    "cookie-necessary-only": "Essential only", "cookie-metrics-only": "Analytics only", "cookie-customize": "Customize", "cookie-save": "Save preferences", "cookie-accept-all": "Accept all",
+    "chat-label": "Haller Boutique virtual assistant", "chat-open": "Open virtual assistant", "chat-close": "Close virtual assistant",
+    "chat-avatar-alt": "Portrait of Aurora, virtual assistant", "chat-online": "Online", "chat-status": "Assistant online",
+    "chat-intro": "Before we start, leave your details so I can assist you better.", "first-name": "First name", "last-name": "Last name", email: "Email", phone: "Phone", optional: "optional",
+    "chat-privacy": "Your details are used only to assist you in this conversation.", "chat-start": "Start chat",
+    "chat-sizes": "Sizes", "chat-track-order": "Track order", "chat-prompt-sizes": "Can you help me choose the right size?", "chat-prompt-order": "I would like to track my order. My code is HB-",
+    "chat-placeholder": "Type here...", "chat-send": "Send message", "chat-greeting": "Hi {name}, I'm Aurora, Haller Boutique's virtual assistant. How can I help?", "chat-thinking": "One moment, I'm checking.", "chat-error": "I can't reply right now.",
+    "location-help-apple": "If the prompt does not appear, enable Location Services for your browser in Apple settings and tap to try again.", "location-help-browser": "If the prompt does not appear, enable Location in your browser settings and tap to try again.", "location-https": "Open the site over HTTPS to allow location access.", "location-unsupported": "This browser does not support location. Open the site in Safari or Chrome.", "location-authorize": "Allow location in the browser prompt.", "location-unavailable": "Location is unavailable. Try again shortly.", "location-active": "Location is active. Real-time delivery estimates are available{accuracy}.", "location-denied": "Location permission was denied. Open the site lock icon and set Location to Allow.", "location-gps": "Location is unavailable. Enable your device GPS and tap to try again.", "location-error": "Location error. Tap to try again.", "location-retry": "Location is unavailable. Tap to try again.",
+    "checkout-to-confirm": "To be confirmed", "checkout-to-fill": "To be completed", copied: "Copied", "copy-this-text": "Copy this text", "wallet-missing": "Wallet missing", cod: "Cash on delivery", "crypto-note": "Send the crypto payment, then submit the TX hash with your order code.", "no-online-payment": "No online payment is required at this stage.", "confirming-order": "Confirming order", "order-not-saved": "Order not saved.", "order-confirmed": "Order confirmed", "order-confirmed-note": "Order {code} confirmed. Total {total}.", "order-save-failed": "We could not save the order.", "discount-applied": "Discount code entered. We will verify it when the order is confirmed.", "discount-empty": "Enter a discount code before applying it.",
+    "tryon-close": "Close try-on", "tryon-product": "Try on the product", "tryon-product-name": "Try on {product}", "tryon-description": "Upload a front-facing photo to generate the preview.", "tryon-upload": "Upload photo", "tryon-result-empty": "The result will appear here.", "tryon-consent": "I authorize private storage of the photo and preview for 30 days so support can retrieve them.", "tryon-generate": "Generate AI try-on", "tryon-progress": "AI try-on progress", "tryon-upload-preview": "Upload your photo to see the preview.", "tryon-loaded-alt": "Photo uploaded for try-on", "tryon-loaded": "Photo uploaded. Select Generate AI try-on.", "tryon-image-missing": "The product image is unavailable.", "tryon-upload-first": "Upload your photo first.", "tryon-preparing": "Preparing the real garment", "tryon-preparing-ai": "Preparing the AI preview...", "tryon-inputs-ready": "Customer photo and catalog garment are ready", "tryon-sending": "Sending the photo to the server...", "tryon-ready": "Preview ready", "tryon-ready-saved": "Preview ready and archived for 30 days.", "tryon-generation-failed": "Generation failed", "tryon-result-failed": "We could not generate the preview.", "tryon-unavailable": "Try-on is unavailable."
+  },
+  fr: {
+    "sizes-available": "Tailles disponibles", added: "Ajoute",
+    "cookie-label": "Preferences de cookies", "cookie-kicker": "Confidentialite Haller Boutique", "cookie-title": "Cookies, sessions et localisation",
+    "cookie-description": "Nous utilisons des cookies essentiels au fonctionnement du site. Avec votre accord, nous pouvons recueillir des statistiques, des relectures de session et la position precise de l'appareil pour la securite, les commandes et l'analyse des visites. Les mots de passe, paiements et valeurs des champs ne sont jamais enregistres.",
+    "cookie-required": "Essentiels", "cookie-required-description": "Panier, paiement, connexion et preference de consentement.",
+    "cookie-analytics": "Statistiques du site", "cookie-analytics-description": "Visites, appareil, navigateur, pages et conversion.",
+    "cookie-replay": "Relecture de session", "cookie-replay-description": "Mouvements, clics et defilement avec les champs masques.",
+    "cookie-location": "Position precise", "cookie-location-description": "Coordonnees GPS, precision et heure, uniquement apres votre accord dans le navigateur.",
+    "cookie-necessary-only": "Essentiels uniquement", "cookie-metrics-only": "Statistiques uniquement", "cookie-customize": "Personnaliser", "cookie-save": "Enregistrer", "cookie-accept-all": "Tout accepter",
+    "chat-label": "Assistant virtuel Haller Boutique", "chat-open": "Ouvrir l'assistant virtuel", "chat-close": "Fermer l'assistant virtuel",
+    "chat-avatar-alt": "Portrait d'Aurora, assistante virtuelle", "chat-online": "En ligne", "chat-status": "Assistante en ligne",
+    "chat-intro": "Avant de commencer, laissez-moi vos coordonnees pour mieux vous accompagner.", "first-name": "Prenom", "last-name": "Nom", email: "E-mail", phone: "Telephone", optional: "facultatif",
+    "chat-privacy": "Vos donnees servent uniquement a vous assister pendant cette conversation.", "chat-start": "Demarrer le chat",
+    "chat-sizes": "Tailles", "chat-track-order": "Suivre la commande", "chat-prompt-sizes": "Pouvez-vous m'aider a choisir la bonne taille ?", "chat-prompt-order": "Je souhaite suivre ma commande. Mon code est HB-",
+    "chat-placeholder": "Ecrivez ici...", "chat-send": "Envoyer le message", "chat-greeting": "Bonjour {name}, je suis Aurora, l'assistante virtuelle de Haller Boutique. Comment puis-je vous aider ?", "chat-thinking": "Un instant, je verifie.", "chat-error": "Je ne peux pas repondre pour le moment.",
+    "location-help-apple": "Si la fenetre ne s'affiche pas, activez la localisation du navigateur dans les reglages Apple et touchez pour reessayer.", "location-help-browser": "Si la fenetre ne s'affiche pas, activez la localisation dans les reglages du navigateur et touchez pour reessayer.", "location-https": "Ouvrez le site en HTTPS pour autoriser la localisation.", "location-unsupported": "Ce navigateur ne prend pas en charge la localisation. Ouvrez le site dans Safari ou Chrome.", "location-authorize": "Autorisez la localisation dans la fenetre du navigateur.", "location-unavailable": "Localisation indisponible. Reessayez dans un instant.", "location-active": "Localisation active. Delais de livraison en temps reel disponibles{accuracy}.", "location-denied": "Autorisation de localisation refusee. Ouvrez le cadenas du site et autorisez la localisation.", "location-gps": "Localisation indisponible. Activez le GPS de l'appareil et touchez pour reessayer.", "location-error": "Erreur de localisation. Touchez pour reessayer.", "location-retry": "Localisation indisponible. Touchez pour reessayer.",
+    "checkout-to-confirm": "A confirmer", "checkout-to-fill": "A completer", copied: "Copie", "copy-this-text": "Copier ce texte", "wallet-missing": "Wallet manquant", cod: "Paiement a la livraison", "crypto-note": "Envoyez le paiement crypto, puis transmettez le hash TX avec le numero de commande.", "no-online-payment": "Aucun paiement en ligne n'est requis a ce stade.", "confirming-order": "Confirmation en cours", "order-not-saved": "Commande non enregistree.", "order-confirmed": "Commande confirmee", "order-confirmed-note": "Commande {code} confirmee. Total {total}.", "order-save-failed": "Impossible d'enregistrer la commande.", "discount-applied": "Code promotionnel saisi. Il sera verifie lors de la confirmation.", "discount-empty": "Saisissez un code promotionnel avant de l'appliquer.",
+    "tryon-close": "Fermer l'essayage", "tryon-product": "Essayer le produit", "tryon-product-name": "Essayer {product}", "tryon-description": "Importez une photo de face pour generer l'aperçu.", "tryon-upload": "Importer une photo", "tryon-result-empty": "Le resultat apparaitra ici.", "tryon-consent": "J'autorise la conservation privee de la photo et de l'aperçu pendant 30 jours afin que l'assistance puisse les recuperer.", "tryon-generate": "Generer l'essayage IA", "tryon-progress": "Progression de l'essayage IA", "tryon-upload-preview": "Importez votre photo pour voir l'aperçu.", "tryon-loaded-alt": "Photo importee pour l'essayage", "tryon-loaded": "Photo importee. Selectionnez Generer l'essayage IA.", "tryon-image-missing": "L'image du produit est indisponible.", "tryon-upload-first": "Importez d'abord votre photo.", "tryon-preparing": "Preparation du vetement reel", "tryon-preparing-ai": "Preparation de l'aperçu IA...", "tryon-inputs-ready": "Photo client et vetement du catalogue prets", "tryon-sending": "Envoi de la photo au serveur...", "tryon-ready": "Aperçu pret", "tryon-ready-saved": "Aperçu pret et archive pendant 30 jours.", "tryon-generation-failed": "Echec de la generation", "tryon-result-failed": "Impossible de generer l'aperçu.", "tryon-unavailable": "L'essayage est indisponible."
+  },
+  de: {
+    "sizes-available": "Verfugbare Grossen", added: "Hinzugefugt",
+    "cookie-label": "Cookie-Einstellungen", "cookie-kicker": "Datenschutz bei Haller Boutique", "cookie-title": "Cookies, Sitzungen und Standort",
+    "cookie-description": "Wir verwenden notwendige Cookies fur den Betrieb der Website. Mit Ihrer Einwilligung konnen wir Statistiken, Sitzungswiedergaben und den genauen Geratestandort fur Sicherheit, Bestellungen und Besuchsanalysen erfassen. Passworter, Zahlungen und Formulareingaben werden nie aufgezeichnet.",
+    "cookie-required": "Notwendig", "cookie-required-description": "Warenkorb, Kasse, Anmeldung und Einwilligungseinstellung.",
+    "cookie-analytics": "Website-Statistiken", "cookie-analytics-description": "Besuche, Gerat, Browser, Seiten und Konversion.",
+    "cookie-replay": "Sitzungswiedergabe", "cookie-replay-description": "Bewegungen, Klicks und Scrollen bei maskierten Eingaben.",
+    "cookie-location": "Genauer Standort", "cookie-location-description": "GPS-Koordinaten, Genauigkeit und Uhrzeit, nur nach Zustimmung im Browser.",
+    "cookie-necessary-only": "Nur notwendige", "cookie-metrics-only": "Nur Statistiken", "cookie-customize": "Anpassen", "cookie-save": "Einstellungen speichern", "cookie-accept-all": "Alle akzeptieren",
+    "chat-label": "Virtueller Assistent von Haller Boutique", "chat-open": "Virtuellen Assistenten offnen", "chat-close": "Virtuellen Assistenten schliessen",
+    "chat-avatar-alt": "Portrat von Aurora, virtueller Assistent", "chat-online": "Online", "chat-status": "Assistent online",
+    "chat-intro": "Hinterlassen Sie vor dem Start Ihre Daten, damit ich Sie besser unterstutzen kann.", "first-name": "Vorname", "last-name": "Nachname", email: "E-Mail", phone: "Telefon", optional: "optional",
+    "chat-privacy": "Ihre Daten werden nur fur die Unterstutzung in diesem Gesprach verwendet.", "chat-start": "Chat starten",
+    "chat-sizes": "Grossen", "chat-track-order": "Bestellung verfolgen", "chat-prompt-sizes": "Konnen Sie mir bei der Wahl der richtigen Grosse helfen?", "chat-prompt-order": "Ich mochte meine Bestellung verfolgen. Mein Code lautet HB-",
+    "chat-placeholder": "Hier schreiben...", "chat-send": "Nachricht senden", "chat-greeting": "Hallo {name}, ich bin Aurora, der virtuelle Assistent von Haller Boutique. Wie kann ich helfen?", "chat-thinking": "Einen Moment, ich prufe das.", "chat-error": "Ich kann gerade nicht antworten.",
+    "location-help-apple": "Wenn die Abfrage nicht erscheint, aktivieren Sie die Ortungsdienste fur den Browser in den Apple-Einstellungen und tippen Sie erneut.", "location-help-browser": "Wenn die Abfrage nicht erscheint, aktivieren Sie den Standort in den Browser-Einstellungen und tippen Sie erneut.", "location-https": "Offnen Sie die Website uber HTTPS, um den Standort freizugeben.", "location-unsupported": "Dieser Browser unterstutzt keinen Standort. Offnen Sie die Website in Safari oder Chrome.", "location-authorize": "Erlauben Sie den Standort in der Browser-Abfrage.", "location-unavailable": "Standort nicht verfugbar. Versuchen Sie es gleich erneut.", "location-active": "Standort aktiv. Lieferzeiten in Echtzeit sind verfugbar{accuracy}.", "location-denied": "Standortzugriff wurde abgelehnt. Offnen Sie das Schloss-Symbol und erlauben Sie den Standort.", "location-gps": "Standort nicht verfugbar. Aktivieren Sie das GPS und tippen Sie erneut.", "location-error": "Standortfehler. Tippen Sie erneut.", "location-retry": "Standort nicht verfugbar. Tippen Sie erneut.",
+    "checkout-to-confirm": "Noch zu bestatigen", "checkout-to-fill": "Noch auszufullen", copied: "Kopiert", "copy-this-text": "Diesen Text kopieren", "wallet-missing": "Wallet fehlt", cod: "Nachnahme", "crypto-note": "Senden Sie die Krypto-Zahlung und danach den TX-Hash mit der Bestellnummer.", "no-online-payment": "In diesem Schritt ist keine Online-Zahlung erforderlich.", "confirming-order": "Bestellung wird bestatigt", "order-not-saved": "Bestellung nicht gespeichert.", "order-confirmed": "Bestellung bestatigt", "order-confirmed-note": "Bestellung {code} bestatigt. Gesamt {total}.", "order-save-failed": "Die Bestellung konnte nicht gespeichert werden.", "discount-applied": "Rabattcode eingegeben. Er wird bei der Bestatigung gepruft.", "discount-empty": "Geben Sie vor dem Anwenden einen Rabattcode ein.",
+    "tryon-close": "Anprobe schliessen", "tryon-product": "Produkt anprobieren", "tryon-product-name": "{product} anprobieren", "tryon-description": "Laden Sie ein frontales Foto hoch, um die Vorschau zu erstellen.", "tryon-upload": "Foto hochladen", "tryon-result-empty": "Das Ergebnis erscheint hier.", "tryon-consent": "Ich erlaube die private Speicherung von Foto und Vorschau fur 30 Tage, damit der Support sie abrufen kann.", "tryon-generate": "KI-Anprobe erstellen", "tryon-progress": "Fortschritt der KI-Anprobe", "tryon-upload-preview": "Laden Sie Ihr Foto fur die Vorschau hoch.", "tryon-loaded-alt": "Foto fur die Anprobe hochgeladen", "tryon-loaded": "Foto hochgeladen. Wahlen Sie KI-Anprobe erstellen.", "tryon-image-missing": "Das Produktbild ist nicht verfugbar.", "tryon-upload-first": "Laden Sie zuerst Ihr Foto hoch.", "tryon-preparing": "Reales Kleidungsstuck wird vorbereitet", "tryon-preparing-ai": "KI-Vorschau wird vorbereitet...", "tryon-inputs-ready": "Kundenfoto und Katalogartikel sind bereit", "tryon-sending": "Foto wird an den Server gesendet...", "tryon-ready": "Vorschau bereit", "tryon-ready-saved": "Vorschau bereit und 30 Tage archiviert.", "tryon-generation-failed": "Generierung fehlgeschlagen", "tryon-result-failed": "Die Vorschau konnte nicht erstellt werden.", "tryon-unavailable": "Die Anprobe ist nicht verfugbar."
+  },
+  es: {
+    "sizes-available": "Tallas disponibles", added: "Anadido",
+    "cookie-label": "Preferencias de cookies", "cookie-kicker": "Privacidad de Haller Boutique", "cookie-title": "Cookies, sesiones y ubicacion",
+    "cookie-description": "Usamos cookies esenciales para que el sitio funcione. Con tu consentimiento podemos recopilar metricas, repeticiones de sesion y la ubicacion precisa del dispositivo para seguridad, pedidos y analisis de visitas. Nunca se registran contrasenas, pagos ni valores de formularios.",
+    "cookie-required": "Esenciales", "cookie-required-description": "Carrito, pago, inicio de sesion y preferencia de consentimiento.",
+    "cookie-analytics": "Metricas del sitio", "cookie-analytics-description": "Visitas, dispositivo, navegador, paginas y conversion.",
+    "cookie-replay": "Repeticion de sesion", "cookie-replay-description": "Movimientos, clics y desplazamiento con los campos ocultos.",
+    "cookie-location": "Ubicacion precisa", "cookie-location-description": "Coordenadas GPS, precision y hora, solo tras autorizarlo en el navegador.",
+    "cookie-necessary-only": "Solo esenciales", "cookie-metrics-only": "Solo metricas", "cookie-customize": "Personalizar", "cookie-save": "Guardar preferencias", "cookie-accept-all": "Aceptar todo",
+    "chat-label": "Asistente virtual de Haller Boutique", "chat-open": "Abrir asistente virtual", "chat-close": "Cerrar asistente virtual",
+    "chat-avatar-alt": "Retrato de Aurora, asistente virtual", "chat-online": "En linea", "chat-status": "Asistente en linea",
+    "chat-intro": "Antes de empezar, dejame tus datos para atenderte mejor.", "first-name": "Nombre", "last-name": "Apellidos", email: "Correo", phone: "Telefono", optional: "opcional",
+    "chat-privacy": "Tus datos se usan solo para ayudarte durante esta conversacion.", "chat-start": "Iniciar chat",
+    "chat-sizes": "Tallas", "chat-track-order": "Seguir pedido", "chat-prompt-sizes": "Puedes ayudarme a elegir la talla correcta?", "chat-prompt-order": "Quiero saber donde esta mi pedido. Mi codigo es HB-",
+    "chat-placeholder": "Escribe aqui...", "chat-send": "Enviar mensaje", "chat-greeting": "Hola {name}, soy Aurora, la asistente virtual de Haller Boutique. En que puedo ayudarte?", "chat-thinking": "Un momento, lo compruebo.", "chat-error": "Ahora mismo no puedo responder.",
+    "location-help-apple": "Si no aparece el aviso, activa Localizacion para el navegador en los ajustes de Apple y toca para volver a intentarlo.", "location-help-browser": "Si no aparece el aviso, activa Ubicacion en los ajustes del navegador y toca para volver a intentarlo.", "location-https": "Abre el sitio mediante HTTPS para permitir la ubicacion.", "location-unsupported": "Este navegador no admite ubicacion. Abre el sitio en Safari o Chrome.", "location-authorize": "Permite la ubicacion en el aviso del navegador.", "location-unavailable": "Ubicacion no disponible. Vuelve a intentarlo en breve.", "location-active": "Ubicacion activa. Plazos de entrega en tiempo real disponibles{accuracy}.", "location-denied": "Permiso de ubicacion denegado. Abre el candado del sitio y establece Ubicacion en Permitir.", "location-gps": "Ubicacion no disponible. Activa el GPS del dispositivo y vuelve a intentarlo.", "location-error": "Error de ubicacion. Toca para volver a intentarlo.", "location-retry": "Ubicacion no disponible. Toca para volver a intentarlo.",
+    "checkout-to-confirm": "Por confirmar", "checkout-to-fill": "Por completar", copied: "Copiado", "copy-this-text": "Copia este texto", "wallet-missing": "Falta el wallet", cod: "Contra reembolso", "crypto-note": "Envia el pago en cripto y despues el hash TX con el codigo de pedido.", "no-online-payment": "No se requiere pago en linea en esta fase.", "confirming-order": "Confirmando pedido", "order-not-saved": "Pedido no guardado.", "order-confirmed": "Pedido confirmado", "order-confirmed-note": "Pedido {code} confirmado. Total {total}.", "order-save-failed": "No hemos podido guardar el pedido.", "discount-applied": "Codigo de descuento introducido. Se verificara al confirmar el pedido.", "discount-empty": "Introduce un codigo de descuento antes de aplicarlo.",
+    "tryon-close": "Cerrar prueba", "tryon-product": "Probar el producto", "tryon-product-name": "Probar {product}", "tryon-description": "Sube una foto frontal para generar la vista previa.", "tryon-upload": "Subir foto", "tryon-result-empty": "El resultado aparecera aqui.", "tryon-consent": "Autorizo el almacenamiento privado de la foto y la vista previa durante 30 dias para que soporte pueda recuperarlas.", "tryon-generate": "Generar prueba con IA", "tryon-progress": "Progreso de la prueba con IA", "tryon-upload-preview": "Sube tu foto para ver la vista previa.", "tryon-loaded-alt": "Foto subida para la prueba", "tryon-loaded": "Foto subida. Selecciona Generar prueba con IA.", "tryon-image-missing": "La imagen del producto no esta disponible.", "tryon-upload-first": "Sube primero tu foto.", "tryon-preparing": "Preparando la prenda real", "tryon-preparing-ai": "Preparando la vista previa con IA...", "tryon-inputs-ready": "Foto del cliente y prenda del catalogo listas", "tryon-sending": "Enviando la foto al servidor...", "tryon-ready": "Vista previa lista", "tryon-ready-saved": "Vista previa lista y archivada durante 30 dias.", "tryon-generation-failed": "La generacion ha fallado", "tryon-result-failed": "No hemos podido generar la vista previa.", "tryon-unavailable": "La prueba no esta disponible."
+  }
+};
+
+Object.entries(interfaceTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
+}
+
+function translateOriginal(value) {
+  return window.HallerI18n?.translate?.(value) || value;
 }
 
 function translatePage() {
@@ -45,6 +149,12 @@ function translatePage() {
   });
   document.querySelectorAll("[data-i18n-content]").forEach((element) => {
     element.setAttribute("content", translate(element.dataset.i18nContent));
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.setAttribute("placeholder", translate(element.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll("[data-i18n-alt]").forEach((element) => {
+    element.setAttribute("alt", translate(element.dataset.i18nAlt));
   });
   document.title = siteLanguage === "it" ? "Haller Boutique" : `Haller Boutique | ${translate("new-arrivals")}`;
 }
@@ -282,10 +392,7 @@ function sendLocationTrack(type, extra = {}) {
 
 function locationPermissionHelpMessage() {
   const appleDevice = /iPhone|iPad|Macintosh|Mac OS X/i.test(navigator.userAgent || "");
-  if (appleDevice) {
-    return "Se non vedi il popup, abilita Localizzazione per il browser nelle impostazioni Apple e tocca per riprovare.";
-  }
-  return "Se non vedi il popup, abilita Posizione dalle impostazioni del browser e tocca per riprovare.";
+  return translate(appleDevice ? "location-help-apple" : "location-help-browser");
 }
 
 function requestPreciseLocation(reason = "consent", options = {}) {
@@ -296,7 +403,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
   analyticsState.locationRequestToken = requestToken;
 
   if (window.isSecureContext === false) {
-    setLocationBannerStatus("Apri il sito in HTTPS per autorizzare la posizione.");
+    setLocationBannerStatus(translate("location-https"));
     sendLocationTrack("precise_location_status", {
       preciseLocationStatus: "insecure_context",
       locationReason: reason,
@@ -306,7 +413,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
   }
 
   if (!navigator.geolocation) {
-    setLocationBannerStatus("Questo browser non supporta la localizzazione. Apri il sito da Safari o Chrome.");
+    setLocationBannerStatus(translate("location-unsupported"));
     sendLocationTrack("precise_location_status", {
       preciseLocationStatus: "unsupported",
       locationReason: reason,
@@ -316,7 +423,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
   }
 
   if (options.userInitiated) {
-    setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
+    setLocationBannerStatus(translate("location-authorize"));
   }
 
   const helpTimer = options.userInitiated
@@ -336,7 +443,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
       finishLocationRequest();
       const preciseLocation = preciseLocationFromPosition(position);
       if (!preciseLocation) {
-        setLocationBannerStatus("Posizione non disponibile. Riprova tra poco.");
+        setLocationBannerStatus(translate("location-unavailable"));
         sendLocationTrack("precise_location_status", {
           preciseLocationStatus: "unavailable",
           locationReason: reason,
@@ -345,7 +452,7 @@ function requestPreciseLocation(reason = "consent", options = {}) {
       }
       analyticsState.preciseLocation = preciseLocation;
       const accuracy = Number.isFinite(preciseLocation.accuracy) ? ` ±${preciseLocation.accuracy}m` : "";
-      setLocationBannerStatus(`Localizzazione attiva. Tempi di consegna in tempo reale${accuracy}.`);
+      setLocationBannerStatus(translate("location-active").replace("{accuracy}", accuracy));
       sendLocationTrack("precise_location", {
         preciseLocation,
         preciseLocationStatus: "granted",
@@ -356,12 +463,12 @@ function requestPreciseLocation(reason = "consent", options = {}) {
       finishLocationRequest();
       const status = locationErrorName(error);
       const messages = {
-        denied: "Permesso posizione negato. Clicca sul lucchetto del sito e imposta Posizione su Consenti.",
+        denied: translate("location-denied"),
         timeout: locationPermissionHelpMessage(),
-        unavailable: "Posizione non disponibile. Attiva il GPS del dispositivo e tocca per riprovare.",
-        error: "Errore posizione. Tocca per riprovare.",
+        unavailable: translate("location-gps"),
+        error: translate("location-error"),
       };
-      setLocationBannerStatus(messages[status] || "Posizione non disponibile. Tocca per riprovare.");
+      setLocationBannerStatus(messages[status] || translate("location-retry"));
       sendLocationTrack("precise_location_status", {
         preciseLocationStatus: status,
         locationError: error?.message || "",
@@ -593,40 +700,40 @@ function consentBannerMarkup(consent) {
   const replayChecked = consent?.replay ? "checked" : "";
   const locationChecked = consent?.location ? "checked" : "";
   return `
-    <section class="cookie-banner" data-cookie-banner aria-label="Preferenze cookie">
+    <section class="cookie-banner" data-cookie-banner aria-label="Preferenze cookie" data-i18n-aria-label="cookie-label">
       <div class="cookie-copy">
-        <span>Privacy Haller Boutique</span>
-        <h2>Cookie, sessione e posizione</h2>
-        <p>Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche, replay sessione e posizione precisa del dispositivo per sicurezza, ordini e analisi visite. Password, pagamenti e valori dei campi non vengono registrati.</p>
+        <span data-i18n="cookie-kicker">Privacy Haller Boutique</span>
+        <h2 data-i18n="cookie-title">Cookie, sessione e posizione</h2>
+        <p data-i18n="cookie-description">Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche, replay sessione e posizione precisa del dispositivo per sicurezza, ordini e analisi visite. Password, pagamenti e valori dei campi non vengono registrati.</p>
       </div>
       <div class="cookie-options" data-cookie-options hidden>
         <label>
           <input type="checkbox" checked disabled>
-          <span>Necessari</span>
-          <small>Carrello, checkout, login e preferenza consenso.</small>
+          <span data-i18n="cookie-required">Necessari</span>
+          <small data-i18n="cookie-required-description">Carrello, checkout, login e preferenza consenso.</small>
         </label>
         <label>
           <input type="checkbox" data-consent-analytics ${analyticsChecked}>
-          <span>Metriche sito</span>
-          <small>Visite, dispositivo, browser, pagine, conversione.</small>
+          <span data-i18n="cookie-analytics">Metriche sito</span>
+          <small data-i18n="cookie-analytics-description">Visite, dispositivo, browser, pagine, conversione.</small>
         </label>
         <label>
           <input type="checkbox" data-consent-replay ${replayChecked}>
-          <span>Replay sessione</span>
-          <small>Movimenti, click e scroll mascherando gli input.</small>
+          <span data-i18n="cookie-replay">Replay sessione</span>
+          <small data-i18n="cookie-replay-description">Movimenti, click e scroll mascherando gli input.</small>
         </label>
         <label>
           <input type="checkbox" data-consent-location ${locationChecked}>
-          <span>Posizione precisa</span>
-          <small>Coordinate GPS, accuratezza in metri e orario, solo se autorizzi il popup del browser.</small>
+          <span data-i18n="cookie-location">Posizione precisa</span>
+          <small data-i18n="cookie-location-description">Coordinate GPS, accuratezza in metri e orario, solo se autorizzi il popup del browser.</small>
         </label>
       </div>
       <div class="cookie-actions">
-        <button type="button" data-consent-reject>Solo necessari</button>
-        <button type="button" data-consent-metrics>Solo metriche</button>
-        <button type="button" data-consent-custom>Personalizza</button>
-        <button type="button" data-consent-save hidden>Salva preferenze</button>
-        <button type="button" data-consent-accept>Accetta tutto</button>
+        <button type="button" data-consent-reject data-i18n="cookie-necessary-only">Solo necessari</button>
+        <button type="button" data-consent-metrics data-i18n="cookie-metrics-only">Solo metriche</button>
+        <button type="button" data-consent-custom data-i18n="cookie-customize">Personalizza</button>
+        <button type="button" data-consent-save data-i18n="cookie-save" hidden>Salva preferenze</button>
+        <button type="button" data-consent-accept data-i18n="cookie-accept-all">Accetta tutto</button>
       </div>
     </section>
   `;
@@ -644,6 +751,7 @@ function renderConsentManager(forceBanner = false) {
   wrapper.innerHTML = consentBannerMarkup(consent);
   const banner = wrapper.firstElementChild;
   document.body.appendChild(banner);
+  translatePage();
 
   const options = banner.querySelector("[data-cookie-options]");
   const analyticsToggle = banner.querySelector("[data-consent-analytics]");
@@ -720,7 +828,7 @@ function requestLocationFromBanner(event) {
     savedAt: new Date().toISOString(),
   };
 
-  setLocationBannerStatus("Autorizza la posizione nel popup del browser.");
+  setLocationBannerStatus(translate("location-authorize"));
   requestPreciseLocation("delivery_banner", { force: true, userInitiated: true });
   saveConsent(nextConsent);
 }
@@ -1009,7 +1117,7 @@ function createSizesMarkup(product) {
   }
 
   return `
-    <div class="product-sizes" aria-label="Taglie disponibili">
+    <div class="product-sizes" aria-label="${translate("sizes-available")}">
       <span>${translate("sizes")}</span>
       <div>${sizes.map((size) => `<button type="button">${size}</button>`).join("")}</div>
     </div>
@@ -1452,7 +1560,7 @@ function addToCart(button) {
   }
 
   const originalText = button.textContent;
-  button.textContent = "Aggiunto";
+  button.textContent = translate("added");
   window.setTimeout(() => {
     button.textContent = originalText;
   }, 1200);
@@ -1468,32 +1576,32 @@ function ensureTryOnModal() {
       <div class="tryon-modal" data-tryon-modal hidden>
         <div class="tryon-backdrop" data-tryon-close></div>
         <section class="tryon-dialog" role="dialog" aria-modal="true" aria-labelledby="tryon-title">
-          <button class="tryon-close" type="button" data-tryon-close aria-label="Chiudi try-on">
+          <button class="tryon-close" type="button" data-tryon-close aria-label="Chiudi try-on" data-i18n-aria-label="tryon-close">
             <i data-lucide="x"></i>
           </button>
           <div class="tryon-heading">
             <p>Try-on AI</p>
             <h2 id="tryon-title" data-tryon-title>Prova il prodotto</h2>
-            <span>Carica una tua foto frontale per generare l'anteprima.</span>
+            <span data-i18n="tryon-description">Carica una tua foto frontale per generare l'anteprima.</span>
           </div>
           <div class="tryon-layout">
             <label class="tryon-upload">
               <input type="file" accept="image/png,image/jpeg,image/webp" data-tryon-user-image>
               <i data-lucide="upload-cloud"></i>
-              <strong>Carica foto</strong>
+              <strong data-i18n="tryon-upload">Carica foto</strong>
               <span>JPG, PNG o WebP</span>
             </label>
             <div class="tryon-result" data-tryon-result>
-              <p>Il risultato comparira qui.</p>
+              <p data-i18n="tryon-result-empty">Il risultato comparira qui.</p>
             </div>
           </div>
           <label class="tryon-save-consent">
             <input type="checkbox" data-tryon-save-consent>
-            <span>Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.</span>
+            <span data-i18n="tryon-consent">Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.</span>
           </label>
-          <button class="tryon-generate" type="button" data-tryon-generate>Genera prova AI</button>
+          <button class="tryon-generate" type="button" data-tryon-generate data-i18n="tryon-generate">Genera prova AI</button>
           <div class="ai-progress" data-tryon-progress hidden>
-            <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento try-on AI" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+            <div class="ai-progress-track" role="progressbar" aria-label="Avanzamento try-on AI" data-i18n-aria-label="tryon-progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
               <i data-tryon-progress-bar></i>
             </div>
             <span data-tryon-progress-label></span>
@@ -1505,6 +1613,7 @@ function ensureTryOnModal() {
   );
 
   modal = document.querySelector("[data-tryon-modal]");
+  translatePage();
   modal.querySelectorAll("[data-tryon-close]").forEach((button) => {
     button.addEventListener("click", closeTryOnModal);
   });
@@ -1551,7 +1660,7 @@ async function uploadWithProgress(path, body, onProgress) {
   const reader = response.body?.getReader();
   if (!reader) {
     const data = await response.json();
-    if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
+    if (!response.ok || data.ok === false) throw new Error(data.message || translate("tryon-unavailable"));
     return data;
   }
 
@@ -1578,10 +1687,10 @@ async function uploadWithProgress(path, body, onProgress) {
   }
   consume(buffer);
 
-  if (!finalEvent) throw new Error("Risposta AI non ricevuta.");
-  if (finalEvent.type === "error") throw new Error(finalEvent.message || "Operazione AI non riuscita.");
+  if (!finalEvent) throw new Error(translate("tryon-unavailable"));
+  if (finalEvent.type === "error") throw new Error(finalEvent.message || translate("tryon-unavailable"));
   const data = finalEvent.data || finalEvent;
-  if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione AI non riuscita.");
+  if (!response.ok || data.ok === false) throw new Error(data.message || translate("tryon-unavailable"));
   return data;
 }
 
@@ -1609,14 +1718,14 @@ function openTryOnModal(productId) {
   modal.hidden = false;
   modal.classList.add("is-open");
   const title = modal.querySelector("[data-tryon-title]");
-  if (title) title.textContent = `Prova ${product.name}`;
+  if (title) title.textContent = translate("tryon-product-name").replace("{product}", product.name);
   const input = modal.querySelector("[data-tryon-user-image]");
   if (input) input.value = "";
   const saveConsent = modal.querySelector("[data-tryon-save-consent]");
   if (saveConsent) saveConsent.checked = false;
   setTryOnMessage("");
   resetTryOnProgress();
-  setTryOnResult("<p>Carica una tua foto per vedere l'anteprima.</p>");
+  setTryOnResult(`<p>${escapeHtml(translate("tryon-upload-preview"))}</p>`);
 }
 
 function previewTryOnUserImage(event) {
@@ -1625,8 +1734,8 @@ function previewTryOnUserImage(event) {
   if (tryOnPreviewUrl) URL.revokeObjectURL(tryOnPreviewUrl);
   tryOnPreviewUrl = URL.createObjectURL(file);
   setTryOnResult(`
-    <img src="${tryOnPreviewUrl}" alt="Foto caricata per try-on">
-    <span>Foto caricata. Premi Genera prova AI.</span>
+    <img src="${tryOnPreviewUrl}" alt="${escapeHtml(translate("tryon-loaded-alt"))}">
+    <span>${escapeHtml(translate("tryon-loaded"))}</span>
   `);
   setTryOnMessage("");
 }
@@ -1635,7 +1744,7 @@ function loadTryOnReferenceImage(src) {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error("Immagine del prodotto non disponibile."));
+    image.onerror = () => reject(new Error(translate("tryon-image-missing")));
     image.src = src;
   });
 }
@@ -1660,7 +1769,7 @@ async function createTryOnReference(userFile, productImage) {
     canvas.width = 1536;
     canvas.height = 1086;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("Preparazione immagine non disponibile.");
+    if (!context) throw new Error(translate("tryon-unavailable"));
 
     context.fillStyle = "#111111";
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -1672,7 +1781,7 @@ async function createTryOnReference(userFile, productImage) {
     context.fillText("CAPO REALE DEL CATALOGO", 1040, 40);
 
     const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error("Preparazione immagine non riuscita."))), "image/png");
+      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error(translate("tryon-unavailable")))), "image/png");
     });
     return blob;
   } finally {
@@ -1688,14 +1797,14 @@ async function generateTryOn() {
   const button = modal.querySelector("[data-tryon-generate]");
   if (!tryOnProduct) return;
   if (!file) {
-    setTryOnMessage("Carica prima una tua foto.", "error");
+    setTryOnMessage(translate("tryon-upload-first"), "error");
     return;
   }
 
   button.disabled = true;
-  setTryOnProgress(4, "Preparazione del capo reale");
-  setTryOnMessage("Preparazione del capo reale...");
-  setTryOnResult("<p>Sto preparando l'anteprima AI...</p>");
+  setTryOnProgress(4, translate("tryon-preparing"));
+  setTryOnMessage(`${translate("tryon-preparing")}...`);
+  setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
     const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct));
@@ -1708,20 +1817,21 @@ async function generateTryOn() {
     formData.append("productId", tryOnProduct.id || "");
     formData.append("productName", tryOnProduct.name || "");
     formData.append("category", tryOnProduct.category || "");
-    setTryOnProgress(16, "Foto cliente e capo del catalogo pronti");
-    setTryOnMessage("Invio foto al server...");
+    formData.append("language", siteLanguage);
+    setTryOnProgress(16, translate("tryon-inputs-ready"));
+    setTryOnMessage(translate("tryon-sending"));
     const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
       setTryOnProgress(event.progress, event.message);
       setTryOnMessage(event.message);
     });
-    setTryOnProgress(100, "Anteprima pronta", "success");
-    setTryOnResult(`<img src="${escapeHtml(data.image)}" alt="Anteprima try-on AI">`);
-    setTryOnMessage(data.saved ? "Anteprima pronta e archiviata per 30 giorni." : "Anteprima pronta.", "success");
+    setTryOnProgress(100, translate("tryon-ready"), "success");
+    setTryOnResult(`<img src="${escapeHtml(data.image)}" alt="${escapeHtml(translate("tryon-ready"))}">`);
+    setTryOnMessage(data.saved ? translate("tryon-ready-saved") : translate("tryon-ready"), "success");
     sendTrack("try_on_generated", { product: tryOnProduct.name });
   } catch (error) {
-    setTryOnProgress(100, "Generazione non riuscita", "error");
-    setTryOnResult("<p>Non siamo riusciti a generare l'anteprima.</p>");
-    setTryOnMessage(error.message || "Try-on non disponibile.", "error");
+    setTryOnProgress(100, translate("tryon-generation-failed"), "error");
+    setTryOnResult(`<p>${escapeHtml(translate("tryon-result-failed"))}</p>`);
+    setTryOnMessage(error.message || translate("tryon-unavailable"), "error");
   } finally {
     button.disabled = false;
   }
@@ -1774,7 +1884,7 @@ function getCheckoutProductText() {
   const item = readCheckoutItem();
 
   if (!item || !item.name) {
-    return "Da confermare";
+    return translate("checkout-to-confirm");
   }
 
   return item.price ? `${item.name} - ${item.price}` : item.name;
@@ -1782,7 +1892,7 @@ function getCheckoutProductText() {
 
 function getFieldValue(name) {
   const field = document.querySelector(`[name="${name}"]`);
-  return field && field.value.trim() ? field.value.trim() : "Da compilare";
+  return field && field.value.trim() ? field.value.trim() : translate("checkout-to-fill");
 }
 
 function copyText(text, button) {
@@ -1796,7 +1906,7 @@ function copyText(text, button) {
     }
     const label = button.querySelector("span") || button;
     const originalText = label.textContent;
-    label.textContent = "Copiato";
+    label.textContent = translate("copied");
     window.setTimeout(() => {
       label.textContent = originalText;
     }, 1200);
@@ -1807,18 +1917,18 @@ function copyText(text, button) {
     return;
   }
 
-  window.prompt("Copia questo testo", text);
+  window.prompt(translate("copy-this-text"), text);
   setCopied();
 }
 
 function buildPaymentPacket(orderCode, wallet) {
   return [
-    `Codice ordine: ${orderCode}`,
-    `Prodotto: ${getCheckoutProductText()}`,
-    `Cliente: ${getFieldValue("name")}`,
-    `Telefono: ${getFieldValue("phone")}`,
+    `${translateOriginal("Codice ordine")}: ${orderCode}`,
+    `${translateOriginal("Prodotto")}: ${getCheckoutProductText()}`,
+    `${translateOriginal("Cliente")}: ${getFieldValue("name")}`,
+    `${translateOriginal("Telefono")}: ${getFieldValue("phone")}`,
     `Email: ${getFieldValue("email")}`,
-    `Pagamento: ${wallet.title} (${wallet.network})`,
+    `${translateOriginal("Pagamento")}: ${wallet.title} (${wallet.network})`,
     `Wallet: ${wallet.address || wallet.displayAddress}`,
     `TX hash: ${getFieldValue("tx-hash")}`,
   ].join("\n");
@@ -1901,7 +2011,7 @@ function setupCheckoutPayments() {
       copyWalletButton.disabled = !wallet.address;
       const label = copyWalletButton.querySelector("span");
       if (label) {
-        label.textContent = wallet.address ? "Copia indirizzo" : "Wallet mancante";
+        label.textContent = wallet.address ? translateOriginal("Copia indirizzo") : translate("wallet-missing");
       }
     }
 
@@ -1927,12 +2037,12 @@ function setupCheckoutPayments() {
       codPanel.hidden = isCrypto;
     }
     if (paymentSummary) {
-      paymentSummary.textContent = isCrypto ? `Crypto ${cryptoWallets[selectedCrypto].title}` : "Contrassegno";
+      paymentSummary.textContent = isCrypto ? `Crypto ${cryptoWallets[selectedCrypto].title}` : translate("cod");
     }
     if (checkoutNote) {
       checkoutNote.textContent = isCrypto
-        ? "Invia pagamento crypto e poi manda TX hash con codice ordine."
-        : "Nessun pagamento online richiesto in questa fase.";
+        ? translate("crypto-note")
+        : translate("no-online-payment");
     }
 
     updatePaymentPacket();
@@ -2002,7 +2112,7 @@ function checkoutField(name) {
 
 function selectedPaymentLabel() {
   const selected = document.querySelector('input[name="payment-method"]:checked');
-  if (!selected || selected.value === "cod") return "Contrassegno";
+  if (!selected || selected.value === "cod") return translate("cod");
   const selectedCrypto = document.querySelector("[data-crypto-option].is-active span:last-child");
   return selectedCrypto ? `Crypto ${selectedCrypto.textContent.trim()}` : "Crypto";
 }
@@ -2011,7 +2121,7 @@ async function confirmCheckoutOrder(button) {
   if (!button) return;
   const originalText = button.textContent;
   button.disabled = true;
-  button.textContent = "Conferma in corso";
+  button.textContent = translate("confirming-order");
   const ids = trackingIds();
 
   const payload = {
@@ -2032,6 +2142,7 @@ async function confirmCheckoutOrder(button) {
     products: collectCheckoutProducts(),
     deviceInfo: currentDeviceInfo(),
     preciseLocation: currentPreciseLocation(),
+    language: siteLanguage,
   };
 
   try {
@@ -2041,7 +2152,7 @@ async function confirmCheckoutOrder(button) {
       body: JSON.stringify(payload),
     });
     const data = await response.json();
-    if (!response.ok || !data.ok) throw new Error(data.message || "Ordine non salvato.");
+    if (!response.ok || !data.ok) throw new Error(data.message || translate("order-not-saved"));
 
     sendTrack("order_confirmed", {
       method: payload.paymentMethod,
@@ -2060,13 +2171,15 @@ async function confirmCheckoutOrder(button) {
 
     const note = document.querySelector("[data-checkout-note]");
     if (note) {
-      note.textContent = `Ordine ${data.order.orderCode} confermato. Totale ${data.order.total}.`;
+      note.textContent = translate("order-confirmed-note")
+        .replace("{code}", data.order.orderCode)
+        .replace("{total}", data.order.total);
     }
-    button.textContent = "Ordine confermato";
+    button.textContent = translate("order-confirmed");
   } catch (error) {
     const note = document.querySelector("[data-checkout-note]");
     if (note) {
-      note.textContent = error.message || "Non siamo riusciti a salvare l'ordine.";
+      note.textContent = error.message || translate("order-save-failed");
     }
     button.disabled = false;
     button.textContent = originalText;
@@ -2101,52 +2214,21 @@ if (window.lucide) {
   window.lucide.createIcons();
 }
 
-const languagePicker = document.querySelector("[data-language-picker]");
-if (languagePicker) {
-  const languageToggle = languagePicker.querySelector(".language-toggle");
-  const languageMenu = languagePicker.querySelector(".language-menu");
-  const languageOptions = [...languagePicker.querySelectorAll("[data-language-option]")];
-  const languageLabels = Object.fromEntries(
-    languageOptions.map((option) => [option.dataset.languageOption, option.getAttribute("aria-label")])
-  );
-  const savedLanguage = localStorage.getItem("haller-language") || "it";
-
-  const applyLanguage = (language) => {
-    const selectedLanguage = languageLabels[language] ? language : "it";
-    siteLanguage = selectedLanguage;
-    document.documentElement.lang = selectedLanguage;
-    languageOptions.forEach((option) => {
-      option.setAttribute("aria-checked", String(option.dataset.languageOption === selectedLanguage));
-    });
-    translatePage();
-    languageToggle.setAttribute("aria-label", `${translate("change-language")}: ${languageLabels[selectedLanguage]}`);
-    renderCatalog();
-  };
-
-  const closeLanguageMenu = () => {
-    languageMenu.classList.remove("is-open");
-    languageToggle.setAttribute("aria-expanded", "false");
-  };
-
-  applyLanguage(savedLanguage);
-  languageToggle.addEventListener("click", () => {
-    const isOpen = languageMenu.classList.toggle("is-open");
-    languageToggle.setAttribute("aria-expanded", String(isOpen));
-  });
-
-  languageOptions.forEach((option) => {
-    option.addEventListener("click", () => {
-      const language = option.dataset.languageOption;
-      localStorage.setItem("haller-language", language);
-      applyLanguage(language);
-      closeLanguageMenu();
-    });
-  });
-
-  document.addEventListener("click", (event) => {
-    if (!languagePicker.contains(event.target)) closeLanguageMenu();
-  });
+function applySiteLanguage(language) {
+  siteLanguage = translations[language] ? language : "it";
+  document.documentElement.lang = siteLanguage;
+  translatePage();
+  renderCatalog();
+  const tryOnTitle = document.querySelector("[data-tryon-title]");
+  if (tryOnTitle) {
+    tryOnTitle.textContent = tryOnProduct
+      ? translate("tryon-product-name").replace("{product}", tryOnProduct.name)
+      : translate("tryon-product");
+  }
 }
+
+applySiteLanguage(siteLanguage);
+window.addEventListener("haller-language-change", (event) => applySiteLanguage(event.detail));
 
 if (slides.length > 0) {
   window.setInterval(() => {
@@ -2187,8 +2269,8 @@ if (discountButton && discountInput && discountMessage) {
     const code = discountInput.value.trim();
 
     discountMessage.textContent = code
-      ? "Codice sconto inserito. Lo verificheremo alla conferma dell'ordine."
-      : "Inserisci un codice sconto prima di applicarlo.";
+      ? translate("discount-applied")
+      : translate("discount-empty");
   });
 }
 
@@ -2226,38 +2308,38 @@ function setupSiteChat() {
   document.body.insertAdjacentHTML(
     "beforeend",
     `
-      <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique">
-        <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale">
-          <img src="assets/chat-assistant-avatar.png" alt="Aurora online" draggable="false">
-          <span class="site-chat-online-copy"><strong>Aurora</strong><small>Online</small></span>
+      <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique" data-i18n-aria-label="chat-label">
+        <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale" data-i18n-aria-label="chat-open">
+          <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+          <span class="site-chat-online-copy"><strong>Aurora</strong><small data-i18n="chat-online">Online</small></span>
           <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" draggable="false">
-            <div><strong>Aurora</strong><span>Assistente online</span></div>
-            <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale"><i data-lucide="x"></i></button>
+            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+            <div><strong>Aurora</strong><span data-i18n="chat-status">Assistente online</span></div>
+            <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale" data-i18n-aria-label="chat-close"><i data-lucide="x"></i></button>
           </header>
           <form class="site-chat-profile" data-chat-profile>
-            <p>Prima di iniziare, lasciami i tuoi dati per seguirti meglio.</p>
+            <p data-i18n="chat-intro">Prima di iniziare, lasciami i tuoi dati per seguirti meglio.</p>
             <div class="site-chat-profile-grid">
-              <label>Nome<input name="firstName" autocomplete="given-name" required></label>
-              <label>Cognome<input name="lastName" autocomplete="family-name" required></label>
+              <label><span data-i18n="first-name">Nome</span><input name="firstName" autocomplete="given-name" required></label>
+              <label><span data-i18n="last-name">Cognome</span><input name="lastName" autocomplete="family-name" required></label>
             </div>
-            <label>Email<input name="email" type="email" autocomplete="email" required></label>
-            <label>Cellulare <em>facoltativo</em><input name="phone" type="tel" autocomplete="tel"></label>
-            <small>I dati vengono usati solo per offrirti assistenza in questa conversazione.</small>
-            <button type="submit">Inizia la chat</button>
+            <label><span data-i18n="email">Email</span><input name="email" type="email" autocomplete="email" required></label>
+            <label><span data-i18n="phone">Cellulare</span> <em data-i18n="optional">facoltativo</em><input name="phone" type="tel" autocomplete="tel"></label>
+            <small data-i18n="chat-privacy">I dati vengono usati solo per offrirti assistenza in questa conversazione.</small>
+            <button type="submit" data-i18n="chat-start">Inizia la chat</button>
           </form>
           <div class="site-chat-conversation" data-chat-conversation hidden>
             <div class="site-chat-messages" data-chat-messages aria-live="polite"></div>
             <div class="site-chat-actions">
-              <button type="button" data-chat-prompt="Mi aiuti a scegliere la taglia?">Taglie</button>
-              <button type="button" data-chat-prompt="Vorrei sapere dove si trova il mio ordine. Il mio codice e HB-">Segui ordine</button>
+              <button type="button" data-chat-prompt-key="chat-prompt-sizes" data-i18n="chat-sizes">Taglie</button>
+              <button type="button" data-chat-prompt-key="chat-prompt-order" data-i18n="chat-track-order">Segui ordine</button>
             </div>
             <form class="site-chat-composer" data-chat-composer>
-              <input data-chat-input maxlength="900" placeholder="Scrivi qui..." autocomplete="off" required>
-              <button type="submit" aria-label="Invia messaggio"><i data-lucide="send"></i></button>
+              <input data-chat-input maxlength="900" placeholder="Scrivi qui..." data-i18n-placeholder="chat-placeholder" autocomplete="off" required>
+              <button type="submit" aria-label="Invia messaggio" data-i18n-aria-label="chat-send"><i data-lucide="send"></i></button>
             </form>
           </div>
         </div>
@@ -2273,11 +2355,14 @@ function setupSiteChat() {
   const composer = root.querySelector("[data-chat-composer]");
   const input = root.querySelector("[data-chat-input]");
   let profile = readChatProfile();
+  translatePage();
 
   const showConversation = () => {
     profileForm.hidden = true;
     conversation.hidden = false;
-    if (!messages.children.length) appendChatMessage(messages, "assistant", `Ciao ${profile.firstName}, sono Aurora, l'assistente virtuale di Haller Boutique. Come posso aiutarti?`);
+    if (!messages.children.length) {
+      appendChatMessage(messages, "assistant", translate("chat-greeting").replace("{name}", profile.firstName));
+    }
   };
 
   const openChat = () => {
@@ -2325,20 +2410,20 @@ function setupSiteChat() {
     chatHistory.push({ role: "user", content: text });
     input.value = "";
     input.disabled = true;
-    appendChatMessage(messages, "assistant", "Un attimo, controllo.");
+    appendChatMessage(messages, "assistant", translate("chat-thinking"));
     const pending = messages.lastElementChild;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1), catalog: getChatCatalog() }),
+        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1), catalog: getChatCatalog(), language: siteLanguage }),
       });
       const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.message || "Non riesco a rispondere ora.");
+      if (!response.ok || !data.ok) throw new Error(data.message || translate("chat-error"));
       pending.textContent = data.reply;
       chatHistory.push({ role: "assistant", content: data.reply });
     } catch (error) {
-      pending.textContent = error.message || "Non riesco a rispondere ora.";
+      pending.textContent = error.message || translate("chat-error");
     } finally {
       input.disabled = false;
       input.focus();
@@ -2350,7 +2435,9 @@ function setupSiteChat() {
     event.preventDefault();
     sendMessage(input.value);
   });
-  root.querySelectorAll("[data-chat-prompt]").forEach((button) => button.addEventListener("click", () => sendMessage(button.dataset.chatPrompt)));
+  root.querySelectorAll("[data-chat-prompt-key]").forEach((button) => {
+    button.addEventListener("click", () => sendMessage(translate(button.dataset.chatPromptKey)));
+  });
   document.querySelectorAll("[data-open-chat]").forEach((link) => link.addEventListener("click", (event) => {
     event.preventDefault();
     openChat();

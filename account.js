@@ -7,6 +7,30 @@ const profileName = document.querySelector("[data-profile-name]");
 const profileEmail = document.querySelector("[data-profile-email]");
 const profilePhone = document.querySelector("[data-profile-phone]");
 const oauthNote = document.querySelector("[data-oauth-note]");
+let missingOauthProviders = [];
+
+const accountCopy = {
+  it: { customer: "Cliente", phone: "Cellulare: {value}", phoneMissing: "Cellulare non inserito", oauth: "Accesso {providers} pronto nel sito, da attivare con le credenziali OAuth.", working: "Operazione in corso...", created: "Account creato.", signedIn: "Accesso effettuato.", failed: "Operazione non riuscita." },
+  en: { customer: "Customer", phone: "Phone: {value}", phoneMissing: "Phone number not provided", oauth: "{providers} sign-in is ready on the site and only needs the OAuth credentials.", working: "Working...", created: "Account created.", signedIn: "Signed in.", failed: "Operation failed." },
+  fr: { customer: "Client", phone: "Telephone : {value}", phoneMissing: "Telephone non renseigne", oauth: "La connexion {providers} est prete sur le site et necessite seulement les identifiants OAuth.", working: "Operation en cours...", created: "Compte cree.", signedIn: "Connexion reussie.", failed: "Echec de l'operation." },
+  de: { customer: "Kunde", phone: "Telefon: {value}", phoneMissing: "Telefonnummer nicht angegeben", oauth: "Die Anmeldung mit {providers} ist vorbereitet und benotigt nur noch die OAuth-Zugangsdaten.", working: "Vorgang lauft...", created: "Konto erstellt.", signedIn: "Anmeldung erfolgreich.", failed: "Vorgang fehlgeschlagen." },
+  es: { customer: "Cliente", phone: "Telefono: {value}", phoneMissing: "Telefono no indicado", oauth: "El acceso con {providers} esta listo y solo necesita las credenciales OAuth.", working: "Operacion en curso...", created: "Cuenta creada.", signedIn: "Sesion iniciada.", failed: "La operacion ha fallado." },
+};
+
+function accountText(key, replacements = {}) {
+  const language = window.HallerI18n?.language?.() || "it";
+  return Object.entries(replacements).reduce(
+    (value, [name, replacement]) => value.replace(`{${name}}`, replacement),
+    accountCopy[language]?.[key] || accountCopy.it[key] || key
+  );
+}
+
+function renderOauthNote() {
+  if (!oauthNote) return;
+  oauthNote.textContent = missingOauthProviders.length
+    ? accountText("oauth", { providers: missingOauthProviders.join(", ") })
+    : "";
+}
 
 function setMessage(message, type = "") {
   if (!authMessage) return;
@@ -20,7 +44,7 @@ async function api(path, options = {}) {
     ...options,
   });
   const data = await response.json();
-  if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione non riuscita.");
+  if (!response.ok || data.ok === false) throw new Error(data.message || accountText("failed"));
   return data;
 }
 
@@ -37,9 +61,9 @@ function showProfile(user) {
   });
   if (profileCard) profileCard.hidden = !logged;
   if (!user) return;
-  profileName.textContent = user.name || "Cliente";
+  profileName.textContent = user.name || accountText("customer");
   profileEmail.textContent = user.email || "";
-  profilePhone.textContent = user.phone ? `Cellulare: ${user.phone}` : "Cellulare non inserito";
+  profilePhone.textContent = user.phone ? accountText("phone", { value: user.phone }) : accountText("phoneMissing");
 }
 
 async function loadMe() {
@@ -56,9 +80,8 @@ async function loadProviders() {
     button.classList.toggle("is-disabled", !provider.configured);
     if (!provider.configured) missing.push(provider.label);
   });
-  if (oauthNote && missing.length) {
-    oauthNote.textContent = `Accesso ${missing.join(", ")} pronto nel sito, da attivare con le credenziali OAuth.`;
-  }
+  missingOauthProviders = missing;
+  renderOauthNote();
 }
 
 authTabs.forEach((tab) => {
@@ -70,13 +93,13 @@ authForms.forEach((form) => {
     event.preventDefault();
     const payload = Object.fromEntries(new FormData(form));
     const isRegister = form.dataset.authForm === "register";
-    setMessage("Operazione in corso...");
+    setMessage(accountText("working"));
     try {
       await api(isRegister ? "/api/auth/register" : "/api/auth/login", {
         method: "POST",
         body: JSON.stringify(payload),
       });
-      setMessage(isRegister ? "Account creato." : "Accesso effettuato.", "success");
+      setMessage(accountText(isRegister ? "created" : "signedIn"), "success");
       await loadMe();
     } catch (error) {
       setMessage(error.message, "error");
@@ -115,6 +138,7 @@ if (params.get("error") || params.get("oauth")) {
 
 loadProviders().catch(() => {});
 loadMe().catch(() => showProfile(null));
+window.addEventListener("haller-language-change", renderOauthNote);
 
 if (window.lucide) {
   window.lucide.createIcons();

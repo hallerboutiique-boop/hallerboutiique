@@ -1242,6 +1242,27 @@ function cleanChatMessage(value) {
   return cleanTrackingString(value, 900);
 }
 
+const siteChatLanguages = {
+  it: { name: "italiano", locale: "it-IT", invalidProfile: "Inserisci nome, cognome e un indirizzo email valido per continuare.", emptyMessage: "Scrivi un messaggio per iniziare la conversazione.", unavailable: "Assistente virtuale temporaneamente non disponibile.", fallback: "Mi e sfuggito un dettaglio. Puoi riscriverlo un attimo?" },
+  en: { name: "English", locale: "en-GB", invalidProfile: "Enter your first name, last name and a valid email address to continue.", emptyMessage: "Write a message to start the conversation.", unavailable: "The virtual assistant is temporarily unavailable.", fallback: "I missed a detail. Could you rephrase that?" },
+  fr: { name: "francais", locale: "fr-FR", invalidProfile: "Saisissez votre prenom, votre nom et une adresse e-mail valide pour continuer.", emptyMessage: "Ecrivez un message pour commencer la conversation.", unavailable: "L'assistante virtuelle est temporairement indisponible.", fallback: "Un detail m'a echappe. Pouvez-vous reformuler ?" },
+  de: { name: "Deutsch", locale: "de-DE", invalidProfile: "Geben Sie Vorname, Nachname und eine gultige E-Mail-Adresse ein.", emptyMessage: "Schreiben Sie eine Nachricht, um das Gesprach zu beginnen.", unavailable: "Der virtuelle Assistent ist vorubergehend nicht verfugbar.", fallback: "Mir ist ein Detail entgangen. Konnen Sie das bitte anders formulieren?" },
+  es: { name: "espanol", locale: "es-ES", invalidProfile: "Introduce tu nombre, apellidos y un correo valido para continuar.", emptyMessage: "Escribe un mensaje para iniciar la conversacion.", unavailable: "La asistente virtual no esta disponible temporalmente.", fallback: "Se me ha escapado un detalle. Puedes reformularlo?" },
+};
+
+const tryOnLanguages = {
+  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", received: "Foto ricevuta", prepared: "Capo reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", unavailable: "Try-on non disponibile." },
+  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", received: "Photo received", prepared: "Real catalog garment prepared", generating: "Generating the AI try-on", preview: "Preview received", unavailable: "Try-on is unavailable." },
+  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", unavailable: "L'essayage est indisponible." },
+  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", unavailable: "Die Anprobe ist nicht verfugbar." },
+  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", unavailable: "La prueba no esta disponible." },
+};
+
+function siteChatLanguage(value) {
+  const code = cleanTrackingString(value, 8).toLowerCase();
+  return Object.hasOwn(siteChatLanguages, code) ? code : "it";
+}
+
 function cleanChatCatalog(catalog) {
   if (!Array.isArray(catalog)) return [];
   return catalog
@@ -1266,10 +1287,12 @@ async function handleSiteChat(req, res) {
   const email = cleanEmail(profile.email);
   const phone = cleanTrackingString(profile.phone, 40);
   const message = cleanChatMessage(body.message);
+  const language = siteChatLanguage(body.language);
+  const languageConfig = siteChatLanguages[language];
   if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(email)) {
-    return badRequest(res, "Inserisci nome, cognome e un indirizzo email valido per continuare.");
+    return badRequest(res, languageConfig.invalidProfile);
   }
-  if (!message) return badRequest(res, "Scrivi un messaggio per iniziare la conversazione.");
+  if (!message) return badRequest(res, languageConfig.emptyMessage);
 
   const catalog = cleanChatCatalog(body.catalog);
   const history = Array.isArray(body.history)
@@ -1284,7 +1307,7 @@ async function handleSiteChat(req, res) {
     const orders = await readOrders();
     const order = orders.find((item) => String(item.orderCode || "").toUpperCase() === orderCode.toUpperCase() && cleanEmail(item.customer?.email) === email);
     orderContext = order
-      ? `Ordine ${order.orderCode}: stato ${order.status || "in lavorazione"}, creato il ${new Date(order.createdAt).toLocaleDateString("it-IT")}, totale ${order.total || "non disponibile"}.`
+      ? `Ordine ${order.orderCode}: stato ${order.status || "in lavorazione"}, creato il ${new Date(order.createdAt).toLocaleDateString(languageConfig.locale)}, totale ${order.total || "non disponibile"}.`
       : `Non e stato trovato un ordine ${orderCode} associato a questa email.`;
   }
 
@@ -1293,7 +1316,7 @@ async function handleSiteChat(req, res) {
     : "Catalogo momentaneamente non disponibile.";
 
   if (!openaiApiKey) {
-    return json(res, 503, { ok: false, message: "Assistente virtuale temporaneamente non disponibile." });
+    return json(res, 503, { ok: false, message: languageConfig.unavailable, language });
   }
 
   try {
@@ -1304,7 +1327,7 @@ async function handleSiteChat(req, res) {
           role: "system",
           content: [
             "Sei Aurora, assistente virtuale di Haller Boutique. Dichiara in modo naturale che sei l'assistente virtuale se ti viene chiesto chi sei; non fingere mai di essere una persona.",
-            "Scrivi in italiano, con tono caldo, brillante e leggermente spiritoso, ma senza errori volontari. Risposte molto concise e concrete: massimo 2 frasi brevi, salvo richiesta esplicita di dettagli.",
+            `Rispondi esclusivamente in ${languageConfig.name}, anche se il catalogo o il contesto ordine sono scritti in italiano. Mantieni un tono caldo, brillante e leggermente spiritoso, senza errori volontari. Risposte molto concise e concrete: massimo 2 frasi brevi, salvo richiesta esplicita di dettagli.`,
             "Usa esclusivamente le informazioni del catalogo e dell'ordine qui sotto. Non inventare disponibilita, spedizioni, promesse o sconti. Per le taglie dai indicazioni generali e invita a contattare WhatsApp quando serve conferma.",
             `Cliente: ${firstName} ${lastName}; email: ${email}; telefono facoltativo: ${phone || "non fornito"}.`,
             `Contesto ordine: ${orderContext}`,
@@ -1316,10 +1339,10 @@ async function handleSiteChat(req, res) {
       ],
       max_output_tokens: 350,
     });
-    const reply = cleanChatMessage(responseOutputText(data)) || "Mi e sfuggito un dettaglio. Puoi riscriverlo un attimo?";
-    json(res, 200, { ok: true, reply });
+    const reply = cleanChatMessage(responseOutputText(data)) || languageConfig.fallback;
+    json(res, 200, { ok: true, reply, language });
   } catch (error) {
-    json(res, 502, { ok: false, message: `Assistente virtuale non disponibile: ${cleanTrackingString(error.message, 180)}` });
+    json(res, 502, { ok: false, message: languageConfig.unavailable, language });
   }
 }
 
@@ -1499,12 +1522,6 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
 
 async function handleTryOn(req, res, { streamProgress = false } = {}) {
   if (req.method !== "POST") return notFound(res);
-  if (!openaiApiKey) {
-    return json(res, 503, {
-      ok: false,
-      message: "Try-on AI non configurato. Imposta OPENAI_API_KEY su Fly.",
-    });
-  }
 
   const contentType = String(req.headers["content-type"] || "");
   const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
@@ -1517,13 +1534,17 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
     return badRequest(res, error.message || "Upload non valido.");
   }
 
+  const language = siteChatLanguage(fieldValue(parts, "language", 8));
+  const copy = tryOnLanguages[language];
+  if (!openaiApiKey) return json(res, 503, { ok: false, message: copy.notConfigured, language });
+
   const image = parts.find((part) => part.name === "userImage" && part.filename);
-  if (!image || image.data.length === 0) return badRequest(res, "Carica una tua foto.");
+  if (!image || image.data.length === 0) return badRequest(res, copy.upload);
   const ext = imageExtension(image.filename, image.contentType);
-  if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato. Usa JPG, PNG o WebP.");
+  if (!ext || ext === ".svg") return badRequest(res, copy.format);
 
   const progress = streamProgress ? createProgressStream(res) : null;
-  progress?.update(24, "Foto ricevuta");
+  progress?.update(24, copy.received);
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
   const saveTryOn = fieldValue(parts, "saveTryOn", 10) === "yes";
@@ -1535,16 +1556,16 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   };
 
   try {
-    progress?.update(46, "Capo reale del catalogo preparato");
-    progress?.update(60, "Generazione try-on AI in corso");
+    progress?.update(46, copy.prepared);
+    progress?.update(60, copy.generating);
     const generated = await generateTryOnImage({ userImage, productName, category });
-    progress?.update(92, "Anteprima ricevuta");
+    progress?.update(92, copy.preview);
     const archived = saveTryOn && customerImage ? await archiveTryOn({ customerImage, generated, productId: fieldValue(parts, "productId", 120), productName, category }) : null;
     const result = { ok: true, image: generated, saved: Boolean(archived) };
     if (progress) return progress.done(result);
     json(res, 200, result);
   } catch (error) {
-    const message = `Try-on non disponibile: ${cleanTrackingString(error.message, 220)}`;
+    const message = copy.unavailable;
     if (progress) return progress.fail(message);
     json(res, 502, { ok: false, message });
   }
