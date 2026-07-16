@@ -2332,19 +2332,59 @@ function readCheckoutItem() {
 }
 
 function getCheckoutProductText() {
-  const cartItems = readCartItems();
-
-  if (cartItems.length > 0) {
-    return cartItems.map((item) => `${item.name} - ${item.price}`).join("; ");
-  }
-
-  const item = readCheckoutItem();
-
-  if (!item || !item.name) {
+  const items = getCheckoutItems();
+  if (items.length === 0) {
     return translate("checkout-to-confirm");
   }
 
-  return item.price ? `${item.name} - ${item.price}` : item.name;
+  return items.map((item) => item.price ? `${item.name} - ${item.price}` : item.name).join("; ");
+}
+
+function getCheckoutItems() {
+  const cartItems = readCartItems();
+  if (cartItems.length > 0) return cartItems;
+
+  const item = readCheckoutItem();
+  return item?.name ? [item] : [];
+}
+
+function getCheckoutItemImage(item) {
+  if (item?.image) return item.image;
+  const product = item?.id ? findProductById(item.id) : findProduct(item?.name);
+  return product ? productPrimaryImage(product) : "";
+}
+
+function renderCheckoutProductSummary() {
+  const root = document.querySelector("[data-checkout-summary-products]");
+  const empty = document.querySelector("[data-checkout-summary-empty]");
+  if (!root) return;
+
+  const items = getCheckoutItems();
+  root.hidden = items.length === 0;
+  if (empty) empty.hidden = items.length > 0;
+  if (items.length === 0) {
+    root.replaceChildren();
+    return;
+  }
+
+  root.innerHTML = items.map((item) => {
+    const image = getCheckoutItemImage(item);
+    const size = String(item.size || "").trim();
+    const imageMarkup = image
+      ? `<img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
+      : `<span class="checkout-summary-product-placeholder"><i data-lucide="image"></i></span>`;
+    return `
+      <article class="checkout-summary-product">
+        <div class="checkout-summary-product-image">${imageMarkup}</div>
+        <div class="checkout-summary-product-copy">
+          <h3>${escapeHtml(item.name || translate("checkout-to-confirm"))}</h3>
+          ${size ? `<p>${escapeHtml(translate("sizes"))}: ${escapeHtml(size)}</p>` : ""}
+        </div>
+        <strong>${escapeHtml(item.price || "")}</strong>
+      </article>
+    `;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function getFieldValue(name) {
@@ -2414,6 +2454,8 @@ function setupCheckoutPayments() {
   if (paymentInputs.length === 0 && !cryptoPanel) {
     return;
   }
+
+  renderCheckoutProductSummary();
 
   if (orderProduct) {
     orderProduct.textContent = getCheckoutProductText();

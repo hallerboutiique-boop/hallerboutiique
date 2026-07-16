@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=product-images-full-1">
+    <link rel="stylesheet" href="styles.css?v=checkout-product-summary-1">
   </head>
   <body>
     <header class="site-header">
@@ -235,10 +235,11 @@
 
         <aside class="order-summary" aria-label="Riepilogo ordine">
           <h2>Riepilogo</h2>
-          <div class="summary-empty">
+          <div class="summary-empty" data-checkout-summary-empty>
             <p>Il carrello &egrave; pronto per i tuoi articoli.</p>
             <a href="index.html#arrivi">Continua lo shopping</a>
           </div>
+          <div class="checkout-summary-products" data-checkout-summary-products aria-live="polite"></div>
           <div class="summary-row">
             <span>Codice ordine</span>
             <strong data-order-code>HB-000000</strong>
@@ -305,6 +306,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="script.js?v=catalog-navigation-2"></script>
+    <script src="script.js?v=checkout-product-summary-1"></script>
   </body>
 </html>
