@@ -884,6 +884,7 @@ function appendImageFormData(form, field, image) {
 
 function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
   const form = new FormData();
+  const bundleIncludesBag = bundleItems.some((item) => /\b(?:bag|bags|borsa|borse|purse|handbag|sac)\b/i.test(`${item.name} ${item.category} ${item.sizeType}`));
   if (bundleItems.length > 0) {
     appendImageFormData(form, "image[]", userImage);
     productImages.forEach((image) => appendImageFormData(form, "image[]", image));
@@ -900,8 +901,11 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
         `The remaining input images are the original catalog product photos, in this exact order: ${bundleItems.map((item, index) => `input image ${index + 2} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`).join("; ")}.`,
         "Dress and style the customer with every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any item.",
         "Layer garments naturally. Put tops, trousers and outerwear on the body; put sneakers or shoes on both feet; place bags in the customer's hand, over the shoulder or across the body; place accessories in their natural position.",
-        "Use each original product photo as the authoritative visual reference. Preserve the exact color, logo, print, material, cut, proportions, shape and visible details of every product.",
+        "Use each original product photo as the authoritative visual reference. If a product name or category conflicts with its photo, follow the photo. Preserve the exact product type, color, logo, print, material, cut, proportions, shape and visible details.",
         "Catalog photos may also show boxes, packaging, shopping bags, cards, mannequins, stands or background props. Ignore them completely and never add them to the result unless the mapped cart item is itself a bag.",
+        bundleIncludesBag
+          ? "The cart includes a bag product. Show only that exact referenced bag and do not invent any additional bag."
+          : "The cart contains no bag product. The customer must not carry or wear any bag, purse, handbag, pouch or shopping bag.",
         "Use a full-length portrait composition with the customer visible from head to toe, both feet unobstructed and every actual bag fully visible. If the customer photo crops the lower legs or feet, extend the frame naturally while preserving the visible person and scene.",
         "Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions or add unrelated products, props or logos.",
         "Return one premium, photorealistic portrait outfit preview. Do not return a collage, split screen, labels or product panels.",

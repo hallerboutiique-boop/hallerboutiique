@@ -102,6 +102,9 @@ test("bundle try-on sends untouched customer and product image files separately"
   assert.match(server, /bundleItems\.length > 0 \? "1024x1536" : "1024x1024"/);
   assert.match(server, /Catalog photos may also show boxes, packaging/);
   assert.match(server, /visible from head to toe, both feet unobstructed/);
+  assert.match(server, /const bundleIncludesBag = bundleItems\.some/);
+  assert.match(server, /The cart contains no bag product/);
+  assert.match(server, /If a product name or category conflicts with its photo, follow the photo/);
 });
 
 test("product images keep their full composition", async () => {
