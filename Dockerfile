@@ -6,7 +6,9 @@ ENV NODE_ENV=production
 ENV DATA_DIR=/data
 
 COPY package.json pnpm-lock.yaml ./
-RUN corepack enable && pnpm install --prod --frozen-lockfile
+RUN corepack enable \
+  && corepack prepare pnpm@10.28.1 --activate \
+  && pnpm install --prod --frozen-lockfile
 
 COPY server.js ./
 COPY index.html product.html checkout.html account.html ultimi-disponibili.html admin.html termini.html spedizioni.html privacy.html ./
