@@ -47,6 +47,7 @@ const publicFiles = new Set([
   "/checkout.html",
   "/account.html",
   "/ultimi-disponibili.html",
+  "/product.html",
   "/admin.html",
   "/spedizioni.html",
   "/termini.html",

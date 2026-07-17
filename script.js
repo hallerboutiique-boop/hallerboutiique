@@ -152,11 +152,11 @@ const bundleTryOnTranslations = {
 Object.entries(bundleTryOnTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
 const catalogTranslations = {
-  it: { "last-stock-nav": "Ultimi disponibili", "last-stock-warning": "Ultimo disponibile", "catalog-choose-category": "Scegli una categoria", "catalog-choose-brand": "Scegli una marca", "catalog-all-brands": "Tutte le marche", "catalog-all-products": "Tutti i modelli", "catalog-viewing": "Stai guardando", "catalog-search-title": "Cerca nel catalogo", "catalog-search-placeholder": "Modello, categoria o marca", "catalog-search-empty": "Nessun modello trovato.", "catalog-search-results": "Risultati ricerca", "catalog-close": "Chiudi", "catalog-last-title": "Ultimi disponibili", "catalog-last-description": "Gli articoli con un solo pezzo rimasto, organizzati per categoria e marca.", "catalog-last-empty": "Non ci sono ultimi pezzi da mostrare.", "catalog-back": "Torna alla selezione", "remove-cart-item": "Rimuovi dal carrello" },
-  en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-back": "Back to selection", "remove-cart-item": "Remove from cart" },
-  fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-back": "Retour a la selection", "remove-cart-item": "Retirer du panier" },
-  de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-back": "Zuruck zur Auswahl", "remove-cart-item": "Aus dem Warenkorb entfernen" },
-  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-back": "Volver a la seleccion", "remove-cart-item": "Eliminar del carrito" }
+  it: { "last-stock-nav": "Ultimi disponibili", "last-stock-warning": "Ultimo disponibile", "catalog-choose-category": "Scegli una categoria", "catalog-choose-brand": "Scegli una marca", "catalog-all-brands": "Tutte le marche", "catalog-all-products": "Tutti i modelli", "catalog-viewing": "Stai guardando", "catalog-search-title": "Cerca nel catalogo", "catalog-search-placeholder": "Modello, categoria o marca", "catalog-search-empty": "Nessun modello trovato.", "catalog-search-results": "Risultati ricerca", "catalog-close": "Chiudi", "catalog-last-title": "Ultimi disponibili", "catalog-last-description": "Gli articoli con un solo pezzo rimasto, organizzati per categoria e marca.", "catalog-last-empty": "Non ci sono ultimi pezzi da mostrare.", "catalog-last-choose": "Scegli il reparto", "catalog-back": "Torna alla selezione", "remove-cart-item": "Rimuovi dal carrello", "product-back": "Torna al catalogo", "product-details": "Dettagli prodotto", "product-description": "Selezionato da Haller Boutique per qualita, stile e cura dei dettagli.", "product-not-found": "Prodotto non trovato.", "gallery-previous": "Foto precedente", "gallery-next": "Foto successiva", "open-product": "Apri pagina prodotto" },
+  en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-last-choose": "Choose department", "catalog-back": "Back to selection", "remove-cart-item": "Remove from cart", "product-back": "Back to catalog", "product-details": "Product details", "product-description": "Selected by Haller Boutique for quality, style and attention to detail.", "product-not-found": "Product not found.", "gallery-previous": "Previous photo", "gallery-next": "Next photo", "open-product": "Open product page" },
+  fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-last-choose": "Choisissez le rayon", "catalog-back": "Retour a la selection", "remove-cart-item": "Retirer du panier", "product-back": "Retour au catalogue", "product-details": "Details du produit", "product-description": "Selectionne par Haller Boutique pour sa qualite, son style et ses finitions.", "product-not-found": "Produit introuvable.", "gallery-previous": "Photo precedente", "gallery-next": "Photo suivante", "open-product": "Ouvrir la page produit" },
+  de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-last-choose": "Bereich auswahlen", "catalog-back": "Zuruck zur Auswahl", "remove-cart-item": "Aus dem Warenkorb entfernen", "product-back": "Zuruck zum Katalog", "product-details": "Produktdetails", "product-description": "Von Haller Boutique wegen Qualitat, Stil und Details ausgewahlt.", "product-not-found": "Produkt nicht gefunden.", "gallery-previous": "Vorheriges Foto", "gallery-next": "Nachstes Foto", "open-product": "Produktseite offnen" },
+  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-last-choose": "Elige la seccion", "catalog-back": "Volver a la seleccion", "remove-cart-item": "Eliminar del carrito", "product-back": "Volver al catalogo", "product-details": "Detalles del producto", "product-description": "Seleccionado por Haller Boutique por su calidad, estilo y acabados.", "product-not-found": "Producto no encontrado.", "gallery-previous": "Foto anterior", "gallery-next": "Foto siguiente", "open-product": "Abrir pagina del producto" }
 };
 
 Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
@@ -196,6 +196,7 @@ const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"
 let productOverrides = {};
 let customProducts = [];
 let catalogState = { gender: "", category: "", brand: "", productIds: [] };
+let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
@@ -953,16 +954,7 @@ const catalogSections = [
         products: [item("Polo Gucci", "133,32", "79,99", "-40%", "clothing")],
       },
       {
-        name: "Tracksuits",
-        discount: "-45%",
-        products: [
-          item("Tracksuit Nike Nocta", "290,89", "159,99", "-45%", "clothing"),
-          item("Tracksuit Polo Ralph Lauren", "290,89", "159,99", "-45%", "clothing"),
-          item("Tracksuit Emporio Armani", "218,16", "119,99", "-45%", "clothing"),
-        ],
-      },
-      {
-        name: "Two-Piece Sets",
+        name: "Completo",
         discount: "-30%",
         products: bulk(
           ["Two-Piece Set Moschino", "Two-Piece Set Gucci"],
@@ -973,7 +965,16 @@ const catalogSections = [
         ),
       },
       {
-        name: "Jackets",
+        name: "Tuta",
+        discount: "-45%",
+        products: [
+          item("Tracksuit Nike Nocta", "290,89", "159,99", "-45%", "clothing"),
+          item("Tracksuit Polo Ralph Lauren", "290,89", "159,99", "-45%", "clothing"),
+          item("Tracksuit Emporio Armani", "218,16", "119,99", "-45%", "clothing"),
+        ],
+      },
+      {
+        name: "Giacche leggere",
         discount: "-30%",
         products: bulk(
           ["Jacket Stone Island", "Jacket Balenciaga"],
@@ -984,12 +985,12 @@ const catalogSections = [
         ),
       },
       {
-        name: "Long Denim",
+        name: "Jeans lunghi",
         discount: "-30%",
         products: [item("Long Denim Dsquared", "114,27", "79,99", "-30%", "clothing")],
       },
       {
-        name: "Denim Shorts",
+        name: "Jeans corti",
         discount: "-30%",
         products: bulk(
           ["Denim Shorts Louis Vuitton", "Denim Shorts Gucci", "Denim Shorts Dsquared"],
@@ -1000,22 +1001,12 @@ const catalogSections = [
         ),
       },
       {
-        name: "Shorts",
+        name: "Pantaloncini",
         discount: "-30%",
         products: [item("EA7 Red Shorts", "85,70", "59,99", "-30%", "clothing")],
       },
       {
-        name: "Borse Uomo",
-        discount: "-30%",
-        products: [
-          item("Crossbody Bag Gucci", "171,41", "119,99", "-30%", "none"),
-          item("Crossbody Bag Louis Vuitton", "185,70", "129,99", "-30%", "none"),
-          item("Dogon Wallet Herm\u00e8s", "185,70", "129,99", "-30%", "none"),
-          item("Card Holder Herm\u00e8s", "157,13", "109,99", "-30%", "none"),
-        ],
-      },
-      {
-        name: "Sneakers Uomo",
+        name: "Scarpe",
         discount: "-45%",
         products: [
           item("Air Jordan", "181,80", "99,99", "-45%", "sneakers"),
@@ -1041,6 +1032,16 @@ const catalogSections = [
           item("Alexander McQueen Classic White", "272,71", "149,99", "-45%", "sneakers"),
           item("Alexander McQueen Sky Blue", "272,71", "149,99", "-45%", "sneakers"),
           item("Alexander McQueen Classic", "272,71", "149,99", "-45%", "sneakers"),
+        ],
+      },
+      {
+        name: "Borse Uomo",
+        discount: "-30%",
+        products: [
+          item("Crossbody Bag Gucci", "171,41", "119,99", "-30%", "none"),
+          item("Crossbody Bag Louis Vuitton", "185,70", "129,99", "-30%", "none"),
+          item("Dogon Wallet Herm\u00e8s", "185,70", "129,99", "-30%", "none"),
+          item("Card Holder Herm\u00e8s", "157,13", "109,99", "-30%", "none"),
         ],
       },
     ],
@@ -1075,7 +1076,7 @@ const catalogSections = [
         ],
       },
       {
-        name: "Sneakers Donna",
+        name: "Scarpe",
         discount: "-45%",
         products: [
           item("Nike Air Force White/Pink", "181,80", "99,99", "-45%", "sneakers"),
@@ -1166,10 +1167,15 @@ const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.png",
     "assets/products/louis-vuitton-skate-beige-white-2.png",
+    "assets/products/louis-vuitton-skate-beige-white-3.png",
   ],
   "Nike Air Force Louis Vuitton Red": [
     "assets/products/nike-air-force-louis-vuitton-red-1.png",
     "assets/products/nike-air-force-louis-vuitton-red-2.png",
+    "assets/products/nike-air-force-louis-vuitton-red-3.png",
+    "assets/products/nike-air-force-louis-vuitton-red-4.png",
+    "assets/products/nike-air-force-louis-vuitton-red-5.png",
+    "assets/products/nike-air-force-louis-vuitton-red-6.png",
   ],
   "Polo Gucci": ["assets/products/polo-gucci-1.png"],
 };
@@ -1251,18 +1257,28 @@ async function loadProductOverrides() {
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
     renderCatalog();
+    renderProductDetail();
     renderBundleTryOn();
   } catch {
     productOverrides = {};
     customProducts = [];
+    renderProductDetail();
     renderBundleTryOn();
   }
 }
 
-function createProductMediaMarkup(product) {
-  const gallery = product.images?.length
+function getProductGallery(product) {
+  return product.images?.length
     ? product.images
     : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
+}
+
+function productPageUrl(product) {
+  return `product.html?id=${encodeURIComponent(product.id)}`;
+}
+
+function createProductMediaMarkup(product, detail = false) {
+  const gallery = getProductGallery(product);
 
   if (gallery.length === 0) {
     return `
@@ -1272,21 +1288,32 @@ function createProductMediaMarkup(product) {
     `;
   }
 
-  return `
+  const slides = gallery.map((image, index) => `
     <img
-      class="product-image"
-      src="${withProductImageVersion(gallery[0])}"
-      alt="${escapeHtml(product.name)}"
-      loading="lazy"
+      class="product-image product-gallery-slide${index === 0 ? " is-active" : ""}"
+      src="${withProductImageVersion(image)}"
+      alt="${escapeHtml(product.name)}${gallery.length > 1 ? ` - ${index + 1}` : ""}"
+      loading="${detail && index === 0 ? "eager" : "lazy"}"
       decoding="async"
+      data-gallery-slide
     >
+  `).join("");
+
+  return `
+    ${slides}
+    ${gallery.length > 1 ? `
+      <div class="product-gallery-controls" aria-label="${escapeHtml(product.name)}">
+        <button type="button" data-product-gallery-prev aria-label="${translate("gallery-previous")}"><i data-lucide="chevron-left"></i></button>
+        <span class="product-gallery-count"><b data-gallery-current>1</b> / ${gallery.length}</span>
+        <button type="button" data-product-gallery-next aria-label="${translate("gallery-next")}"><i data-lucide="chevron-right"></i></button>
+      </div>
+      <div class="product-gallery-dots" aria-hidden="true">${gallery.map((_, index) => `<span class="${index === 0 ? "is-active" : ""}" data-gallery-dot></span>`).join("")}</div>
+    ` : ""}
   `;
 }
 
 function productPrimaryImage(product) {
-  const gallery = product.images?.length
-    ? product.images
-    : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
+  const gallery = getProductGallery(product);
   return gallery[0] || "";
 }
 
@@ -1301,13 +1328,14 @@ function createTryOnMarkup(product) {
 
 function createProductCard(product) {
   return `
-    <article class="product-card" data-product-card="${escapeHtml(product.id)}">
+    <article class="product-card" data-product-card="${escapeHtml(product.id)}" data-product-url="${productPageUrl(product)}">
       <div class="product-media">
         ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
         ${createProductMediaMarkup(product)}
+        <a class="product-media-open" href="${productPageUrl(product)}" aria-label="${translate("open-product")}: ${escapeHtml(product.name)}"></a>
       </div>
       <div class="product-body">
-        <h4>${escapeHtml(product.name)}</h4>
+        <h4><a class="product-name-link" href="${productPageUrl(product)}">${escapeHtml(product.name)}</a></h4>
         <div class="product-prices" aria-label="${translate("price")}">
           <span class="price-original">${escapeHtml(product.original)}</span>
           <strong>${escapeHtml(product.finalPrice)}</strong>
@@ -1335,6 +1363,7 @@ const homeFeaturedProductNames = [
   "Nike Air Force Louis Vuitton Red",
   "Louis Vuitton Skate Beige/White",
   "T-Shirt Balenciaga",
+  "T-Shirt Gucci",
   "Polo Gucci",
   "Tracksuit Nike Nocta",
   "Jacket Stone Island",
@@ -1349,7 +1378,7 @@ function getHomeFeaturedProducts() {
     .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
     .filter(Boolean);
   return [...customProducts, ...defaultFeatured]
-    .slice(0, 9);
+    .slice(0, 10);
 }
 
 function findProduct(productName) {
@@ -1358,6 +1387,52 @@ function findProduct(productName) {
 
 function findProductById(productId) {
   return getAllProducts().find((product) => product.id === productId);
+}
+
+function renderProductDetail() {
+  const root = document.querySelector("[data-product-detail]");
+  if (!root) return;
+  const productId = new URLSearchParams(window.location.search).get("id") || "";
+  const product = findProductById(productId);
+
+  if (!product) {
+    root.innerHTML = `<section class="product-detail-empty"><p>${translate("product-not-found")}</p><a href="index.html#selezione">${translate("product-back")}</a></section>`;
+    return;
+  }
+
+  const productPageTitle = `${product.name} | Haller Boutique`;
+  document.documentElement.dataset.originalTitle = productPageTitle;
+  document.title = productPageTitle;
+  const description = product.description || translate("product-description");
+  root.innerHTML = `
+    <a class="product-detail-back" href="index.html#selezione"><i data-lucide="arrow-left"></i><span>${translate("product-back")}</span></a>
+    <article class="product-detail" data-product-card="${escapeHtml(product.id)}">
+      <section class="product-detail-gallery" aria-label="${escapeHtml(product.name)}">
+        ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
+        ${createProductMediaMarkup(product, true)}
+      </section>
+      <section class="product-detail-info">
+        <p class="product-detail-kicker">${escapeHtml(product.collection)} / ${escapeHtml(product.category)}</p>
+        <h1>${escapeHtml(product.name)}</h1>
+        <div class="product-prices product-detail-prices" aria-label="${translate("price")}">
+          ${product.original ? `<span class="price-original">${escapeHtml(product.original)}</span>` : ""}
+          <strong>${escapeHtml(product.finalPrice)}</strong>
+        </div>
+        <div class="product-detail-copy">
+          <h2>${translate("product-details")}</h2>
+          <p>${escapeHtml(description)}</p>
+        </div>
+        ${createSizesMarkup(product)}
+        ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
+        <div class="product-actions product-detail-actions">
+          <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
+          <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
+          ${createTryOnMarkup(product)}
+        </div>
+      </section>
+    </article>
+  `;
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function saveCheckoutItem(productId, size = "") {
@@ -1494,17 +1569,31 @@ function renderCatalog() {
 function renderLastStockCatalog() {
   const root = document.querySelector("[data-last-stock-catalog]");
   if (!root) return;
-  const sections = ["uomo", "donna"].map((gender) => {
-    const products = getGenderProducts(gender).filter((product) => product.isLastAvailable);
-    if (!products.length) return "";
-    const categories = [...new Set(products.map((product) => product.category))];
-    return `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${gender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
-      const categoryProducts = products.filter((product) => product.category === category);
-      const brands = getBrands(categoryProducts);
-      return `<section class="last-stock-category"><h3>${escapeHtml(category)}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
-    }).join("")}</section>`;
-  }).join("");
-  root.innerHTML = sections || `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
+  const chooser = `
+    <section class="last-stock-chooser" aria-label="${translate("catalog-last-choose")}">
+      <p>${translate("catalog-last-choose")}</p>
+      <div>
+        <button type="button" data-last-stock-gender="uomo" class="${lastStockGender === "uomo" ? "is-active" : ""}"><i data-lucide="user-round"></i><span>${translate("men")}</span></button>
+        <button type="button" data-last-stock-gender="donna" class="${lastStockGender === "donna" ? "is-active" : ""}"><i data-lucide="user-round"></i><span>${translate("women")}</span></button>
+      </div>
+    </section>
+  `;
+
+  if (!lastStockGender) {
+    root.innerHTML = chooser;
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
+
+  const products = getGenderProducts(lastStockGender).filter((product) => product.isLastAvailable);
+  const categories = [...new Set(products.map((product) => product.category))];
+  const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
+    const categoryProducts = products.filter((product) => product.category === category);
+    const brands = getBrands(categoryProducts);
+    return `<section class="last-stock-category"><h3>${escapeHtml(category)}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
+  }).join("")}</section>` : `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
+  root.innerHTML = chooser + section;
+  refreshScrollReveals(root);
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -1549,6 +1638,19 @@ function renderCatalogSearchResults(query = "") {
     ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
     : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`;
   if (window.lucide) window.lucide.createIcons();
+}
+
+function moveProductGallery(control, direction) {
+  const gallery = control.closest(".product-media, .product-detail-gallery");
+  if (!gallery) return;
+  const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
+  if (slides.length < 2) return;
+  const currentIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
+  const nextIndex = (currentIndex + direction + slides.length) % slides.length;
+  slides.forEach((slide, index) => slide.classList.toggle("is-active", index === nextIndex));
+  gallery.querySelectorAll("[data-gallery-dot]").forEach((dot, index) => dot.classList.toggle("is-active", index === nextIndex));
+  const current = gallery.querySelector("[data-gallery-current]");
+  if (current) current.textContent = String(nextIndex + 1);
 }
 
 function refreshScrollReveals(root = document) {
@@ -2718,6 +2820,7 @@ async function confirmCheckoutOrder(button) {
 }
 
 renderCatalog();
+renderProductDetail();
 loadProductOverrides();
 updateCartCount();
 setupLocationDeliveryBanner();
@@ -2750,6 +2853,7 @@ function applySiteLanguage(language) {
   document.documentElement.lang = siteLanguage;
   translatePage();
   renderCatalog();
+  renderProductDetail();
   renderCheckoutProductSummary();
   refreshCatalogSearchLanguage();
   const tryOnTitle = document.querySelector("[data-tryon-title]");
@@ -2788,6 +2892,22 @@ document.addEventListener("click", (event) => {
   const addButton = event.target.closest("[data-add-to-cart]");
   const buyButton = event.target.closest("[data-buy-now]");
   const checkoutRemoveButton = event.target.closest("[data-checkout-remove-index]");
+  const lastStockButton = event.target.closest("[data-last-stock-gender]");
+  const galleryPrevious = event.target.closest("[data-product-gallery-prev]");
+  const galleryNext = event.target.closest("[data-product-gallery-next]");
+  const productCard = event.target.closest("[data-product-url]");
+
+  if (galleryPrevious || galleryNext) {
+    event.preventDefault();
+    moveProductGallery(galleryPrevious || galleryNext, galleryPrevious ? -1 : 1);
+    return;
+  }
+
+  if (lastStockButton) {
+    lastStockGender = lastStockButton.dataset.lastStockGender;
+    renderLastStockCatalog();
+    return;
+  }
 
   if (searchButton) {
     ensureCatalogSearch();
@@ -2802,15 +2922,9 @@ document.addEventListener("click", (event) => {
 
   if (searchResult) {
     const productId = searchResult.dataset.catalogSearchResult;
-    catalogState = { gender: "", category: "", brand: "", productIds: [productId] };
-    document.querySelector("[data-catalog-search-dialog]")?.close();
-    renderCatalog();
-    window.requestAnimationFrame(() => {
-      const productCard = document.querySelector(`[data-product-card="${CSS.escape(productId)}"]`);
-      productCard?.classList.add("is-revealed", "is-search-match");
-      productCard?.scrollIntoView({ behavior: "smooth", block: "center" });
-      window.setTimeout(() => productCard?.classList.remove("is-search-match"), 1800);
-    });
+    const product = findProductById(productId);
+    if (product) window.location.href = productPageUrl(product);
+    return;
   }
 
   if (navToggle) {
@@ -2862,6 +2976,11 @@ document.addEventListener("click", (event) => {
   if (buyButton) {
     addToCart(buyButton);
     window.location.href = "checkout.html";
+    return;
+  }
+
+  if (productCard && !event.target.closest("button, a, input, label")) {
+    window.location.href = productCard.dataset.productUrl;
   }
 });
 

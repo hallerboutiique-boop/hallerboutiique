@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const htmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-disponibili.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
+const htmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-disponibili.html", "product.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
 
 test("one language controller owns every picker", async () => {
   const [i18n, script] = await Promise.all([readFile("i18n.js", "utf8"), readFile("script.js", "utf8")]);
@@ -72,7 +72,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(script, /\.toLowerCase\(\)\.includes\(value\)/);
   assert.doesNotMatch(script, /function searchCatalogProducts\(query\)/);
   assert.doesNotMatch(script, /data-catalog-search-query/);
-  assert.match(script, /productCard\?\.scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(script, /window\.location\.href = productPageUrl\(product\)/);
   assert.match(styles, /\.catalog-search-results\s*\{[\s\S]*?grid-auto-rows:\s*minmax\(96px, auto\)/);
   assert.match(styles, /\.catalog-search-result\s*\{[\s\S]*?overflow:\s*hidden/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
@@ -82,6 +82,29 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(server, /function cleanProductInventory/);
   assert.match(server, /const \{ inventory, \.\.\.publicProduct \}/);
   assert.match(server, /async function reduceProductInventory/);
+});
+
+test("catalog categories, product pages and galleries follow the storefront flow", async () => {
+  const [index, productPage, script, server, styles] = await Promise.all([
+    readFile("index.html", "utf8"),
+    readFile("product.html", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+    readFile("styles.css", "utf8"),
+  ]);
+  for (const category of ["Completo", "Tuta", "Giacche leggere", "Jeans lunghi", "Jeans corti", "Pantaloncini", "Scarpe"]) {
+    assert.match(script, new RegExp(`name: "${category}"`));
+  }
+  assert.match(script, /function renderProductDetail\(\)/);
+  assert.match(script, /function moveProductGallery\(control, direction\)/);
+  assert.match(script, /data-last-stock-gender="uomo"/);
+  assert.match(script, /data-last-stock-gender="donna"/);
+  assert.match(productPage, /data-product-detail/);
+  assert.match(server, /"\/product\.html"/);
+  assert.match(index, /class="last-stock-nav"/);
+  assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
+  assert.match(styles, /\.product-gallery-controls\s*\{/);
+  assert.match(styles, /\.product-detail\s*\{/);
 });
 
 test("try-on supports clothing, shoes and bags", async () => {
@@ -122,6 +145,7 @@ test("admin can publish the original or cropped product image while preserving t
     readFile("server.js", "utf8"),
     readFile("script.js", "utf8"),
   ]);
+  assert.match(styles, /\.product-media\s*\{[\s\S]*?aspect-ratio:\s*10 \/ 11/);
   assert.match(styles, /\.product-image\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.match(styles, /\.catalog-search-preview img[\s\S]*?object-fit:\s*contain/);
   assert.match(adminHtml, /data-product-crop-original>Usa originale/);
