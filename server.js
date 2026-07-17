@@ -248,6 +248,21 @@ async function ensureProductImageStorage() {
   return productImageStorageReadyPromise;
 }
 
+async function verifyProductImageStorage() {
+  if (!productImageStorage) return false;
+  const body = Buffer.from("ready\n", "utf8");
+  await productImageStorage.send(new PutObjectCommand({
+    Bucket: productImageBucketName,
+    Key: "checks/storage-ready.txt",
+    Body: body,
+    ContentLength: body.length,
+    ContentType: "text/plain; charset=utf-8",
+    CacheControl: "no-store",
+    ContentDisposition: "inline",
+  }));
+  return true;
+}
+
 function storedImageContentType(extension, suppliedType) {
   const cleanType = String(suppliedType || "").split(";")[0].trim().toLowerCase();
   if (["image/jpeg", "image/png", "image/webp"].includes(cleanType)) return cleanType;
@@ -2680,9 +2695,14 @@ http
     console.log(`Haller Boutique listening on ${port}`);
     if (productImageStorage) {
       setTimeout(() => {
+        verifyProductImageStorage()
+          .then(() => {
+            console.log("Tigris product image storage ready.");
+            return pruneOrphanProductObjects({ minAgeMs: 0 });
+          })
+          .catch((error) => console.error(`Tigris storage verification failed: ${error.message}`));
         ensureProductImageStorage()
-          .then(() => pruneOrphanProductObjects({ minAgeMs: 0 }))
-          .catch((error) => console.error(`Tigris initialization skipped: ${error.message}`));
+          .catch((error) => console.error(`Tigris CORS initialization skipped: ${error.message}`));
       }, 0);
     }
   });
