@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=two-axis-product-zoom-1">
+    <link rel="stylesheet" href="styles.css?v=product-gallery-manager-1">
   </head>
   <body>
     <header class="site-header">
@@ -226,10 +226,7 @@
                     <span>Inventario privato</span>
                     <input name="inventory" type="number" min="0" step="1" inputmode="numeric" placeholder="Lascia vuoto finche non definito">
                   </label>
-                  <label class="product-editor-images">
-                    <span>Immagini</span>
-                    <textarea name="images" rows="5" placeholder="assets/products/foto-1.png&#10;https://..."></textarea>
-                  </label>
+                  <textarea name="images" hidden></textarea>
                   <div class="product-upload-box">
                     <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" multiple data-product-image-upload>
                     <div class="product-upload-actions">
@@ -242,7 +239,14 @@
                         <span>Interrompi</span>
                       </button>
                     </div>
-                    <small data-product-upload-status>Seleziona fino a 8 foto insieme: saranno caricate in un'unica operazione.</small>
+                    <small data-product-upload-status>Puoi selezionare fino a 40 foto insieme.</small>
+                  </div>
+                  <div class="product-gallery-editor-header">
+                    <div>
+                      <span>Ordine immagini sul sito</span>
+                      <small>La prima foto &egrave; la copertina.</small>
+                    </div>
+                    <strong data-product-image-count>0 / 40</strong>
                   </div>
                   <div class="product-preview-grid" data-product-previews>
                     <p class="admin-empty">Nessuna immagine caricata per questo prodotto.</p>
@@ -374,6 +378,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="admin.js?v=batch-product-images-1"></script>
+    <script src="admin.js?v=product-gallery-manager-1"></script>
   </body>
 </html>

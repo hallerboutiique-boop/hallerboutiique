@@ -16,6 +16,7 @@ const productImageButton = document.querySelector("[data-product-image-button]")
 const productUploadCancel = document.querySelector("[data-product-upload-cancel]");
 const productUploadStatus = document.querySelector("[data-product-upload-status]");
 const productPreviews = document.querySelector("[data-product-previews]");
+const productImageCount = document.querySelector("[data-product-image-count]");
 const aiProductImage = document.querySelector("[data-ai-product-image]");
 const aiProductButton = document.querySelector("[data-ai-product-button]");
 const aiProductStatus = document.querySelector("[data-ai-product-status]");
@@ -41,6 +42,13 @@ let cropState = null;
 let cropDrag = null;
 let productUploadQueue = null;
 let productUploadController = null;
+let productImageEntries = [];
+let selectedProductImageKey = "";
+let productImageKeySequence = 0;
+const maximumProductImages = 40;
+const productUploadBatchSize = 8;
+const maximumProductImageBytes = 20 * 1024 * 1024;
+const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -156,6 +164,8 @@ function setProductUploadStatus(message) {
 function setProductUploadActive(active) {
   if (productImageButton) productImageButton.disabled = active;
   if (productUploadCancel) productUploadCancel.hidden = !active;
+  const saveButton = productForm?.querySelector('button[type="submit"]');
+  if (saveButton) saveButton.disabled = active;
 }
 
 function resetProductUploadState() {
@@ -168,7 +178,6 @@ function resetProductUploadState() {
 function interruptProductUpload(message = "Caricamento foto interrotto.") {
   if (!productUploadQueue && !productUploadController) return;
   productUploadController?.abort();
-  if (cropState?.source?.type === "manual") closeProductCropper();
   resetProductUploadState();
   setProductUploadStatus(message);
   setProductMessage(message);
@@ -201,29 +210,83 @@ function productImageUrl(src) {
   return value.startsWith("/") ? value : `/${value}`;
 }
 
-function currentProductImages() {
-  return String(productForm?.elements.images.value || "")
-    .split(/\r?\n/)
-    .map((image) => image.trim())
-    .filter(Boolean);
+function nextProductImageKey() {
+  productImageKeySequence += 1;
+  return `product-image-${productImageKeySequence}`;
 }
 
-function renderProductPreviews(images = currentProductImages()) {
+function revokeProductImagePreview(entry) {
+  if (entry?.previewUrl?.startsWith("blob:")) URL.revokeObjectURL(entry.previewUrl);
+}
+
+function clearProductImageEntries() {
+  productImageEntries.forEach(revokeProductImagePreview);
+  productImageEntries = [];
+  selectedProductImageKey = "";
+}
+
+function syncProductImageFields() {
+  if (!productForm) return;
+  productForm.elements.images.value = productImageEntries.map((entry) => entry.image).filter(Boolean).join("\n");
+  productForm.elements.originalImages.value = productImageEntries
+    .filter((entry) => entry.image)
+    .map((entry) => entry.originalImage || entry.image)
+    .join("\n");
+  productForm.elements.imageVariant.value = productImageEntries[0]?.variant || "original";
+}
+
+function setProductImageEntries(images = [], originals = [], primaryVariant = "original") {
+  clearProductImageEntries();
+  productImageEntries = images.slice(0, maximumProductImages).map((image, index) => {
+    const originalImage = originals[index] || image;
+    return {
+      key: nextProductImageKey(),
+      image,
+      originalImage,
+      variant: index === 0 ? primaryVariant : originalImage !== image ? "cropped" : "original",
+      pendingImage: null,
+      originalFile: null,
+      previewUrl: "",
+    };
+  });
+  selectedProductImageKey = productImageEntries[0]?.key || "";
+  syncProductImageFields();
+  renderProductPreviews();
+}
+
+function renderProductPreviews() {
   if (!productPreviews) return;
-  if (!images.length) {
+  if (productImageCount) productImageCount.textContent = `${productImageEntries.length} / ${maximumProductImages}`;
+  if (!productImageEntries.length) {
     productPreviews.innerHTML = `<p class="admin-empty">Nessuna immagine caricata per questo prodotto.</p>`;
     return;
   }
-  productPreviews.innerHTML = images
+  if (!productImageEntries.some((entry) => entry.key === selectedProductImageKey)) {
+    selectedProductImageKey = productImageEntries[0].key;
+  }
+  productPreviews.innerHTML = productImageEntries
     .map(
-      (image, index) => `
-        <figure class="product-preview-item">
-          <img src="${escapeHtml(productImageUrl(image))}" alt="Anteprima prodotto ${index + 1}" loading="lazy">
-          <figcaption>Foto ${index + 1}</figcaption>
-        </figure>
+      (entry, index) => `
+        <article class="product-preview-item${entry.key === selectedProductImageKey ? " is-selected" : ""}" data-product-image-key="${entry.key}">
+          <button class="product-preview-select" type="button" data-product-image-select aria-label="Seleziona foto ${index + 1}">
+            <img src="${escapeHtml(entry.previewUrl || productImageUrl(entry.image))}" alt="Anteprima prodotto ${index + 1}" loading="lazy">
+            <span>${index === 0 ? "Copertina" : `Foto ${index + 1}`}</span>
+          </button>
+          <div class="product-preview-caption">
+            <strong>${index === 0 ? "Copertina" : `Posizione ${index + 1}`}</strong>
+            <small>${entry.pendingImage ? "Da caricare" : entry.variant === "cropped" ? "Ritagliata" : "Originale"}</small>
+          </div>
+          <div class="product-preview-actions">
+            <button type="button" data-product-image-move="left" title="Sposta prima" aria-label="Sposta la foto ${index + 1} prima"${index === 0 ? " disabled" : ""}><i data-lucide="chevron-left"></i></button>
+            <button type="button" data-product-image-edit title="Modifica foto" aria-label="Modifica la foto ${index + 1}"><i data-lucide="crop"></i></button>
+            <button type="button" data-product-image-move="right" title="Sposta dopo" aria-label="Sposta la foto ${index + 1} dopo"${index === productImageEntries.length - 1 ? " disabled" : ""}><i data-lucide="chevron-right"></i></button>
+            <button type="button" data-product-image-remove title="Rimuovi foto" aria-label="Rimuovi la foto ${index + 1}"><i data-lucide="trash-2"></i></button>
+          </div>
+        </article>
       `
     )
     .join("");
+  if (window.lucide) window.lucide.createIcons();
 }
 
 function clamp(value, min, max) {
@@ -243,7 +306,7 @@ function cropOutputName(file, mimeType) {
 function refreshCropStorefrontCopy(source) {
   if (!productCropPreviewName) return;
   const selectedName = String(productForm?.elements.name?.value || "").trim();
-  productCropPreviewName.textContent = source?.type === "manual" && selectedName ? selectedName : "Nuovo prodotto";
+  productCropPreviewName.textContent = source?.type === "gallery" && selectedName ? selectedName : "Nuovo prodotto";
 }
 
 function syncCropPositionControl(control, offset, maximum) {
@@ -317,10 +380,6 @@ function closeProductCropper() {
 function cancelProductCropper() {
   const source = cropState?.source;
   closeProductCropper();
-  if (source?.type === "manual") {
-    interruptProductUpload("Caricamento annullato.");
-    return;
-  }
   if (source?.type === "ai") {
     if (aiProductImage) aiProductImage.value = "";
     setAiProductStatus("Creazione bozza annullata.");
@@ -361,7 +420,7 @@ function openProductCropper(file, source) {
     productCropOriginal.textContent = source.type === "ai" ? "Usa originale e crea bozza" : "Usa originale";
     productCropOriginal.disabled = true;
   }
-  productCropConfirm.textContent = source.type === "ai" ? "Ritaglia e crea bozza" : "Applica ritaglio e carica";
+  productCropConfirm.textContent = source.type === "ai" ? "Ritaglia e crea bozza" : "Applica ritaglio";
   productCropConfirm.disabled = true;
   refreshCropStorefrontCopy(source);
   productCropImage.src = cropState.objectUrl;
@@ -424,7 +483,7 @@ function createCroppedProductImage() {
 async function uploadProductImages(entries, productId, { signal } = {}) {
   const formData = new FormData();
   formData.append("productId", productId);
-  formData.append("makePrimary", "yes");
+  formData.append("makePrimary", "no");
   const imageVariants = [];
   const originalImageIndexes = [];
   entries.forEach((entry, index) => {
@@ -440,13 +499,7 @@ async function uploadProductImages(entries, productId, { signal } = {}) {
   formData.append("imageVariants", JSON.stringify(imageVariants));
   formData.append("originalImageIndexes", JSON.stringify(originalImageIndexes));
   formData.append("imageVariant", imageVariants[0] || "original");
-  setProductUploadStatus(`Caricamento simultaneo di ${entries.length} foto...`);
-  setProductMessage("");
-  const data = await uploadApi("/api/admin/product-images", formData, { signal });
-  selectedProductId = productId;
-  await loadProducts();
-  const product = adminProducts.find((entry) => entry.id === productId);
-  if (product) fillProductForm(product);
+  return uploadApi("/api/admin/product-images", formData, { signal });
 }
 
 async function createAiProductFromImage(image, { originalFile, variant = "original" } = {}) {
@@ -485,47 +538,122 @@ async function createAiProductFromImage(image, { originalFile, variant = "origin
   }
 }
 
-function openNextProductCrop() {
-  if (!productUploadQueue) return;
-  const { files, index, productId } = productUploadQueue;
-  const file = files[index];
-  if (!file) return;
-  setProductUploadStatus(`Prepara la foto ${index + 1} di ${files.length}: scegli originale o ritaglio.`);
-  openProductCropper(file, { type: "manual", productId });
-}
-
 async function handleSelectedProductImage(image, source, variant) {
   if (source.type === "ai") {
     await createAiProductFromImage(image, { originalFile: cropState?.file || source.originalFile, variant });
     return;
   }
 
-  const queue = productUploadQueue;
-  if (!queue) return;
-  queue.prepared.push({ image, originalFile: source.originalFile, variant });
+  if (source.type !== "gallery") return;
+  const entry = productImageEntries.find((item) => item.key === source.entryKey);
+  if (!entry) return;
+  revokeProductImagePreview(entry);
+  entry.pendingImage = image;
+  entry.originalFile = source.originalFile;
+  entry.variant = variant;
+  entry.previewUrl = URL.createObjectURL(image.blob || image);
+  selectedProductImageKey = entry.key;
+  syncProductImageFields();
+  renderProductPreviews();
+  setProductUploadStatus("Modifica pronta. Salva il prodotto per pubblicarla.");
+  setProductMessage("Immagine modificata nella galleria.", "success");
+}
 
-  queue.index += 1;
-  if (queue.index < queue.files.length) {
-    openNextProductCrop();
-    return;
+async function uploadPendingProductImages(productId) {
+  const pendingEntries = productImageEntries.filter((entry) => entry.pendingImage);
+  if (!pendingEntries.length) return;
+  productUploadController?.abort();
+  productUploadController = new AbortController();
+  productUploadQueue = { productId, entries: pendingEntries };
+  setProductUploadActive(true);
+
+  const batches = [];
+  pendingEntries.forEach((entry) => {
+    const uploadBytes = Number(entry.pendingImage?.blob?.size || entry.pendingImage?.size || 0)
+      + (entry.variant === "cropped" ? Number(entry.originalFile?.size || 0) : 0);
+    let batch = batches[batches.length - 1];
+    const batchBytes = batch?.reduce((total, item) => {
+      return total + Number(item.pendingImage?.blob?.size || item.pendingImage?.size || 0)
+        + (item.variant === "cropped" ? Number(item.originalFile?.size || 0) : 0);
+    }, 0) || 0;
+    if (!batch || batch.length >= productUploadBatchSize || batchBytes + uploadBytes > maximumProductUploadBatchBytes) {
+      batch = [];
+      batches.push(batch);
+    }
+    batch.push(entry);
+  });
+
+  let uploadedCount = 0;
+  for (const batch of batches) {
+    if (!productUploadQueue) throw new DOMException("Upload interrotto", "AbortError");
+    setProductUploadStatus(`Caricamento foto ${uploadedCount + 1}-${uploadedCount + batch.length} di ${pendingEntries.length}...`);
+    const data = await uploadProductImages(
+      batch.map((entry) => ({ image: entry.pendingImage, originalFile: entry.originalFile, variant: entry.variant })),
+      productId,
+      { signal: productUploadController.signal }
+    );
+    if (!Array.isArray(data.images) || data.images.length !== batch.length) {
+      throw new Error("Il server non ha salvato tutte le immagini.");
+    }
+    batch.forEach((entry, index) => {
+      revokeProductImagePreview(entry);
+      entry.image = data.images[index];
+      entry.originalImage = data.originalImages?.[index] || data.images[index];
+      entry.pendingImage = null;
+      entry.originalFile = null;
+      entry.previewUrl = "";
+    });
+    syncProductImageFields();
+    renderProductPreviews();
+    uploadedCount += batch.length;
   }
+}
 
-  try {
-    await uploadProductImages(queue.prepared, source.productId, { signal: productUploadController?.signal });
-    if (productUploadQueue !== queue) return;
-  } catch (error) {
-    if (error.name === "AbortError" || productUploadQueue !== queue) return;
-    setProductUploadStatus("Upload multiplo non riuscito.");
-    setProductMessage(error.message, "error");
-    resetProductUploadState();
-    return;
+async function editProductImageEntry(entry) {
+  if (!entry) return;
+  selectedProductImageKey = entry.key;
+  renderProductPreviews();
+  let sourceFile = entry.originalFile;
+  if (!sourceFile) {
+    const sourceUrl = productImageUrl(entry.originalImage || entry.image);
+    if (!sourceUrl) throw new Error("Immagine originale non disponibile.");
+    setProductUploadStatus("Apertura immagine selezionata...");
+    const response = await fetch(sourceUrl);
+    if (!response.ok) throw new Error("Impossibile aprire questa immagine.");
+    const blob = await response.blob();
+    const filename = sourceUrl.split("/").pop()?.split("?")[0] || "prodotto.jpg";
+    sourceFile = new File([blob], filename, { type: blob.type || "image/jpeg" });
   }
+  openProductCropper(sourceFile, {
+    type: "gallery",
+    productId: productForm?.elements.id.value || "",
+    entryKey: entry.key,
+  });
+}
 
-  const cropped = queue.prepared.filter((item) => item.variant === "cropped").length;
-  const originals = queue.prepared.length - cropped;
-  setProductUploadStatus(`${queue.files.length} foto collegate: ${originals} originali, ${cropped} ritagliate.`);
-  setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
-  resetProductUploadState();
+function addProductImageFiles(files) {
+  const remaining = Math.max(0, maximumProductImages - productImageEntries.length);
+  const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size > 0 && file.size <= maximumProductImageBytes);
+  const accepted = validFiles.slice(0, remaining);
+  if (!accepted.length) {
+    throw new Error(remaining ? "Usa immagini JPG, PNG o WebP fino a 20 MB ciascuna." : `La galleria contiene gia ${maximumProductImages} foto.`);
+  }
+  const newEntries = accepted.map((file) => ({
+    key: nextProductImageKey(),
+    image: "",
+    originalImage: "",
+    variant: "original",
+    pendingImage: { blob: file, name: file.name },
+    originalFile: file,
+    previewUrl: URL.createObjectURL(file),
+  }));
+  productImageEntries.push(...newEntries);
+  selectedProductImageKey = newEntries[0].key;
+  syncProductImageFields();
+  renderProductPreviews();
+  const skipped = files.length - accepted.length;
+  setProductUploadStatus(`${accepted.length} foto aggiunte${skipped ? `, ${skipped} non aggiunte per formato, dimensione o limite` : ""}.`);
+  setProductMessage("Galleria pronta da ordinare e modificare.", "success");
 }
 
 function deviceLine(session) {
@@ -848,10 +976,7 @@ function fillProductForm(product) {
   productForm.elements.sizeType.value = product.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
-  productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
-  productForm.elements.originalImages.value = Array.isArray(product.originalImages) ? product.originalImages.join("\n") : "";
-  productForm.elements.imageVariant.value = product.imageVariant || "original";
-  renderProductPreviews(product.images || []);
+  setProductImageEntries(product.images || [], product.originalImages || product.images || [], product.imageVariant || "original");
   setProductMessage("");
   renderAdminProducts();
 }
@@ -870,10 +995,7 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.sizeType.value = suggestion.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
   productForm.elements.inventory.value = "";
-  productForm.elements.images.value = Array.isArray(suggestion.images) ? suggestion.images.join("\n") : "";
-  productForm.elements.originalImages.value = Array.isArray(suggestion.originalImages) ? suggestion.originalImages.join("\n") : "";
-  productForm.elements.imageVariant.value = suggestion.imageVariant || "original";
-  renderProductPreviews(suggestion.images || []);
+  setProductImageEntries(suggestion.images || [], suggestion.originalImages || suggestion.images || [], suggestion.imageVariant || "original");
   renderAdminProducts();
 }
 
@@ -1253,7 +1375,46 @@ document.addEventListener("click", (event) => {
 
 productSearch?.addEventListener("input", renderAdminProducts);
 
-productForm?.elements.images?.addEventListener("input", () => {
+productPreviews?.addEventListener("click", async (event) => {
+  const item = event.target.closest("[data-product-image-key]");
+  if (!item) return;
+  const index = productImageEntries.findIndex((entry) => entry.key === item.dataset.productImageKey);
+  if (index === -1) return;
+  const entry = productImageEntries[index];
+  selectedProductImageKey = entry.key;
+
+  if (event.target.closest("[data-product-image-remove]")) {
+    revokeProductImagePreview(entry);
+    productImageEntries.splice(index, 1);
+    selectedProductImageKey = productImageEntries[Math.min(index, productImageEntries.length - 1)]?.key || "";
+    syncProductImageFields();
+    renderProductPreviews();
+    setProductUploadStatus("Foto rimossa dalla galleria. Salva il prodotto per confermare.");
+    return;
+  }
+
+  const moveButton = event.target.closest("[data-product-image-move]");
+  if (moveButton) {
+    const nextIndex = moveButton.dataset.productImageMove === "left" ? index - 1 : index + 1;
+    if (nextIndex >= 0 && nextIndex < productImageEntries.length) {
+      [productImageEntries[index], productImageEntries[nextIndex]] = [productImageEntries[nextIndex], productImageEntries[index]];
+      syncProductImageFields();
+      renderProductPreviews();
+      setProductUploadStatus("Ordine aggiornato. La prima foto sara la copertina.");
+    }
+    return;
+  }
+
+  if (event.target.closest("[data-product-image-edit]")) {
+    try {
+      await editProductImageEntry(entry);
+    } catch (error) {
+      setProductUploadStatus(error.message);
+      setProductMessage(error.message, "error");
+    }
+    return;
+  }
+
   renderProductPreviews();
 });
 
@@ -1396,16 +1557,19 @@ productCropOriginal?.addEventListener("click", async () => {
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProductMessage("Salvataggio in corso...");
-  const payload = Object.fromEntries(new FormData(productForm));
-  payload.images = String(payload.images || "")
-    .split(/\r?\n/)
-    .map((image) => image.trim())
-    .filter(Boolean);
-  payload.originalImages = String(payload.originalImages || "")
-    .split(/\r?\n/)
-    .map((image) => image.trim())
-    .filter(Boolean);
+  const productId = productForm.elements.id.value;
   try {
+    if (productImageEntries.some((entry) => entry.pendingImage)) {
+      if (!productId) throw new Error("Salva prima il prodotto, poi aggiungi le immagini.");
+      await uploadPendingProductImages(productId);
+    }
+    syncProductImageFields();
+    const payload = Object.fromEntries(new FormData(productForm));
+    payload.images = productImageEntries.map((entry) => entry.image).filter(Boolean);
+    payload.originalImages = productImageEntries
+      .filter((entry) => entry.image)
+      .map((entry) => entry.originalImage || entry.image);
+    payload.imageVariant = productImageEntries[0]?.variant || "original";
     const data = await api("/api/admin/products", {
       method: "POST",
       body: JSON.stringify(payload),
@@ -1414,9 +1578,12 @@ productForm?.addEventListener("submit", async (event) => {
     await loadProducts();
     const product = adminProducts.find((entry) => entry.id === selectedProductId);
     if (product) fillProductForm(product);
+    setProductUploadStatus(`${productImageEntries.length} foto salvate nell'ordine mostrato.`);
     setProductMessage("Prodotto salvato.", "success");
   } catch (error) {
-    setProductMessage(error.message, "error");
+    if (error.name !== "AbortError") setProductMessage(error.message, "error");
+  } finally {
+    resetProductUploadState();
   }
 });
 
@@ -1456,24 +1623,13 @@ productImageUpload?.addEventListener("change", () => {
   const files = [...(productImageUpload.files || [])];
   const productId = productForm?.elements.id.value;
   if (!productId || files.length === 0) return;
-  if (files.length > 8) {
-    setProductUploadStatus("Puoi caricare al massimo 8 foto per volta.");
-    setProductMessage("Seleziona non piu di 8 foto.", "error");
-    productImageUpload.value = "";
-    return;
-  }
-
-  setProductMessage("");
-  productUploadController?.abort();
-  productUploadController = new AbortController();
-  productUploadQueue = { files, productId, index: 0, prepared: [] };
-  setProductUploadActive(true);
   try {
-    openNextProductCrop();
+    addProductImageFiles(files);
   } catch (error) {
-    resetProductUploadState();
-    setProductUploadStatus("Ritaglio non disponibile.");
+    setProductUploadStatus(error.message);
     setProductMessage(error.message, "error");
+  } finally {
+    productImageUpload.value = "";
   }
 });
 

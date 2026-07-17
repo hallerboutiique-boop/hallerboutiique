@@ -623,7 +623,7 @@ function cleanProductImages(images) {
     .map((image) => cleanTrackingString(image, 260))
     .filter(Boolean)
     .filter((image) => image.startsWith("assets/") || image.startsWith("/") || /^https?:\/\//i.test(image))
-    .slice(0, 8);
+    .slice(0, 40);
 }
 
 function cleanProductSizes(sizes) {
@@ -1552,7 +1552,7 @@ async function handleAdminProductImages(req, res) {
   const sourceSaved = saved.map((image, savedIndex) => originalSavedByIndex.get(savedInputIndexes[savedIndex]) || image);
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
-    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 8);
+    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 40);
   };
 
   let product;
@@ -1583,7 +1583,7 @@ async function handleAdminProductImages(req, res) {
   }
   await writeProductOverrides(overrides);
 
-  json(res, 200, { ok: true, images: saved, product });
+  json(res, 200, { ok: true, images: saved, originalImages: sourceSaved, product });
 }
 
 async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
