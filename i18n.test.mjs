@@ -41,7 +41,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=bundle-failure-fix-1/);
+  assert.match(checkout, /script\.js\?v=product-image-choice-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -114,13 +114,29 @@ test("bundle try-on sends untouched customer and product image files separately"
   assert.match(script, /setBundleTryOnResult\(`<p>\$\{escapeHtml\(message\)\}<\/p>`\)/);
 });
 
-test("product images keep their full composition", async () => {
-  const [styles, admin] = await Promise.all([readFile("styles.css", "utf8"), readFile("admin.js", "utf8")]);
+test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
+  const [styles, admin, adminHtml, server, script] = await Promise.all([
+    readFile("styles.css", "utf8"),
+    readFile("admin.js", "utf8"),
+    readFile("admin.html", "utf8"),
+    readFile("server.js", "utf8"),
+    readFile("script.js", "utf8"),
+  ]);
   assert.match(styles, /\.product-image\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.match(styles, /\.catalog-search-preview img[\s\S]*?object-fit:\s*contain/);
-  assert.match(admin, /async function uploadProductImageFiles\(files, productId\)/);
+  assert.match(adminHtml, /data-product-crop-original>Usa originale/);
+  assert.match(adminHtml, /data-product-crop-preview-image/);
+  assert.match(adminHtml, /data-product-crop-preview-mode="original">Originale/);
+  assert.match(adminHtml, /data-product-crop-preview-mode="cropped">Ritagliata/);
+  assert.match(admin, /productUploadQueue = \{ files, productId, index: 0, variants: \[\] \}/);
+  assert.match(admin, /openNextProductCrop\(\)/);
+  assert.match(admin, /handleSelectedProductImage\(croppedImage, source, "cropped"\)/);
+  assert.match(admin, /handleSelectedProductImage\(\{ blob: originalFile, name: originalFile\.name \}, source, "original"\)/);
   assert.match(admin, /formData\.append\("images", file, filename\)/);
-  assert.match(admin, /uploadProductImageFiles\(files, productId\)/);
+  assert.match(admin, /formData\.append\("originalImage", originalFile/);
+  assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
+  assert.match(script, /function productPrimaryTryOnImage\(product\)/);
+  assert.match(script, /tryOnImage: productPrimaryTryOnImage\(product\)/);
 });
 
 test("checkout renders product images from the cart", async () => {

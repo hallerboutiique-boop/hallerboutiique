@@ -1214,6 +1214,10 @@ function applyProductOverride(product) {
     sizes: Array.isArray(override.sizes) ? override.sizes : product.sizes || [],
     isLastAvailable: Boolean(override.isLastAvailable),
     images: Array.isArray(override.images) ? override.images : product.images || [],
+    originalImages: Array.isArray(override.originalImages)
+      ? override.originalImages
+      : Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    imageVariant: override.imageVariant || product.imageVariant || "original",
   };
 }
 
@@ -1234,6 +1238,8 @@ function normalizeCustomProduct(product) {
     sizes: Array.isArray(product.sizes) ? product.sizes : [],
     isLastAvailable: Boolean(product.isLastAvailable),
     images: Array.isArray(product.images) ? product.images : [],
+    originalImages: Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    imageVariant: product.imageVariant || "original",
   };
 }
 
@@ -1282,6 +1288,11 @@ function productPrimaryImage(product) {
     ? product.images
     : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
   return gallery[0] || "";
+}
+
+function productPrimaryTryOnImage(product) {
+  const originals = Array.isArray(product.originalImages) ? product.originalImages : [];
+  return originals[0] || productPrimaryImage(product);
 }
 
 function createTryOnMarkup(product) {
@@ -1366,6 +1377,7 @@ function saveCheckoutItem(productId, size = "") {
     sizeType: product.sizeType,
     size,
     image: productPrimaryImage(product),
+    tryOnImage: productPrimaryTryOnImage(product),
     savedAt: new Date().toISOString(),
   };
 
@@ -2064,7 +2076,7 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const referenceImage = await createTryOnReference(file, productPrimaryImage(tryOnProduct), tryOnProduct.name);
+    const referenceImage = await createTryOnReference(file, productPrimaryTryOnImage(tryOnProduct), tryOnProduct.name);
     const formData = new FormData();
     formData.append("userImage", referenceImage, "try-on-reference.png");
     if (saveConsent?.checked) {
@@ -2115,6 +2127,7 @@ function getBundleTryOnItems() {
         category: product?.category || item.category || "fashion",
         sizeType: product?.sizeType || item.sizeType || "none",
         image: product ? productPrimaryImage(product) : item.image || "",
+        tryOnImage: product ? productPrimaryTryOnImage(product) : item.tryOnImage || item.image || "",
       };
     })
     .filter((item) => {
@@ -2210,13 +2223,14 @@ function bundleTryOnImageFilename(src, index, extension) {
 }
 
 async function loadOriginalBundleProductImage(item, index) {
-  if (!item.image) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
-  const response = await fetch(withProductImageVersion(item.image), { credentials: "same-origin" });
+  const sourceImage = item.tryOnImage || item.image;
+  if (!sourceImage) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
+  const response = await fetch(withProductImageVersion(sourceImage), { credentials: "same-origin" });
   if (!response.ok) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
 
   const blob = await response.blob();
   const responseType = String(blob.type || response.headers.get("content-type") || "").split(";")[0].toLowerCase();
-  const sourceExtension = String(item.image).match(/\.(jpe?g|png|webp)(?:[?#]|$)/i)?.[1]?.toLowerCase();
+  const sourceExtension = String(sourceImage).match(/\.(jpe?g|png|webp)(?:[?#]|$)/i)?.[1]?.toLowerCase();
   const extension = bundleTryOnImageExtensions[responseType] || (sourceExtension === "jpeg" ? "jpg" : sourceExtension);
   if (!extension || blob.size === 0) throw new Error(`${translate("tryon-image-missing")} ${item.name}`);
 
@@ -2225,7 +2239,7 @@ async function loadOriginalBundleProductImage(item, index) {
     : extension === "jpg" ? "image/jpeg" : `image/${extension}`;
   return {
     blob: blob.type === mime ? blob : blob.slice(0, blob.size, mime),
-    filename: bundleTryOnImageFilename(item.image, index, extension),
+    filename: bundleTryOnImageFilename(sourceImage, index, extension),
   };
 }
 

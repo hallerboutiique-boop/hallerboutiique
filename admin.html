@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=product-images-full-1">
+    <link rel="stylesheet" href="styles.css?v=product-image-choice-1">
   </head>
   <body>
     <header class="site-header">
@@ -180,6 +180,8 @@
                 <h2>Modifica prodotto</h2>
                 <form class="product-editor-form" data-product-form>
                   <input type="hidden" name="id">
+                  <input type="hidden" name="originalImages">
+                  <input type="hidden" name="imageVariant">
                   <label>
                     <span>Titolo</span>
                     <input name="name" placeholder="Nome prodotto" required>
@@ -229,7 +231,7 @@
                     <textarea name="images" rows="5" placeholder="assets/products/foto-1.png&#10;https://..."></textarea>
                   </label>
                   <div class="product-upload-box">
-                    <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" multiple data-product-image-upload>
+                    <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" multiple data-product-image-upload>
                     <button type="button" data-product-image-button>
                       <i data-lucide="image-plus"></i>
                       <span>Carica foto dal Finder</span>
@@ -323,6 +325,10 @@
           </section>
           <section class="product-crop-storefront" aria-label="Anteprima scheda prodotto">
             <p>Anteprima sul sito</p>
+            <div class="product-crop-preview-modes" role="group" aria-label="Versione immagine in anteprima">
+              <button type="button" data-product-crop-preview-mode="original">Originale</button>
+              <button type="button" class="is-active" data-product-crop-preview-mode="cropped">Ritagliata</button>
+            </div>
             <article class="product-card product-crop-site-card">
               <div class="product-media" data-product-crop-preview-media>
                 <span class="discount-badge">NUOVO</span>
@@ -340,6 +346,7 @@
         </div>
         <div class="product-crop-actions">
           <button type="button" class="product-crop-secondary" data-product-crop-cancel>Annulla</button>
+          <button type="button" class="product-crop-original" data-product-crop-original>Usa originale</button>
           <button type="button" data-product-crop-confirm>Applica ritaglio</button>
         </div>
       </dialog>
@@ -351,6 +358,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="admin.js?v=product-images-full-1"></script>
+    <script src="admin.js?v=product-image-choice-1"></script>
   </body>
 </html>

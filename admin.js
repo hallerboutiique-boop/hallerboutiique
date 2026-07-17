@@ -27,7 +27,9 @@ const productCropImage = document.querySelector("[data-product-crop-image]");
 const productCropPreviewMedia = document.querySelector("[data-product-crop-preview-media]");
 const productCropPreviewImage = document.querySelector("[data-product-crop-preview-image]");
 const productCropPreviewName = document.querySelector("[data-product-crop-preview-name]");
+const productCropPreviewModes = document.querySelectorAll("[data-product-crop-preview-mode]");
 const productCropZoom = document.querySelector("[data-product-crop-zoom]");
+const productCropOriginal = document.querySelector("[data-product-crop-original]");
 const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
 let adminProducts = [];
@@ -246,7 +248,19 @@ function updateCropPreview() {
 
   applyPosition(productCropImage, stageBounds);
   const previewBounds = productCropPreviewMedia.getBoundingClientRect();
-  if (previewBounds.width && previewBounds.height) applyPosition(productCropPreviewImage, previewBounds);
+  if (!previewBounds.width || !previewBounds.height) return;
+  if (cropState.previewMode === "original") {
+    productCropPreviewImage.style.inset = "0";
+    productCropPreviewImage.style.width = "100%";
+    productCropPreviewImage.style.height = "100%";
+    productCropPreviewImage.style.objectFit = "contain";
+    productCropPreviewImage.style.transform = "none";
+  } else {
+    productCropPreviewImage.style.inset = "auto";
+    productCropPreviewImage.style.height = "auto";
+    productCropPreviewImage.style.objectFit = "initial";
+    applyPosition(productCropPreviewImage, previewBounds);
+  }
 }
 
 function closeProductCropper() {
@@ -293,10 +307,16 @@ function openProductCropper(file, source) {
     zoom: 1,
     offsetX: 0,
     offsetY: 0,
+    previewMode: "cropped",
     stageWidth: 0,
     stageHeight: 0,
   };
   productCropZoom.value = "1";
+  productCropPreviewModes.forEach((button) => button.classList.toggle("is-active", button.dataset.productCropPreviewMode === "cropped"));
+  if (productCropOriginal) {
+    productCropOriginal.textContent = source.type === "ai" ? "Usa originale e crea bozza" : "Usa originale";
+    productCropOriginal.disabled = true;
+  }
   productCropConfirm.textContent = source.type === "ai" ? "Ritaglia e crea bozza" : "Applica ritaglio e carica";
   productCropConfirm.disabled = true;
   refreshCropStorefrontCopy(source);
@@ -345,12 +365,17 @@ function createCroppedProductImage() {
   });
 }
 
-async function uploadProductImage(image, productId, position, total) {
+async function uploadProductImage(image, productId, position, total, { originalFile, variant = "original" } = {}) {
   const file = image?.blob || image;
   const filename = image?.name || "prodotto.jpg";
   const formData = new FormData();
   formData.append("productId", productId);
   formData.append("images", file, filename);
+  formData.append("imageVariant", variant);
+  formData.append("makePrimary", position === 1 ? "yes" : "no");
+  if (variant === "cropped" && originalFile) {
+    formData.append("originalImage", originalFile, originalFile.name || "prodotto-originale.jpg");
+  }
   setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
   setProductMessage("");
   const data = await uploadApi("/api/admin/product-images", formData);
@@ -362,25 +387,13 @@ async function uploadProductImage(image, productId, position, total) {
   if (product) fillProductForm(product);
 }
 
-async function uploadProductImageFiles(files, productId) {
-  try {
-    for (const [index, file] of files.entries()) {
-      await uploadProductImage(file, productId, index + 1, files.length);
-    }
-    setProductUploadStatus(`${files.length} foto intere collegate al prodotto.`);
-    setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
-  } catch (error) {
-    setProductUploadStatus("Upload non riuscito.");
-    setProductMessage(error.message, "error");
-  } finally {
-    if (productImageButton) productImageButton.disabled = false;
-    if (productImageUpload) productImageUpload.value = "";
-  }
-}
-
-async function createAiProductFromImage(image) {
+async function createAiProductFromImage(image, { originalFile, variant = "original" } = {}) {
   const formData = new FormData();
   formData.append("image", image.blob, image.name);
+  formData.append("imageVariant", variant);
+  if (variant === "cropped" && originalFile) {
+    formData.append("sourceImage", originalFile, originalFile.name || "prodotto-originale.jpg");
+  }
   aiProductButton.disabled = true;
   setAiProductProgress(4, "Invio foto al server");
   setAiProductStatus("Invio foto al server...");
@@ -393,6 +406,8 @@ async function createAiProductFromImage(image) {
     const suggestion = {
       ...(data.suggestion || {}),
       images: data.suggestion?.images || (data.image ? [data.image] : []),
+      originalImages: data.suggestion?.originalImages || (data.originalImage ? [data.originalImage] : []),
+      imageVariant: data.suggestion?.imageVariant || variant,
     };
     fillAiProductDraft(suggestion);
     setAiProductProgress(100, "Bozza prodotto pronta", "success");
@@ -413,20 +428,24 @@ function openNextProductCrop() {
   const { files, index, productId } = productUploadQueue;
   const file = files[index];
   if (!file) return;
-  setProductUploadStatus(`Ritaglia foto ${index + 1} di ${files.length}.`);
+  setProductUploadStatus(`Scegli originale o ritaglio per la foto ${index + 1} di ${files.length}.`);
   openProductCropper(file, { type: "manual", productId });
 }
 
-async function handleCroppedProductImage(image, source) {
+async function handleSelectedProductImage(image, source, variant) {
   if (source.type === "ai") {
-    await createAiProductFromImage(image);
+    await createAiProductFromImage(image, { originalFile: cropState?.file || source.originalFile, variant });
     return;
   }
 
   const queue = productUploadQueue;
   if (!queue) return;
   try {
-    await uploadProductImage(image, source.productId, queue.index + 1, queue.files.length);
+    await uploadProductImage(image, source.productId, queue.index + 1, queue.files.length, {
+      originalFile: source.originalFile,
+      variant,
+    });
+    queue.variants.push(variant);
   } catch (error) {
     setProductUploadStatus("Upload non riuscito.");
     setProductMessage(error.message, "error");
@@ -441,7 +460,9 @@ async function handleCroppedProductImage(image, source) {
     openNextProductCrop();
     return;
   }
-  setProductUploadStatus(`${queue.files.length} foto ritagliate e collegate al prodotto.`);
+  const cropped = queue.variants.filter((item) => item === "cropped").length;
+  const originals = queue.variants.length - cropped;
+  setProductUploadStatus(`${queue.files.length} foto collegate: ${originals} originali, ${cropped} ritagliate.`);
   setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
   productUploadQueue = null;
   productImageButton.disabled = false;
@@ -769,6 +790,8 @@ function fillProductForm(product) {
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.images.value = Array.isArray(product.images) ? product.images.join("\n") : "";
+  productForm.elements.originalImages.value = Array.isArray(product.originalImages) ? product.originalImages.join("\n") : "";
+  productForm.elements.imageVariant.value = product.imageVariant || "original";
   renderProductPreviews(product.images || []);
   setProductMessage("");
   renderAdminProducts();
@@ -789,6 +812,8 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
   productForm.elements.inventory.value = "";
   productForm.elements.images.value = Array.isArray(suggestion.images) ? suggestion.images.join("\n") : "";
+  productForm.elements.originalImages.value = Array.isArray(suggestion.originalImages) ? suggestion.originalImages.join("\n") : "";
+  productForm.elements.imageVariant.value = suggestion.imageVariant || "original";
   renderProductPreviews(suggestion.images || []);
   renderAdminProducts();
 }
@@ -1177,6 +1202,7 @@ productCropImage?.addEventListener("load", () => {
   if (!cropState) return;
   cropState.sourceWidth = productCropImage.naturalWidth;
   cropState.sourceHeight = productCropImage.naturalHeight;
+  if (productCropOriginal) productCropOriginal.disabled = false;
   if (productCropConfirm) productCropConfirm.disabled = false;
   window.requestAnimationFrame(updateCropPreview);
 });
@@ -1193,6 +1219,15 @@ productCropZoom?.addEventListener("input", () => {
   if (!cropState) return;
   cropState.zoom = Number(productCropZoom.value) || 1;
   updateCropPreview();
+});
+
+productCropPreviewModes.forEach((button) => {
+  button.addEventListener("click", () => {
+    if (!cropState) return;
+    cropState.previewMode = button.dataset.productCropPreviewMode === "original" ? "original" : "cropped";
+    productCropPreviewModes.forEach((option) => option.classList.toggle("is-active", option === button));
+    updateCropPreview();
+  });
 });
 
 productCropStage?.addEventListener("pointerdown", (event) => {
@@ -1239,16 +1274,33 @@ productCropDialog?.addEventListener("cancel", (event) => {
 
 productCropConfirm?.addEventListener("click", async () => {
   if (!cropState) return;
+  if (productCropOriginal) productCropOriginal.disabled = true;
   productCropConfirm.disabled = true;
-  const source = cropState.source;
+  const source = { ...cropState.source, originalFile: cropState.file };
   try {
     const croppedImage = await createCroppedProductImage();
     closeProductCropper();
-    await handleCroppedProductImage(croppedImage, source);
+    await handleSelectedProductImage(croppedImage, source, "cropped");
   } catch (error) {
     if (source.type === "ai") setAiProductStatus(error.message, "error");
     else setProductUploadStatus(error.message);
+    if (productCropOriginal) productCropOriginal.disabled = false;
     productCropConfirm.disabled = false;
+  }
+});
+
+productCropOriginal?.addEventListener("click", async () => {
+  if (!cropState) return;
+  productCropOriginal.disabled = true;
+  if (productCropConfirm) productCropConfirm.disabled = true;
+  const originalFile = cropState.file;
+  const source = { ...cropState.source, originalFile };
+  try {
+    closeProductCropper();
+    await handleSelectedProductImage({ blob: originalFile, name: originalFile.name }, source, "original");
+  } catch (error) {
+    if (source.type === "ai") setAiProductStatus(error.message, "error");
+    else setProductUploadStatus(error.message);
   }
 });
 
@@ -1257,6 +1309,10 @@ productForm?.addEventListener("submit", async (event) => {
   setProductMessage("Salvataggio in corso...");
   const payload = Object.fromEntries(new FormData(productForm));
   payload.images = String(payload.images || "")
+    .split(/\r?\n/)
+    .map((image) => image.trim())
+    .filter(Boolean);
+  payload.originalImages = String(payload.originalImages || "")
     .split(/\r?\n/)
     .map((image) => image.trim())
     .filter(Boolean);
@@ -1309,8 +1365,17 @@ productImageUpload?.addEventListener("change", () => {
   if (!productId || files.length === 0) return;
 
   setProductMessage("");
+  productUploadQueue = { files, productId, index: 0, variants: [] };
   productImageButton.disabled = true;
-  uploadProductImageFiles(files, productId);
+  try {
+    openNextProductCrop();
+  } catch (error) {
+    productUploadQueue = null;
+    productImageButton.disabled = false;
+    setProductUploadStatus("Ritaglio non disponibile.");
+    setProductMessage(error.message, "error");
+    productImageUpload.value = "";
+  }
 });
 
 aiProductButton?.addEventListener("click", () => {
@@ -1320,7 +1385,12 @@ aiProductButton?.addEventListener("click", () => {
 aiProductImage?.addEventListener("change", () => {
   const file = aiProductImage.files?.[0];
   if (!file) return;
-  createAiProductFromImage({ blob: file, name: file.name });
+  try {
+    openProductCropper(file, { type: "ai" });
+  } catch (error) {
+    setAiProductStatus(error.message, "error");
+    aiProductImage.value = "";
+  }
 });
 
 document.querySelectorAll("[data-admin-tab]").forEach((tab) => {

@@ -610,6 +610,9 @@ function mergeProduct(product, overrides) {
     baseName: product.name,
     custom: false,
     images: Array.isArray(override.images) ? override.images : product.images,
+    originalImages: Array.isArray(override.originalImages)
+      ? override.originalImages
+      : Array.isArray(product.originalImages) ? product.originalImages : product.images,
   };
 }
 
@@ -635,6 +638,7 @@ function cleanProductInventory(inventory) {
 
 function cleanProductPatch(body) {
   const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
+  const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
   return {
     name: cleanTrackingString(body.name, 180) || "Prodotto",
     description: cleanTrackingString(body.description, 700),
@@ -647,6 +651,8 @@ function cleanProductPatch(body) {
     sizes: cleanProductSizes(body.sizes),
     inventory: cleanProductInventory(body.inventory),
     images: cleanProductImages(body.images),
+    originalImages: cleanProductImages(body.originalImages),
+    imageVariant,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -1488,7 +1494,7 @@ async function handleAdminProductImages(req, res) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req, 10 * 1024 * 1024), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 35 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
@@ -1503,13 +1509,31 @@ async function handleAdminProductImages(req, res) {
   const saved = [];
   for (const part of parts.filter((entry) => entry.name === "images" && entry.filename)) {
     const ext = imageExtension(part.filename, part.contentType);
-    if (!ext || part.data.length === 0) continue;
+    if (!ext || ext === ".svg" || part.data.length === 0) continue;
     const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
     await fs.writeFile(path.join(uploadsDir, name), part.data);
     saved.push(`/uploads/${name}`);
   }
 
+  const originalSaved = [];
+  const originalPart = parts.find((entry) => entry.name === "originalImage" && entry.filename);
+  if (originalPart) {
+    const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
+    if (!originalExt || originalExt === ".svg" || originalPart.data.length === 0) return badRequest(res, "Foto originale non valida.");
+    const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
+    await fs.writeFile(path.join(uploadsDir, originalName), originalPart.data);
+    originalSaved.push(`/uploads/${originalName}`);
+  }
+
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
+
+  const makePrimary = fieldValue(parts, "makePrimary", 8) === "yes";
+  const imageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
+  const sourceSaved = originalSaved.length ? originalSaved : saved;
+  const mergeUploadedImages = (current, incoming) => {
+    const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
+    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 8);
+  };
 
   let product;
   if (base) {
@@ -1519,7 +1543,9 @@ async function handleAdminProductImages(req, res) {
       ...existing,
       id: undefined,
       baseName: undefined,
-      images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
+      images: mergeUploadedImages(existing.images, saved),
+      originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      imageVariant: makePrimary ? imageVariant : existing.imageVariant || "original",
       updatedAt: new Date().toISOString(),
     };
     delete overrides.items[productId].id;
@@ -1529,7 +1555,9 @@ async function handleAdminProductImages(req, res) {
     const existing = overrides.custom[customIndex];
     overrides.custom[customIndex] = cleanCustomProduct({
       ...existing,
-      images: [...cleanProductImages(existing.images), ...saved].slice(0, 8),
+      images: mergeUploadedImages(existing.images, saved),
+      originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      imageVariant: makePrimary ? imageVariant : existing.imageVariant || "original",
     });
     product = mergeCustomProduct(overrides.custom[customIndex]);
   }
@@ -1554,7 +1582,7 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req, 10 * 1024 * 1024), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 35 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
@@ -1563,6 +1591,12 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   if (!image || image.data.length === 0) return badRequest(res, "Carica una immagine prodotto.");
   const ext = imageExtension(image.filename, image.contentType);
   if (!ext || ext === ".svg") return badRequest(res, "Formato immagine non supportato per AI. Usa JPG, PNG o WebP.");
+  const sourceImage = parts.find((part) => part.name === "sourceImage" && part.filename) || image;
+  const sourceExt = imageExtension(sourceImage.filename, sourceImage.contentType);
+  if (!sourceExt || sourceExt === ".svg" || sourceImage.data.length === 0) {
+    return badRequest(res, "Foto originale non valida. Usa JPG, PNG o WebP.");
+  }
+  const imageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
 
   const progress = streamProgress ? createProgressStream(res) : null;
   progress?.update(24, "Foto ricevuta");
@@ -1570,16 +1604,26 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   const name = `ai-product-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
   await fs.writeFile(path.join(uploadsDir, name), image.data);
   const imageUrl = `/uploads/${name}`;
-  const mime = image.contentType || (ext === ".png" ? "image/png" : ext === ".webp" ? "image/webp" : "image/jpeg");
-  const dataUrl = `data:${mime};base64,${image.data.toString("base64")}`;
+  let originalImageUrl = imageUrl;
+  if (sourceImage !== image) {
+    const originalName = `ai-product-original-${Date.now()}-${randomBytes(4).toString("hex")}${sourceExt}`;
+    await fs.writeFile(path.join(uploadsDir, originalName), sourceImage.data);
+    originalImageUrl = `/uploads/${originalName}`;
+  }
+  const sourceMime = sourceImage.contentType || (sourceExt === ".png" ? "image/png" : sourceExt === ".webp" ? "image/webp" : "image/jpeg");
+  const dataUrl = `data:${sourceMime};base64,${sourceImage.data.toString("base64")}`;
   progress?.update(42, "Foto preparata");
 
   try {
     progress?.update(58, "Ricerca e descrizione AI in corso");
     const rawSuggestion = await analyzeProductImageWithAi(dataUrl);
     progress?.update(90, "Dati prodotto ricevuti");
-    const suggestion = cleanAiSuggestion(rawSuggestion, imageUrl);
-    const result = { ok: true, image: imageUrl, suggestion };
+    const suggestion = {
+      ...cleanAiSuggestion(rawSuggestion, imageUrl),
+      originalImages: [originalImageUrl],
+      imageVariant,
+    };
+    const result = { ok: true, image: imageUrl, originalImage: originalImageUrl, suggestion };
     if (progress) return progress.done(result);
     json(res, 200, result);
   } catch (error) {
