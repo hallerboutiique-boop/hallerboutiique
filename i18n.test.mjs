@@ -103,6 +103,9 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /const catalogCategoryOrder =/);
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /function selectProductGallerySlide\(control\)/);
+  assert.match(script, /function stepProductGallery\(gallery, direction\)/);
+  assert.match(script, /event\.clientX < galleryBounds\.left \+ galleryBounds\.width \/ 2 \? -1 : 1/);
+  assert.match(script, /data-gallery-click/);
   assert.match(script, /data-gallery-index="\$\{index\}"/);
   assert.doesNotMatch(script, /data-product-gallery-prev/);
   assert.doesNotMatch(script, /data-product-gallery-next/);
@@ -171,7 +174,8 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(adminHtml, /data-product-upload-cancel/);
   assert.match(adminHtml, /data-lucide="circle-stop"/);
   assert.match(styles, /\.product-crop-stage\s*\{[\s\S]*?aspect-ratio:\s*10 \/ 11/);
-  assert.match(admin, /productUploadQueue = \{ files, productId, index: 0, variants: \[\] \}/);
+  assert.match(adminHtml, /Carica pi&ugrave; foto dal Finder/);
+  assert.match(admin, /productUploadQueue = \{ files, productId, index: 0, prepared: \[\] \}/);
   assert.match(admin, /productUploadController = new AbortController\(\)/);
   assert.match(admin, /productUploadController\?\.abort\(\)/);
   assert.match(admin, /signal: options\.signal/);
@@ -185,7 +189,13 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /const sourceCropWidth = Math\.min\([\s\S]*?const sourceCropHeight = Math\.min/);
   assert.match(admin, /sourceX,[\s\S]*?sourceY,[\s\S]*?sourceCropWidth,[\s\S]*?sourceCropHeight/);
   assert.match(admin, /formData\.append\("images", file, filename\)/);
-  assert.match(admin, /formData\.append\("originalImage", originalFile/);
+  assert.match(admin, /formData\.append\("originalImage", entry\.originalFile/);
+  assert.match(admin, /formData\.append\("imageVariants", JSON\.stringify\(imageVariants\)\)/);
+  assert.match(admin, /formData\.append\("originalImageIndexes", JSON\.stringify\(originalImageIndexes\)\)/);
+  assert.match(admin, /Caricamento simultaneo di \$\{entries\.length\} foto/);
+  assert.match(server, /readRequestBuffer\(req, 80 \* 1024 \* 1024\)/);
+  assert.match(server, /const originalSavedByIndex = new Map\(\)/);
+  assert.match(server, /sourceSaved = saved\.map/);
   assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
   assert.match(script, /function productPrimaryTryOnImage\(product\)/);
   assert.match(script, /tryOnImage: productPrimaryTryOnImage\(product\)/);

@@ -1326,6 +1326,7 @@ function createProductMediaMarkup(product, detail = false) {
       loading="${detail && index === 0 ? "eager" : "lazy"}"
       decoding="async"
       data-gallery-slide
+      ${gallery.length > 1 ? "data-gallery-click" : ""}
     >
   `).join("");
 
@@ -1674,18 +1675,28 @@ function renderCatalogSearchResults(query = "") {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function selectProductGallerySlide(control) {
-  const gallery = control.closest(".product-media, .product-detail-gallery");
-  if (!gallery) return;
+function setProductGalleryIndex(gallery, nextIndex) {
   const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
   if (slides.length < 2) return;
-  const nextIndex = Number.parseInt(control.dataset.galleryIndex, 10);
   if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= slides.length) return;
   slides.forEach((slide, index) => slide.classList.toggle("is-active", index === nextIndex));
   gallery.querySelectorAll("[data-gallery-dot]").forEach((dot, index) => {
     dot.classList.toggle("is-active", index === nextIndex);
     dot.setAttribute("aria-pressed", index === nextIndex ? "true" : "false");
   });
+}
+
+function selectProductGallerySlide(control) {
+  const gallery = control.closest(".product-media, .product-detail-gallery");
+  if (!gallery) return;
+  setProductGalleryIndex(gallery, Number.parseInt(control.dataset.galleryIndex, 10));
+}
+
+function stepProductGallery(gallery, direction) {
+  const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
+  if (slides.length < 2) return;
+  const currentIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
+  setProductGalleryIndex(gallery, (currentIndex + direction + slides.length) % slides.length);
 }
 
 function refreshScrollReveals(root = document) {
@@ -2929,12 +2940,24 @@ document.addEventListener("click", (event) => {
   const checkoutRemoveButton = event.target.closest("[data-checkout-remove-index]");
   const lastStockButton = event.target.closest("[data-last-stock-gender]");
   const galleryDot = event.target.closest("[data-gallery-dot]");
+  const gallerySurfaceClick = event.target.closest("[data-gallery-click], .product-media-open");
   const productCard = event.target.closest("[data-product-url]");
 
   if (galleryDot) {
     event.preventDefault();
     selectProductGallerySlide(galleryDot);
     return;
+  }
+
+  if (gallerySurfaceClick && event.detail !== 0) {
+    const gallery = gallerySurfaceClick.closest(".product-media, .product-detail-gallery");
+    if (gallery?.querySelectorAll("[data-gallery-slide]").length > 1) {
+      event.preventDefault();
+      const galleryBounds = gallery.getBoundingClientRect();
+      const direction = event.clientX < galleryBounds.left + galleryBounds.width / 2 ? -1 : 1;
+      stepProductGallery(gallery, direction);
+      return;
+    }
   }
 
   if (lastStockButton) {

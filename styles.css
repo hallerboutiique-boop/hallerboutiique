@@ -3190,6 +3190,10 @@ body.motion-enabled .product-card:hover {
   opacity: 1;
 }
 
+[data-gallery-click] {
+  cursor: pointer;
+}
+
 .product-media-open {
   position: absolute;
   inset: 0;

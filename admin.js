@@ -421,22 +421,28 @@ function createCroppedProductImage() {
   });
 }
 
-async function uploadProductImage(image, productId, position, total, { originalFile, variant = "original", signal } = {}) {
-  const file = image?.blob || image;
-  const filename = image?.name || "prodotto.jpg";
+async function uploadProductImages(entries, productId, { signal } = {}) {
   const formData = new FormData();
   formData.append("productId", productId);
-  formData.append("images", file, filename);
-  formData.append("imageVariant", variant);
-  formData.append("makePrimary", position === 1 ? "yes" : "no");
-  if (variant === "cropped" && originalFile) {
-    formData.append("originalImage", originalFile, originalFile.name || "prodotto-originale.jpg");
-  }
-  setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
+  formData.append("makePrimary", "yes");
+  const imageVariants = [];
+  const originalImageIndexes = [];
+  entries.forEach((entry, index) => {
+    const file = entry.image?.blob || entry.image;
+    const filename = entry.image?.name || `prodotto-${index + 1}.jpg`;
+    formData.append("images", file, filename);
+    imageVariants.push(entry.variant);
+    if (entry.variant === "cropped" && entry.originalFile) {
+      originalImageIndexes.push(index);
+      formData.append("originalImage", entry.originalFile, entry.originalFile.name || `prodotto-originale-${index + 1}.jpg`);
+    }
+  });
+  formData.append("imageVariants", JSON.stringify(imageVariants));
+  formData.append("originalImageIndexes", JSON.stringify(originalImageIndexes));
+  formData.append("imageVariant", imageVariants[0] || "original");
+  setProductUploadStatus(`Caricamento simultaneo di ${entries.length} foto...`);
   setProductMessage("");
   const data = await uploadApi("/api/admin/product-images", formData, { signal });
-  const current = currentProductImages();
-  productForm.elements.images.value = [...current, ...(data.images || [])].join("\n");
   selectedProductId = productId;
   await loadProducts();
   const product = adminProducts.find((entry) => entry.id === productId);
@@ -484,7 +490,7 @@ function openNextProductCrop() {
   const { files, index, productId } = productUploadQueue;
   const file = files[index];
   if (!file) return;
-  setProductUploadStatus(`Scegli originale o ritaglio per la foto ${index + 1} di ${files.length}.`);
+  setProductUploadStatus(`Prepara la foto ${index + 1} di ${files.length}: scegli originale o ritaglio.`);
   openProductCropper(file, { type: "manual", productId });
 }
 
@@ -496,29 +502,27 @@ async function handleSelectedProductImage(image, source, variant) {
 
   const queue = productUploadQueue;
   if (!queue) return;
-  try {
-    await uploadProductImage(image, source.productId, queue.index + 1, queue.files.length, {
-      originalFile: source.originalFile,
-      variant,
-      signal: productUploadController?.signal,
-    });
-    if (productUploadQueue !== queue) return;
-    queue.variants.push(variant);
-  } catch (error) {
-    if (error.name === "AbortError" || productUploadQueue !== queue) return;
-    setProductUploadStatus("Upload non riuscito.");
-    setProductMessage(error.message, "error");
-    resetProductUploadState();
-    return;
-  }
+  queue.prepared.push({ image, originalFile: source.originalFile, variant });
 
   queue.index += 1;
   if (queue.index < queue.files.length) {
     openNextProductCrop();
     return;
   }
-  const cropped = queue.variants.filter((item) => item === "cropped").length;
-  const originals = queue.variants.length - cropped;
+
+  try {
+    await uploadProductImages(queue.prepared, source.productId, { signal: productUploadController?.signal });
+    if (productUploadQueue !== queue) return;
+  } catch (error) {
+    if (error.name === "AbortError" || productUploadQueue !== queue) return;
+    setProductUploadStatus("Upload multiplo non riuscito.");
+    setProductMessage(error.message, "error");
+    resetProductUploadState();
+    return;
+  }
+
+  const cropped = queue.prepared.filter((item) => item.variant === "cropped").length;
+  const originals = queue.prepared.length - cropped;
   setProductUploadStatus(`${queue.files.length} foto collegate: ${originals} originali, ${cropped} ritagliate.`);
   setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
   resetProductUploadState();
@@ -1452,11 +1456,17 @@ productImageUpload?.addEventListener("change", () => {
   const files = [...(productImageUpload.files || [])];
   const productId = productForm?.elements.id.value;
   if (!productId || files.length === 0) return;
+  if (files.length > 8) {
+    setProductUploadStatus("Puoi caricare al massimo 8 foto per volta.");
+    setProductMessage("Seleziona non piu di 8 foto.", "error");
+    productImageUpload.value = "";
+    return;
+  }
 
   setProductMessage("");
   productUploadController?.abort();
   productUploadController = new AbortController();
-  productUploadQueue = { files, productId, index: 0, variants: [] };
+  productUploadQueue = { files, productId, index: 0, prepared: [] };
   setProductUploadActive(true);
   try {
     openNextProductCrop();

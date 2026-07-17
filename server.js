@@ -1495,7 +1495,7 @@ async function handleAdminProductImages(req, res) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req, 35 * 1024 * 1024), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 80 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
@@ -1507,30 +1507,49 @@ async function handleAdminProductImages(req, res) {
   if (!base && customIndex === -1) return badRequest(res, "Prodotto non valido.");
 
   await fs.mkdir(uploadsDir, { recursive: true });
+  const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 8);
   const saved = [];
-  for (const part of parts.filter((entry) => entry.name === "images" && entry.filename)) {
+  const savedInputIndexes = [];
+  for (const [inputIndex, part] of imageParts.entries()) {
     const ext = imageExtension(part.filename, part.contentType);
     if (!ext || ext === ".svg" || part.data.length === 0) continue;
     const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
     await fs.writeFile(path.join(uploadsDir, name), part.data);
     saved.push(`/uploads/${name}`);
+    savedInputIndexes.push(inputIndex);
   }
 
-  const originalSaved = [];
-  const originalPart = parts.find((entry) => entry.name === "originalImage" && entry.filename);
-  if (originalPart) {
+  let originalImageIndexes = [];
+  try {
+    const parsed = JSON.parse(fieldValue(parts, "originalImageIndexes", 120) || "[]");
+    if (Array.isArray(parsed)) originalImageIndexes = parsed.map(Number);
+  } catch {
+    originalImageIndexes = [];
+  }
+  const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 8);
+  const originalSavedByIndex = new Map();
+  for (const [partIndex, originalPart] of originalParts.entries()) {
     const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
     if (!originalExt || originalExt === ".svg" || originalPart.data.length === 0) return badRequest(res, "Foto originale non valida.");
     const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
     await fs.writeFile(path.join(uploadsDir, originalName), originalPart.data);
-    originalSaved.push(`/uploads/${originalName}`);
+    const targetIndex = Number.isInteger(originalImageIndexes[partIndex]) ? originalImageIndexes[partIndex] : partIndex;
+    if (targetIndex >= 0 && targetIndex < imageParts.length) originalSavedByIndex.set(targetIndex, `/uploads/${originalName}`);
   }
 
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
 
   const makePrimary = fieldValue(parts, "makePrimary", 8) === "yes";
-  const imageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
-  const sourceSaved = originalSaved.length ? originalSaved : saved;
+  let imageVariants = [];
+  try {
+    const parsed = JSON.parse(fieldValue(parts, "imageVariants", 180) || "[]");
+    if (Array.isArray(parsed)) imageVariants = parsed.map((variant) => variant === "cropped" ? "cropped" : "original");
+  } catch {
+    imageVariants = [];
+  }
+  const legacyImageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
+  const imageVariant = imageVariants[savedInputIndexes[0]] || legacyImageVariant;
+  const sourceSaved = saved.map((image, savedIndex) => originalSavedByIndex.get(savedInputIndexes[savedIndex]) || image);
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
     return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 8);
