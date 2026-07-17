@@ -45,6 +45,9 @@ let productUploadController = null;
 let productImageEntries = [];
 let selectedProductImageKey = "";
 let productImageKeySequence = 0;
+let productImageDrag = null;
+let suppressProductImageClickUntil = 0;
+let productImagePositionTimer = 0;
 const maximumProductImages = 40;
 const productUploadBatchSize = 8;
 const maximumProductImageBytes = 20 * 1024 * 1024;
@@ -256,6 +259,7 @@ function setProductImageEntries(images = [], originals = [], primaryVariant = "o
 
 function renderProductPreviews() {
   if (!productPreviews) return;
+  window.clearTimeout(productImagePositionTimer);
   if (productImageCount) productImageCount.textContent = `${productImageEntries.length} / ${maximumProductImages}`;
   if (!productImageEntries.length) {
     productPreviews.innerHTML = `<p class="admin-empty">Nessuna immagine caricata per questo prodotto.</p>`;
@@ -273,8 +277,15 @@ function renderProductPreviews() {
             <span>${index === 0 ? "Copertina" : `Foto ${index + 1}`}</span>
           </button>
           <div class="product-preview-caption">
-            <strong>${index === 0 ? "Copertina" : `Posizione ${index + 1}`}</strong>
+            <strong>${index === 0 ? "Copertina" : `Foto ${index + 1}`}</strong>
             <small>${entry.pendingImage ? "Da caricare" : entry.variant === "cropped" ? "Ritagliata" : "Originale"}</small>
+          </div>
+          <div class="product-preview-order">
+            <button class="product-preview-drag" type="button" data-product-image-drag title="Trascina per riordinare" aria-label="Trascina la foto ${index + 1} per cambiarne la posizione"><i data-lucide="grip-vertical"></i></button>
+            <label>
+              <span>Pos.</span>
+              <input type="number" min="1" max="${productImageEntries.length}" step="1" inputmode="numeric" value="${index + 1}" data-product-image-position aria-label="Posizione della foto ${index + 1}">
+            </label>
           </div>
           <div class="product-preview-actions">
             <button type="button" data-product-image-move="left" title="Sposta prima" aria-label="Sposta la foto ${index + 1} prima"${index === 0 ? " disabled" : ""}><i data-lucide="chevron-left"></i></button>
@@ -287,6 +298,107 @@ function renderProductPreviews() {
     )
     .join("");
   if (window.lucide) window.lucide.createIcons();
+}
+
+function moveProductImageEntry(fromIndex, toIndex) {
+  if (!productImageEntries.length || fromIndex < 0 || fromIndex >= productImageEntries.length) return false;
+  const destination = clamp(Math.trunc(Number(toIndex)), 0, productImageEntries.length - 1);
+  if (!Number.isFinite(destination) || destination === fromIndex) return false;
+  const [entry] = productImageEntries.splice(fromIndex, 1);
+  productImageEntries.splice(destination, 0, entry);
+  selectedProductImageKey = entry.key;
+  syncProductImageFields();
+  renderProductPreviews();
+  setProductUploadStatus("Ordine aggiornato. La foto in posizione 1 sara la copertina.");
+  return true;
+}
+
+function commitProductImagePosition(positionInput) {
+  window.clearTimeout(productImagePositionTimer);
+  const item = positionInput?.closest("[data-product-image-key]");
+  if (!positionInput || !item) return;
+  const fromIndex = productImageEntries.findIndex((entry) => entry.key === item.dataset.productImageKey);
+  const requestedPosition = Number.parseInt(positionInput.value, 10);
+  if (fromIndex === -1 || !Number.isFinite(requestedPosition)) {
+    renderProductPreviews();
+    return;
+  }
+  if (!moveProductImageEntry(fromIndex, requestedPosition - 1)) renderProductPreviews();
+}
+
+function clearProductImageDropState() {
+  productPreviews?.querySelectorAll(".is-dragging, .is-drop-target").forEach((item) => {
+    item.classList.remove("is-dragging", "is-drop-target");
+    delete item.dataset.dropSide;
+  });
+}
+
+function startProductImageDrag(event) {
+  const handle = event.target.closest("[data-product-image-drag]");
+  const item = handle?.closest("[data-product-image-key]");
+  if (!handle || !item || event.button !== 0 || event.isPrimary === false) return;
+  productImageDrag = {
+    pointerId: event.pointerId,
+    key: item.dataset.productImageKey,
+    startX: event.clientX,
+    startY: event.clientY,
+    targetKey: item.dataset.productImageKey,
+    dropAfter: false,
+    started: false,
+    handle,
+  };
+  handle.setPointerCapture?.(event.pointerId);
+  event.preventDefault();
+}
+
+function moveProductImageDrag(event) {
+  if (!productImageDrag || event.pointerId !== productImageDrag.pointerId) return;
+  const distance = Math.hypot(event.clientX - productImageDrag.startX, event.clientY - productImageDrag.startY);
+  if (!productImageDrag.started && distance < 7) return;
+  productImageDrag.started = true;
+  suppressProductImageClickUntil = Date.now() + 500;
+  event.preventDefault();
+
+  const sourceItem = productPreviews?.querySelector(`[data-product-image-key="${productImageDrag.key}"]`);
+  sourceItem?.classList.add("is-dragging");
+  productPreviews?.querySelectorAll(".is-drop-target").forEach((item) => {
+    item.classList.remove("is-drop-target");
+    delete item.dataset.dropSide;
+  });
+
+  const targetItem = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-product-image-key]");
+  if (!targetItem || !productPreviews?.contains(targetItem)) return;
+  const bounds = targetItem.getBoundingClientRect();
+  const nearMiddleRow = Math.abs(event.clientY - (bounds.top + bounds.height / 2)) < bounds.height * 0.28;
+  const dropAfter = nearMiddleRow
+    ? event.clientX >= bounds.left + bounds.width / 2
+    : event.clientY >= bounds.top + bounds.height / 2;
+  productImageDrag.targetKey = targetItem.dataset.productImageKey;
+  productImageDrag.dropAfter = dropAfter;
+  if (productImageDrag.targetKey !== productImageDrag.key) {
+    targetItem.classList.add("is-drop-target");
+    targetItem.dataset.dropSide = dropAfter ? "after" : "before";
+  }
+}
+
+function finishProductImageDrag(event, cancelled = false) {
+  if (!productImageDrag || event.pointerId !== productImageDrag.pointerId) return;
+  const drag = productImageDrag;
+  productImageDrag = null;
+  try {
+    if (drag.handle.hasPointerCapture?.(event.pointerId)) drag.handle.releasePointerCapture(event.pointerId);
+  } catch {}
+
+  if (!cancelled && drag.started) {
+    const sourceIndex = productImageEntries.findIndex((entry) => entry.key === drag.key);
+    const targetIndex = productImageEntries.findIndex((entry) => entry.key === drag.targetKey);
+    if (sourceIndex !== -1 && targetIndex !== -1) {
+      let destination = targetIndex + (drag.dropAfter ? 1 : 0);
+      if (sourceIndex < destination) destination -= 1;
+      if (moveProductImageEntry(sourceIndex, destination)) return;
+    }
+  }
+  clearProductImageDropState();
 }
 
 function clamp(value, min, max) {
@@ -1376,6 +1488,11 @@ document.addEventListener("click", (event) => {
 productSearch?.addEventListener("input", renderAdminProducts);
 
 productPreviews?.addEventListener("click", async (event) => {
+  if (Date.now() < suppressProductImageClickUntil && event.target.closest("[data-product-image-drag]")) {
+    event.preventDefault();
+    return;
+  }
+  if (event.target.closest("[data-product-image-drag], [data-product-image-position]")) return;
   const item = event.target.closest("[data-product-image-key]");
   if (!item) return;
   const index = productImageEntries.findIndex((entry) => entry.key === item.dataset.productImageKey);
@@ -1396,12 +1513,7 @@ productPreviews?.addEventListener("click", async (event) => {
   const moveButton = event.target.closest("[data-product-image-move]");
   if (moveButton) {
     const nextIndex = moveButton.dataset.productImageMove === "left" ? index - 1 : index + 1;
-    if (nextIndex >= 0 && nextIndex < productImageEntries.length) {
-      [productImageEntries[index], productImageEntries[nextIndex]] = [productImageEntries[nextIndex], productImageEntries[index]];
-      syncProductImageFields();
-      renderProductPreviews();
-      setProductUploadStatus("Ordine aggiornato. La prima foto sara la copertina.");
-    }
+    moveProductImageEntry(index, nextIndex);
     return;
   }
 
@@ -1417,6 +1529,30 @@ productPreviews?.addEventListener("click", async (event) => {
 
   renderProductPreviews();
 });
+
+productPreviews?.addEventListener("change", (event) => {
+  const positionInput = event.target.closest("[data-product-image-position]");
+  if (positionInput) commitProductImagePosition(positionInput);
+});
+
+productPreviews?.addEventListener("input", (event) => {
+  const positionInput = event.target.closest("[data-product-image-position]");
+  window.clearTimeout(productImagePositionTimer);
+  if (!positionInput || !Number.isFinite(Number.parseInt(positionInput.value, 10))) return;
+  productImagePositionTimer = window.setTimeout(() => commitProductImagePosition(positionInput), 450);
+});
+
+productPreviews?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" && event.target.matches("[data-product-image-position]")) {
+    event.preventDefault();
+    commitProductImagePosition(event.target);
+  }
+});
+
+productPreviews?.addEventListener("pointerdown", startProductImageDrag);
+productPreviews?.addEventListener("pointermove", moveProductImageDrag);
+productPreviews?.addEventListener("pointerup", finishProductImageDrag);
+productPreviews?.addEventListener("pointercancel", (event) => finishProductImageDrag(event, true));
 
 productCropImage?.addEventListener("load", () => {
   if (!cropState) return;
