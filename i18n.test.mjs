@@ -41,7 +41,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=bundle-original-images-1/);
+  assert.match(checkout, /script\.js\?v=bundle-failure-fix-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -53,13 +53,14 @@ test("checkout exposes a multilingual bundle try-on", async () => {
   }
 });
 
-test("catalog navigation, visual search and private last-stock handling are present", async () => {
-  const [index, lastStock, admin, script, server] = await Promise.all([
+test("catalog navigation, stable visual search and private last-stock handling are present", async () => {
+  const [index, lastStock, admin, script, server, styles] = await Promise.all([
     readFile("index.html", "utf8"),
     readFile("ultimi-disponibili.html", "utf8"),
     readFile("admin.html", "utf8"),
     readFile("script.js", "utf8"),
     readFile("server.js", "utf8"),
+    readFile("styles.css", "utf8"),
   ]);
   assert.match(index, /data-catalog-nav-toggle="uomo"/);
   assert.match(index, /data-catalog-nav-toggle="donna"/);
@@ -67,11 +68,13 @@ test("catalog navigation, visual search and private last-stock handling are pres
   assert.match(lastStock, /data-last-stock-catalog/);
   assert.match(script, /function renderCatalogNavigation\(\)/);
   assert.match(script, /function ensureCatalogSearch\(\)/);
-  assert.match(script, /function searchCatalogProducts\(query\)/);
-  assert.match(script, /function normalizeCatalogSearchText\(value\)/);
-  assert.match(script, /maglietta/);
-  assert.match(script, /scarpe/);
-  assert.match(script, /data-catalog-search-query/);
+  assert.match(script, /function renderCatalogSearchResults\(query = ""\)/);
+  assert.match(script, /\.toLowerCase\(\)\.includes\(value\)/);
+  assert.doesNotMatch(script, /function searchCatalogProducts\(query\)/);
+  assert.doesNotMatch(script, /data-catalog-search-query/);
+  assert.match(script, /productCard\?\.scrollIntoView\(\{ behavior: "smooth", block: "center" \}\)/);
+  assert.match(styles, /\.catalog-search-results\s*\{[\s\S]*?grid-auto-rows:\s*minmax\(96px, auto\)/);
+  assert.match(styles, /\.catalog-search-result\s*\{[\s\S]*?overflow:\s*hidden/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
   assert.match(script, /isLastAvailable/);
   assert.match(admin, /name="sizes"/);
@@ -105,6 +108,10 @@ test("bundle try-on sends untouched customer and product image files separately"
   assert.match(server, /const bundleIncludesBag = bundleItems\.some/);
   assert.match(server, /The cart contains no bag product/);
   assert.match(server, /If a product name or category conflicts with its photo, follow the photo/);
+  assert.match(server, /const openaiTryOnTimeoutMs = 180000/);
+  assert.match(server, /readRequestBuffer\(req, 60 \* 1024 \* 1024\)/);
+  assert.match(server, /function tryOnFailureMessage\(error, copy\)/);
+  assert.match(script, /setBundleTryOnResult\(`<p>\$\{escapeHtml\(message\)\}<\/p>`\)/);
 });
 
 test("product images keep their full composition", async () => {

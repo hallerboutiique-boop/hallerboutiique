@@ -22,7 +22,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
-const openaiTryOnTimeoutMs = 120000;
+const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
@@ -1294,12 +1294,20 @@ const siteChatLanguages = {
 };
 
 const tryOnLanguages = {
-  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", received: "Foto ricevuta", prepared: "Capo reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "Tutti gli articoli del carrello sono pronti", bundleGenerating: "Generazione outfit completo in corso", bundlePreview: "Outfit completo ricevuto", unavailable: "Try-on non disponibile." },
-  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", received: "Photo received", prepared: "Real catalog garment prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "Every cart item is ready", bundleGenerating: "Generating the complete outfit", bundlePreview: "Complete outfit received", unavailable: "Try-on is unavailable." },
-  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Tous les articles du panier sont prets", bundleGenerating: "Generation de la tenue complete", bundlePreview: "Tenue complete reçue", unavailable: "L'essayage est indisponible." },
-  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Alle Warenkorbartikel sind bereit", bundleGenerating: "Komplettes Outfit wird erstellt", bundlePreview: "Komplettes Outfit empfangen", unavailable: "Die Anprobe ist nicht verfugbar." },
-  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Todos los articulos del carrito estan listos", bundleGenerating: "Generando el conjunto completo", bundlePreview: "Conjunto completo recibido", unavailable: "La prueba no esta disponible." },
+  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", received: "Foto ricevuta", prepared: "Capo reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "Tutti gli articoli del carrello sono pronti", bundleGenerating: "Generazione outfit completo in corso", bundlePreview: "Outfit completo ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
+  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", received: "Photo received", prepared: "Real catalog garment prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "Every cart item is ready", bundleGenerating: "Generating the complete outfit", bundlePreview: "Complete outfit received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
+  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Tous les articles du panier sont prets", bundleGenerating: "Generation de la tenue complete", bundlePreview: "Tenue complete reçue", timeout: "La generation a pris trop de temps. Reessayez.", busy: "Le service d'essayage est momentanement occupe. Reessayez bientot.", rejected: "Une image ne peut pas etre traitee. Utilisez une photo JPG, PNG ou WebP nette.", unavailable: "L'essayage est indisponible." },
+  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Alle Warenkorbartikel sind bereit", bundleGenerating: "Komplettes Outfit wird erstellt", bundlePreview: "Komplettes Outfit empfangen", timeout: "Die Generierung hat zu lange gedauert. Versuchen Sie es erneut.", busy: "Der Anprobe-Service ist vorubergehend ausgelastet. Versuchen Sie es gleich noch einmal.", rejected: "Ein Bild kann nicht verarbeitet werden. Verwenden Sie ein klares JPG-, PNG- oder WebP-Foto.", unavailable: "Die Anprobe ist nicht verfugbar." },
+  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Todos los articulos del carrito estan listos", bundleGenerating: "Generando el conjunto completo", bundlePreview: "Conjunto completo recibido", timeout: "La generacion ha tardado demasiado. Vuelve a intentarlo.", busy: "El servicio de prueba esta ocupado temporalmente. Intentalo de nuevo en breve.", rejected: "Una imagen no se puede procesar. Usa una foto JPG, PNG o WebP nitida.", unavailable: "La prueba no esta disponible." },
 };
+
+function tryOnFailureMessage(error, copy) {
+  if (error?.name === "AbortError") return copy.timeout;
+  const status = Number(error?.status || 0);
+  if (status === 400 || status === 413 || status === 415) return copy.rejected;
+  if (status === 408 || status === 429 || status >= 500) return copy.busy;
+  return copy.unavailable;
+}
 
 function siteChatLanguage(value) {
   const code = cleanTrackingString(value, 8).toLowerCase();
@@ -1590,7 +1598,7 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
 
   let parts;
   try {
-    parts = parseMultipartBuffer(await readRequestBuffer(req), boundary);
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 60 * 1024 * 1024), boundary);
   } catch (error) {
     return badRequest(res, error.message || "Upload non valido.");
   }
@@ -1643,7 +1651,13 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
     if (progress) return progress.done(result);
     json(res, 200, result);
   } catch (error) {
-    const message = copy.unavailable;
+    const message = tryOnFailureMessage(error, copy);
+    console.error("[try-on] generation failed", {
+      mode,
+      itemCount: bundleItems.length,
+      status: Number(error?.status || 0),
+      error: cleanTrackingString(error?.message, 220),
+    });
     if (progress) return progress.fail(message);
     json(res, 502, { ok: false, message });
   }
