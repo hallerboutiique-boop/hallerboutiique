@@ -1332,12 +1332,7 @@ function createProductMediaMarkup(product, detail = false) {
   return `
     ${slides}
     ${gallery.length > 1 ? `
-      <div class="product-gallery-controls" aria-label="${escapeHtml(product.name)}">
-        <button type="button" data-product-gallery-prev aria-label="${translate("gallery-previous")}"><i data-lucide="chevron-left"></i></button>
-        <span class="product-gallery-count"><b data-gallery-current>1</b> / ${gallery.length}</span>
-        <button type="button" data-product-gallery-next aria-label="${translate("gallery-next")}"><i data-lucide="chevron-right"></i></button>
-      </div>
-      <div class="product-gallery-dots" aria-hidden="true">${gallery.map((_, index) => `<span class="${index === 0 ? "is-active" : ""}" data-gallery-dot></span>`).join("")}</div>
+      <div class="product-gallery-dots" aria-label="${escapeHtml(product.name)}">${gallery.map((_, index) => `<button type="button" class="${index === 0 ? "is-active" : ""}" data-gallery-dot data-gallery-index="${index}" aria-label="${escapeHtml(product.name)} ${index + 1}" aria-pressed="${index === 0 ? "true" : "false"}"></button>`).join("")}</div>
     ` : ""}
   `;
 }
@@ -1679,17 +1674,18 @@ function renderCatalogSearchResults(query = "") {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function moveProductGallery(control, direction) {
+function selectProductGallerySlide(control) {
   const gallery = control.closest(".product-media, .product-detail-gallery");
   if (!gallery) return;
   const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
   if (slides.length < 2) return;
-  const currentIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
-  const nextIndex = (currentIndex + direction + slides.length) % slides.length;
+  const nextIndex = Number.parseInt(control.dataset.galleryIndex, 10);
+  if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= slides.length) return;
   slides.forEach((slide, index) => slide.classList.toggle("is-active", index === nextIndex));
-  gallery.querySelectorAll("[data-gallery-dot]").forEach((dot, index) => dot.classList.toggle("is-active", index === nextIndex));
-  const current = gallery.querySelector("[data-gallery-current]");
-  if (current) current.textContent = String(nextIndex + 1);
+  gallery.querySelectorAll("[data-gallery-dot]").forEach((dot, index) => {
+    dot.classList.toggle("is-active", index === nextIndex);
+    dot.setAttribute("aria-pressed", index === nextIndex ? "true" : "false");
+  });
 }
 
 function refreshScrollReveals(root = document) {
@@ -2932,13 +2928,12 @@ document.addEventListener("click", (event) => {
   const buyButton = event.target.closest("[data-buy-now]");
   const checkoutRemoveButton = event.target.closest("[data-checkout-remove-index]");
   const lastStockButton = event.target.closest("[data-last-stock-gender]");
-  const galleryPrevious = event.target.closest("[data-product-gallery-prev]");
-  const galleryNext = event.target.closest("[data-product-gallery-next]");
+  const galleryDot = event.target.closest("[data-gallery-dot]");
   const productCard = event.target.closest("[data-product-url]");
 
-  if (galleryPrevious || galleryNext) {
+  if (galleryDot) {
     event.preventDefault();
-    moveProductGallery(galleryPrevious || galleryNext, galleryPrevious ? -1 : 1);
+    selectProductGallerySlide(galleryDot);
     return;
   }
 

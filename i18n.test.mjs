@@ -102,7 +102,11 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /function normalizeCatalogCategory\(value\)/);
   assert.match(script, /const catalogCategoryOrder =/);
   assert.match(script, /function renderProductDetail\(\)/);
-  assert.match(script, /function moveProductGallery\(control, direction\)/);
+  assert.match(script, /function selectProductGallerySlide\(control\)/);
+  assert.match(script, /data-gallery-index="\$\{index\}"/);
+  assert.doesNotMatch(script, /data-product-gallery-prev/);
+  assert.doesNotMatch(script, /data-product-gallery-next/);
+  assert.doesNotMatch(script, /product-gallery-count/);
   assert.match(script, /data-last-stock-gender="uomo"/);
   assert.match(script, /data-last-stock-gender="donna"/);
   assert.match(productPage, /data-product-detail/);
@@ -110,7 +114,8 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(dockerfile, /COPY index\.html product\.html/);
   assert.match(index, /class="last-stock-nav"/);
   assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
-  assert.match(styles, /\.product-gallery-controls\s*\{/);
+  assert.match(styles, /\.product-gallery-dots button::before\s*\{[\s\S]*?width:\s*5px/);
+  assert.doesNotMatch(styles, /\.product-gallery-controls\s*\{/);
   assert.match(styles, /\.product-detail\s*\{/);
 });
 
