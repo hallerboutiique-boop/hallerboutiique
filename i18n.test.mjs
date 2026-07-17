@@ -128,7 +128,13 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(adminHtml, /data-product-crop-preview-image/);
   assert.match(adminHtml, /data-product-crop-preview-mode="original">Originale/);
   assert.match(adminHtml, /data-product-crop-preview-mode="cropped">Ritagliata/);
+  assert.match(adminHtml, /data-product-upload-cancel/);
+  assert.match(adminHtml, /data-lucide="circle-stop"/);
   assert.match(admin, /productUploadQueue = \{ files, productId, index: 0, variants: \[\] \}/);
+  assert.match(admin, /productUploadController = new AbortController\(\)/);
+  assert.match(admin, /productUploadController\?\.abort\(\)/);
+  assert.match(admin, /signal: options\.signal/);
+  assert.match(admin, /productUploadCancel\?\.addEventListener\("click"/);
   assert.match(admin, /openNextProductCrop\(\)/);
   assert.match(admin, /handleSelectedProductImage\(croppedImage, source, "cropped"\)/);
   assert.match(admin, /handleSelectedProductImage\(\{ blob: originalFile, name: originalFile\.name \}, source, "original"\)/);

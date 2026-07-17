@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=product-image-choice-1">
+    <link rel="stylesheet" href="styles.css?v=product-upload-cancel-1">
   </head>
   <body>
     <header class="site-header">
@@ -232,10 +232,16 @@
                   </label>
                   <div class="product-upload-box">
                     <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" multiple data-product-image-upload>
-                    <button type="button" data-product-image-button>
-                      <i data-lucide="image-plus"></i>
-                      <span>Carica foto dal Finder</span>
-                    </button>
+                    <div class="product-upload-actions">
+                      <button type="button" data-product-image-button>
+                        <i data-lucide="image-plus"></i>
+                        <span>Carica foto dal Finder</span>
+                      </button>
+                      <button type="button" class="product-upload-cancel" data-product-upload-cancel hidden title="Interrompi caricamento foto">
+                        <i data-lucide="circle-stop"></i>
+                        <span>Interrompi</span>
+                      </button>
+                    </div>
                     <small data-product-upload-status>Puoi selezionare pi&ugrave; foto per lo stesso prodotto.</small>
                   </div>
                   <div class="product-preview-grid" data-product-previews>
@@ -358,6 +364,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="admin.js?v=product-image-choice-1"></script>
+    <script src="admin.js?v=product-upload-cancel-1"></script>
   </body>
 </html>

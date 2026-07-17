@@ -13,6 +13,7 @@ const productSearch = document.querySelector("[data-product-search]");
 const productMessage = document.querySelector("[data-product-message]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
+const productUploadCancel = document.querySelector("[data-product-upload-cancel]");
 const productUploadStatus = document.querySelector("[data-product-upload-status]");
 const productPreviews = document.querySelector("[data-product-previews]");
 const aiProductImage = document.querySelector("[data-ai-product-image]");
@@ -37,6 +38,7 @@ let selectedProductId = "";
 let cropState = null;
 let cropDrag = null;
 let productUploadQueue = null;
+let productUploadController = null;
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -54,8 +56,8 @@ async function api(path, options = {}) {
   return data;
 }
 
-async function uploadApi(path, body) {
-  const response = await fetch(path, { method: "POST", body });
+async function uploadApi(path, body, options = {}) {
+  const response = await fetch(path, { method: "POST", body, signal: options.signal });
   const data = await response.json();
   if (!response.ok || data.ok === false) throw new Error(data.message || "Upload non riuscito.");
   return data;
@@ -147,6 +149,27 @@ function setProductMessage(message, type = "") {
 function setProductUploadStatus(message) {
   if (!productUploadStatus) return;
   productUploadStatus.textContent = message || "";
+}
+
+function setProductUploadActive(active) {
+  if (productImageButton) productImageButton.disabled = active;
+  if (productUploadCancel) productUploadCancel.hidden = !active;
+}
+
+function resetProductUploadState() {
+  productUploadQueue = null;
+  productUploadController = null;
+  setProductUploadActive(false);
+  if (productImageUpload) productImageUpload.value = "";
+}
+
+function interruptProductUpload(message = "Caricamento foto interrotto.") {
+  if (!productUploadQueue && !productUploadController) return;
+  productUploadController?.abort();
+  if (cropState?.source?.type === "manual") closeProductCropper();
+  resetProductUploadState();
+  setProductUploadStatus(message);
+  setProductMessage(message);
 }
 
 function setAiProductStatus(message, type = "") {
@@ -278,10 +301,7 @@ function cancelProductCropper() {
   const source = cropState?.source;
   closeProductCropper();
   if (source?.type === "manual") {
-    productUploadQueue = null;
-    if (productImageButton) productImageButton.disabled = false;
-    if (productImageUpload) productImageUpload.value = "";
-    setProductUploadStatus("Caricamento annullato.");
+    interruptProductUpload("Caricamento annullato.");
     return;
   }
   if (source?.type === "ai") {
@@ -365,7 +385,7 @@ function createCroppedProductImage() {
   });
 }
 
-async function uploadProductImage(image, productId, position, total, { originalFile, variant = "original" } = {}) {
+async function uploadProductImage(image, productId, position, total, { originalFile, variant = "original", signal } = {}) {
   const file = image?.blob || image;
   const filename = image?.name || "prodotto.jpg";
   const formData = new FormData();
@@ -378,7 +398,7 @@ async function uploadProductImage(image, productId, position, total, { originalF
   }
   setProductUploadStatus(`Caricamento foto ${position} di ${total}...`);
   setProductMessage("");
-  const data = await uploadApi("/api/admin/product-images", formData);
+  const data = await uploadApi("/api/admin/product-images", formData, { signal });
   const current = currentProductImages();
   productForm.elements.images.value = [...current, ...(data.images || [])].join("\n");
   selectedProductId = productId;
@@ -444,14 +464,15 @@ async function handleSelectedProductImage(image, source, variant) {
     await uploadProductImage(image, source.productId, queue.index + 1, queue.files.length, {
       originalFile: source.originalFile,
       variant,
+      signal: productUploadController?.signal,
     });
+    if (productUploadQueue !== queue) return;
     queue.variants.push(variant);
   } catch (error) {
+    if (error.name === "AbortError" || productUploadQueue !== queue) return;
     setProductUploadStatus("Upload non riuscito.");
     setProductMessage(error.message, "error");
-    productUploadQueue = null;
-    productImageButton.disabled = false;
-    productImageUpload.value = "";
+    resetProductUploadState();
     return;
   }
 
@@ -464,9 +485,7 @@ async function handleSelectedProductImage(image, source, variant) {
   const originals = queue.variants.length - cropped;
   setProductUploadStatus(`${queue.files.length} foto collegate: ${originals} originali, ${cropped} ritagliate.`);
   setProductMessage("Foto caricate. Prodotto aggiornato.", "success");
-  productUploadQueue = null;
-  productImageButton.disabled = false;
-  productImageUpload.value = "";
+  resetProductUploadState();
 }
 
 function deviceLine(session) {
@@ -1359,22 +1378,26 @@ productImageButton?.addEventListener("click", () => {
   productImageUpload?.click();
 });
 
+productUploadCancel?.addEventListener("click", () => {
+  interruptProductUpload();
+});
+
 productImageUpload?.addEventListener("change", () => {
   const files = [...(productImageUpload.files || [])];
   const productId = productForm?.elements.id.value;
   if (!productId || files.length === 0) return;
 
   setProductMessage("");
+  productUploadController?.abort();
+  productUploadController = new AbortController();
   productUploadQueue = { files, productId, index: 0, variants: [] };
-  productImageButton.disabled = true;
+  setProductUploadActive(true);
   try {
     openNextProductCrop();
   } catch (error) {
-    productUploadQueue = null;
-    productImageButton.disabled = false;
+    resetProductUploadState();
     setProductUploadStatus("Ritaglio non disponibile.");
     setProductMessage(error.message, "error");
-    productImageUpload.value = "";
   }
 });
 

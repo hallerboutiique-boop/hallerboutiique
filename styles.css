@@ -712,6 +712,12 @@
   gap: 9px;
 }
 
+.product-upload-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(138px, auto);
+  gap: 9px;
+}
+
 .product-upload-input {
   display: none;
 }
@@ -736,6 +742,16 @@
 .product-upload-box button:disabled {
   opacity: 0.6;
   cursor: progress;
+}
+
+.product-upload-box .product-upload-cancel {
+  color: #ffaaaa;
+  border-color: rgba(255, 92, 92, 0.62);
+  background: rgba(145, 20, 20, 0.18);
+}
+
+.product-upload-box .product-upload-cancel[hidden] {
+  display: none;
 }
 
 .product-upload-box svg {
@@ -1539,6 +1555,10 @@
 
   .product-ai-card button {
     width: 100%;
+  }
+
+  .product-upload-actions {
+    grid-template-columns: 1fr;
   }
 
   .product-crop-dialog {
