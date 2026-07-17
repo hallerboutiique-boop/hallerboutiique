@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=product-upload-cancel-1">
+    <link rel="stylesheet" href="styles.css?v=classic-product-crop-1">
   </head>
   <body>
     <header class="site-header">
@@ -323,11 +323,17 @@
           <section class="product-crop-editor" aria-label="Editor di ritaglio">
             <div class="product-crop-stage" data-product-crop-stage>
               <img data-product-crop-image alt="Immagine prodotto da ritagliare">
+              <div class="product-crop-selection" data-product-crop-selection tabindex="0" aria-label="Area di ritaglio selezionata" hidden>
+                <span data-product-crop-handle="nw" aria-hidden="true"></span>
+                <span data-product-crop-handle="n" aria-hidden="true"></span>
+                <span data-product-crop-handle="ne" aria-hidden="true"></span>
+                <span data-product-crop-handle="e" aria-hidden="true"></span>
+                <span data-product-crop-handle="se" aria-hidden="true"></span>
+                <span data-product-crop-handle="s" aria-hidden="true"></span>
+                <span data-product-crop-handle="sw" aria-hidden="true"></span>
+                <span data-product-crop-handle="w" aria-hidden="true"></span>
+              </div>
             </div>
-            <label class="product-crop-zoom">
-              <span>Zoom</span>
-              <input type="range" min="1" max="3" step="0.01" value="1" data-product-crop-zoom>
-            </label>
           </section>
           <section class="product-crop-storefront" aria-label="Anteprima scheda prodotto">
             <p>Anteprima sul sito</p>
@@ -364,6 +370,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=sitewide-language-5"></script>
-    <script src="admin.js?v=product-upload-cancel-1"></script>
+    <script src="admin.js?v=classic-product-crop-1"></script>
   </body>
 </html>

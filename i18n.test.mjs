@@ -154,6 +154,9 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(adminHtml, /data-product-crop-preview-image/);
   assert.match(adminHtml, /data-product-crop-preview-mode="original">Originale/);
   assert.match(adminHtml, /data-product-crop-preview-mode="cropped">Ritagliata/);
+  assert.match(adminHtml, /data-product-crop-selection/);
+  assert.match(adminHtml, /data-product-crop-handle="nw"/);
+  assert.doesNotMatch(adminHtml, /data-product-crop-zoom/);
   assert.match(adminHtml, /data-product-upload-cancel/);
   assert.match(adminHtml, /data-lucide="circle-stop"/);
   assert.match(admin, /productUploadQueue = \{ files, productId, index: 0, variants: \[\] \}/);
@@ -164,6 +167,8 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /openNextProductCrop\(\)/);
   assert.match(admin, /handleSelectedProductImage\(croppedImage, source, "cropped"\)/);
   assert.match(admin, /handleSelectedProductImage\(\{ blob: originalFile, name: originalFile\.name \}, source, "original"\)/);
+  assert.match(admin, /const mode = handle \? "resize" : insideSelection \? "move" : "create"/);
+  assert.match(admin, /selection\.x,[\s\S]*?selection\.y,[\s\S]*?selection\.width,[\s\S]*?selection\.height/);
   assert.match(admin, /formData\.append\("images", file, filename\)/);
   assert.match(admin, /formData\.append\("originalImage", originalFile/);
   assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
