@@ -29,7 +29,9 @@ const productCropPreviewMedia = document.querySelector("[data-product-crop-previ
 const productCropPreviewImage = document.querySelector("[data-product-crop-preview-image]");
 const productCropPreviewName = document.querySelector("[data-product-crop-preview-name]");
 const productCropPreviewModes = document.querySelectorAll("[data-product-crop-preview-mode]");
-const productCropSelection = document.querySelector("[data-product-crop-selection]");
+const productCropZoom = document.querySelector("[data-product-crop-zoom]");
+const productCropX = document.querySelector("[data-product-crop-x]");
+const productCropY = document.querySelector("[data-product-crop-y]");
 const productCropOriginal = document.querySelector("[data-product-crop-original]");
 const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
@@ -244,68 +246,20 @@ function refreshCropStorefrontCopy(source) {
   productCropPreviewName.textContent = source?.type === "manual" && selectedName ? selectedName : "Nuovo prodotto";
 }
 
-function defaultCropSelection() {
-  const insetX = cropState.sourceWidth * 0.06;
-  const insetY = cropState.sourceHeight * 0.06;
-  return {
-    x: insetX,
-    y: insetY,
-    width: cropState.sourceWidth - insetX * 2,
-    height: cropState.sourceHeight - insetY * 2,
-  };
+function syncCropPositionControl(control, offset, maximum) {
+  if (!control) return;
+  control.disabled = maximum < 0.5;
+  control.value = maximum < 0.5 ? "0" : String(Math.round((offset / maximum) * 100));
 }
 
-function cropMinimumSelectionSize() {
-  const visibleMinimum = cropState?.imageScale ? 42 / cropState.imageScale : 1;
-  return {
-    width: Math.min(Math.max(1, visibleMinimum), cropState?.sourceWidth || 1),
-    height: Math.min(Math.max(1, visibleMinimum), cropState?.sourceHeight || 1),
-  };
-}
-
-function normalizeCropSelection(selection) {
-  const minimum = cropMinimumSelectionSize();
-  const width = Math.min(cropState.sourceWidth, Math.max(minimum.width, selection.width));
-  const height = Math.min(cropState.sourceHeight, Math.max(minimum.height, selection.height));
-  return {
-    x: clamp(selection.x, 0, cropState.sourceWidth - width),
-    y: clamp(selection.y, 0, cropState.sourceHeight - height),
-    width,
-    height,
-  };
-}
-
-function cropPointFromEvent(event) {
-  if (!cropState?.imageScale || !productCropStage) return null;
-  const bounds = productCropStage.getBoundingClientRect();
-  return {
-    x: clamp((event.clientX - bounds.left - productCropStage.clientLeft - cropState.imageLeft) / cropState.imageScale, 0, cropState.sourceWidth),
-    y: clamp((event.clientY - bounds.top - productCropStage.clientTop - cropState.imageTop) / cropState.imageScale, 0, cropState.sourceHeight),
-  };
-}
-
-function renderCropSelection() {
-  if (!cropState?.selection || !productCropSelection) return;
-  const selection = cropState.selection;
-  productCropSelection.hidden = false;
-  productCropSelection.style.left = `${cropState.imageLeft + selection.x * cropState.imageScale}px`;
-  productCropSelection.style.top = `${cropState.imageTop + selection.y * cropState.imageScale}px`;
-  productCropSelection.style.width = `${selection.width * cropState.imageScale}px`;
-  productCropSelection.style.height = `${selection.height * cropState.imageScale}px`;
-}
-
-function updateCroppedStorefrontPreview(previewBounds) {
-  const selection = cropState.selection;
-  const scale = Math.min(previewBounds.width / selection.width, previewBounds.height / selection.height);
-  const selectedWidth = selection.width * scale;
-  const selectedHeight = selection.height * scale;
-  productCropPreviewImage.style.inset = "auto";
-  productCropPreviewImage.style.width = `${cropState.sourceWidth * scale}px`;
-  productCropPreviewImage.style.height = `${cropState.sourceHeight * scale}px`;
-  productCropPreviewImage.style.left = `${(previewBounds.width - selectedWidth) / 2 - selection.x * scale}px`;
-  productCropPreviewImage.style.top = `${(previewBounds.height - selectedHeight) / 2 - selection.y * scale}px`;
-  productCropPreviewImage.style.objectFit = "initial";
-  productCropPreviewImage.style.transform = "none";
+function positionCropImage(image, bounds, imageWidth, imageHeight, offsetX, offsetY) {
+  image.style.inset = "auto";
+  image.style.width = `${imageWidth}px`;
+  image.style.height = `${imageHeight}px`;
+  image.style.left = `${bounds.width / 2 + offsetX}px`;
+  image.style.top = `${bounds.height / 2 + offsetY}px`;
+  image.style.objectFit = "initial";
+  image.style.transform = "translate(-50%, -50%)";
 }
 
 function updateCropPreview() {
@@ -314,19 +268,19 @@ function updateCropPreview() {
   const stageHeight = productCropStage.clientHeight;
   if (!stageWidth || !stageHeight || !cropState.sourceWidth || !cropState.sourceHeight) return;
 
-  cropState.imageScale = Math.min(stageWidth / cropState.sourceWidth, stageHeight / cropState.sourceHeight);
+  cropState.stageWidth = stageWidth;
+  cropState.stageHeight = stageHeight;
+  cropState.baseScale = Math.max(stageWidth / cropState.sourceWidth, stageHeight / cropState.sourceHeight);
+  cropState.imageScale = cropState.baseScale * cropState.zoom;
   const imageWidth = cropState.sourceWidth * cropState.imageScale;
   const imageHeight = cropState.sourceHeight * cropState.imageScale;
-  cropState.imageLeft = (stageWidth - imageWidth) / 2;
-  cropState.imageTop = (stageHeight - imageHeight) / 2;
-  cropState.selection ||= defaultCropSelection();
-
-  productCropImage.style.width = `${imageWidth}px`;
-  productCropImage.style.height = `${imageHeight}px`;
-  productCropImage.style.left = `${cropState.imageLeft}px`;
-  productCropImage.style.top = `${cropState.imageTop}px`;
-  productCropImage.style.transform = "none";
-  renderCropSelection();
+  cropState.maxOffsetX = Math.max(0, (imageWidth - stageWidth) / 2);
+  cropState.maxOffsetY = Math.max(0, (imageHeight - stageHeight) / 2);
+  cropState.offsetX = clamp(cropState.offsetX, -cropState.maxOffsetX, cropState.maxOffsetX);
+  cropState.offsetY = clamp(cropState.offsetY, -cropState.maxOffsetY, cropState.maxOffsetY);
+  positionCropImage(productCropImage, { width: stageWidth, height: stageHeight }, imageWidth, imageHeight, cropState.offsetX, cropState.offsetY);
+  syncCropPositionControl(productCropX, cropState.offsetX, cropState.maxOffsetX);
+  syncCropPositionControl(productCropY, cropState.offsetY, cropState.maxOffsetY);
 
   const previewBounds = productCropPreviewMedia.getBoundingClientRect();
   if (!previewBounds.width || !previewBounds.height) return;
@@ -337,7 +291,15 @@ function updateCropPreview() {
     productCropPreviewImage.style.objectFit = "contain";
     productCropPreviewImage.style.transform = "none";
   } else {
-    updateCroppedStorefrontPreview(previewBounds);
+    const previewScale = Math.max(previewBounds.width / stageWidth, previewBounds.height / stageHeight);
+    positionCropImage(
+      productCropPreviewImage,
+      previewBounds,
+      imageWidth * previewScale,
+      imageHeight * previewScale,
+      cropState.offsetX * previewScale,
+      cropState.offsetY * previewScale
+    );
   }
 }
 
@@ -346,7 +308,6 @@ function closeProductCropper() {
   cropState = null;
   cropDrag = null;
   productCropStage?.classList.remove("is-dragging");
-  if (productCropSelection) productCropSelection.hidden = true;
   if (productCropDialog?.open) productCropDialog.close();
   if (productCropImage) productCropImage.removeAttribute("src");
   if (productCropPreviewImage) productCropPreviewImage.removeAttribute("src");
@@ -367,7 +328,7 @@ function cancelProductCropper() {
 }
 
 function openProductCropper(file, source) {
-  if (!productCropDialog || !productCropImage || !productCropPreviewImage || !productCropSelection) {
+  if (!productCropDialog || !productCropImage || !productCropPreviewImage || !productCropZoom || !productCropX || !productCropY) {
     throw new Error("Ritaglio immagine non disponibile.");
   }
   if (!file?.type?.startsWith("image/")) throw new Error("Seleziona una immagine valida.");
@@ -379,13 +340,22 @@ function openProductCropper(file, source) {
     objectUrl: URL.createObjectURL(file),
     sourceWidth: 0,
     sourceHeight: 0,
+    baseScale: 1,
     imageScale: 1,
-    imageLeft: 0,
-    imageTop: 0,
-    selection: null,
+    zoom: 1,
+    offsetX: 0,
+    offsetY: 0,
+    maxOffsetX: 0,
+    maxOffsetY: 0,
+    stageWidth: 0,
+    stageHeight: 0,
     previewMode: "cropped",
   };
-  productCropSelection.hidden = true;
+  productCropZoom.value = "1";
+  productCropX.value = "0";
+  productCropY.value = "0";
+  productCropX.disabled = true;
+  productCropY.disabled = true;
   productCropPreviewModes.forEach((button) => button.classList.toggle("is-active", button.dataset.productCropPreviewMode === "cropped"));
   if (productCropOriginal) {
     productCropOriginal.textContent = source.type === "ai" ? "Usa originale e crea bozza" : "Usa originale";
@@ -401,13 +371,24 @@ function openProductCropper(file, source) {
 }
 
 function createCroppedProductImage() {
-  if (!cropState?.selection || !cropState.sourceWidth || !cropState.sourceHeight) {
+  if (!cropState?.imageScale || !cropState.stageWidth || !cropState.stageHeight || !cropState.sourceWidth || !cropState.sourceHeight) {
     throw new Error("L'immagine non e ancora pronta.");
   }
-  const selection = cropState.selection;
-  const outputScale = Math.min(1, 1600 / Math.max(selection.width, selection.height));
-  const outputWidth = Math.max(1, Math.round(selection.width * outputScale));
-  const outputHeight = Math.max(1, Math.round(selection.height * outputScale));
+  const sourceCropWidth = Math.min(cropState.sourceWidth, cropState.stageWidth / cropState.imageScale);
+  const sourceCropHeight = Math.min(cropState.sourceHeight, cropState.stageHeight / cropState.imageScale);
+  const sourceX = clamp(
+    (cropState.sourceWidth - sourceCropWidth) / 2 - cropState.offsetX / cropState.imageScale,
+    0,
+    cropState.sourceWidth - sourceCropWidth
+  );
+  const sourceY = clamp(
+    (cropState.sourceHeight - sourceCropHeight) / 2 - cropState.offsetY / cropState.imageScale,
+    0,
+    cropState.sourceHeight - sourceCropHeight
+  );
+  const outputScale = Math.min(1, 1600 / Math.max(sourceCropWidth, sourceCropHeight));
+  const outputWidth = Math.max(1, Math.round(sourceCropWidth * outputScale));
+  const outputHeight = Math.max(1, Math.round(sourceCropHeight * outputScale));
   const sourceFile = cropState.file;
   const canvas = document.createElement("canvas");
   canvas.width = outputWidth;
@@ -416,10 +397,10 @@ function createCroppedProductImage() {
   if (!context) throw new Error("Impossibile preparare il ritaglio.");
   context.drawImage(
     productCropImage,
-    selection.x,
-    selection.y,
-    selection.width,
-    selection.height,
+    sourceX,
+    sourceY,
+    sourceCropWidth,
+    sourceCropHeight,
     0,
     0,
     outputWidth,
@@ -1276,7 +1257,6 @@ productCropImage?.addEventListener("load", () => {
   if (!cropState) return;
   cropState.sourceWidth = productCropImage.naturalWidth;
   cropState.sourceHeight = productCropImage.naturalHeight;
-  cropState.selection = defaultCropSelection();
   if (productCropOriginal) productCropOriginal.disabled = false;
   if (productCropConfirm) productCropConfirm.disabled = false;
   window.requestAnimationFrame(updateCropPreview);
@@ -1299,22 +1279,37 @@ productCropPreviewModes.forEach((button) => {
   });
 });
 
+productCropZoom?.addEventListener("input", () => {
+  if (!cropState) return;
+  const horizontalPosition = cropState.maxOffsetX ? cropState.offsetX / cropState.maxOffsetX : 0;
+  const verticalPosition = cropState.maxOffsetY ? cropState.offsetY / cropState.maxOffsetY : 0;
+  cropState.zoom = clamp(Number(productCropZoom.value) || 1, 1, 3);
+  updateCropPreview();
+  cropState.offsetX = horizontalPosition * cropState.maxOffsetX;
+  cropState.offsetY = verticalPosition * cropState.maxOffsetY;
+  updateCropPreview();
+});
+
+productCropX?.addEventListener("input", () => {
+  if (!cropState) return;
+  cropState.offsetX = (Number(productCropX.value) / 100) * cropState.maxOffsetX;
+  updateCropPreview();
+});
+
+productCropY?.addEventListener("input", () => {
+  if (!cropState) return;
+  cropState.offsetY = (Number(productCropY.value) / 100) * cropState.maxOffsetY;
+  updateCropPreview();
+});
+
 productCropStage?.addEventListener("pointerdown", (event) => {
   if (!cropState || event.button !== 0) return;
-  const point = cropPointFromEvent(event);
-  if (!point) return;
-  const handle = event.target.closest("[data-product-crop-handle]");
-  const insideSelection = event.target.closest("[data-product-crop-selection]");
-  const mode = handle ? "resize" : insideSelection ? "move" : "create";
-  if (mode === "create") {
-    cropState.selection = { x: point.x, y: point.y, width: 1, height: 1 };
-  }
   cropDrag = {
     pointerId: event.pointerId,
-    mode,
-    direction: handle?.dataset.productCropHandle || "",
-    startPoint: point,
-    selection: { ...cropState.selection },
+    startX: event.clientX,
+    startY: event.clientY,
+    startOffsetX: cropState.offsetX,
+    startOffsetY: cropState.offsetY,
   };
   productCropStage.classList.add("is-dragging");
   productCropStage.setPointerCapture?.(event.pointerId);
@@ -1323,44 +1318,14 @@ productCropStage?.addEventListener("pointerdown", (event) => {
 
 productCropStage?.addEventListener("pointermove", (event) => {
   if (!cropState || !cropDrag || cropDrag.pointerId !== event.pointerId) return;
-  const point = cropPointFromEvent(event);
-  if (!point) return;
-  const start = cropDrag.selection;
-  const deltaX = point.x - cropDrag.startPoint.x;
-  const deltaY = point.y - cropDrag.startPoint.y;
-  const minimum = cropMinimumSelectionSize();
-
-  if (cropDrag.mode === "move") {
-    cropState.selection = {
-      ...start,
-      x: clamp(start.x + deltaX, 0, cropState.sourceWidth - start.width),
-      y: clamp(start.y + deltaY, 0, cropState.sourceHeight - start.height),
-    };
-  } else if (cropDrag.mode === "create") {
-    cropState.selection = normalizeCropSelection({
-      x: Math.min(cropDrag.startPoint.x, point.x),
-      y: Math.min(cropDrag.startPoint.y, point.y),
-      width: Math.max(1, Math.abs(point.x - cropDrag.startPoint.x)),
-      height: Math.max(1, Math.abs(point.y - cropDrag.startPoint.y)),
-    });
-  } else {
-    let left = start.x;
-    let top = start.y;
-    let right = start.x + start.width;
-    let bottom = start.y + start.height;
-    if (cropDrag.direction.includes("w")) left = clamp(start.x + deltaX, 0, right - minimum.width);
-    if (cropDrag.direction.includes("e")) right = clamp(right + deltaX, left + minimum.width, cropState.sourceWidth);
-    if (cropDrag.direction.includes("n")) top = clamp(start.y + deltaY, 0, bottom - minimum.height);
-    if (cropDrag.direction.includes("s")) bottom = clamp(bottom + deltaY, top + minimum.height, cropState.sourceHeight);
-    cropState.selection = { x: left, y: top, width: right - left, height: bottom - top };
-  }
+  cropState.offsetX = cropDrag.startOffsetX + event.clientX - cropDrag.startX;
+  cropState.offsetY = cropDrag.startOffsetY + event.clientY - cropDrag.startY;
   updateCropPreview();
   event.preventDefault();
 });
 
 function finishCropDrag(event) {
   if (!cropDrag || cropDrag.pointerId !== event.pointerId) return;
-  if (cropState?.selection) cropState.selection = normalizeCropSelection(cropState.selection);
   cropDrag = null;
   productCropStage?.classList.remove("is-dragging");
   updateCropPreview();
@@ -1370,14 +1335,13 @@ productCropStage?.addEventListener("pointerup", finishCropDrag);
 productCropStage?.addEventListener("pointercancel", finishCropDrag);
 productCropStage?.addEventListener("lostpointercapture", finishCropDrag);
 
-productCropSelection?.addEventListener("keydown", (event) => {
-  if (!cropState?.selection || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
-  const step = (event.shiftKey ? 12 : 3) / cropState.imageScale;
-  const selection = cropState.selection;
-  if (event.key === "ArrowLeft") selection.x = clamp(selection.x - step, 0, cropState.sourceWidth - selection.width);
-  if (event.key === "ArrowRight") selection.x = clamp(selection.x + step, 0, cropState.sourceWidth - selection.width);
-  if (event.key === "ArrowUp") selection.y = clamp(selection.y - step, 0, cropState.sourceHeight - selection.height);
-  if (event.key === "ArrowDown") selection.y = clamp(selection.y + step, 0, cropState.sourceHeight - selection.height);
+productCropStage?.addEventListener("keydown", (event) => {
+  if (!cropState || !["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+  const step = event.shiftKey ? 24 : 6;
+  if (event.key === "ArrowLeft") cropState.offsetX -= step;
+  if (event.key === "ArrowRight") cropState.offsetX += step;
+  if (event.key === "ArrowUp") cropState.offsetY -= step;
+  if (event.key === "ArrowDown") cropState.offsetY += step;
   updateCropPreview();
   event.preventDefault();
 });
