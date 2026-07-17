@@ -96,6 +96,11 @@ test("catalog categories, product pages and galleries follow the storefront flow
   for (const category of ["Completo", "Tuta", "Giacche leggere", "Jeans lunghi", "Jeans corti", "Pantaloncini", "Scarpe"]) {
     assert.match(script, new RegExp(`name: "${category}"`));
   }
+  assert.match(script, /"tracksuits": "Tuta"/);
+  assert.match(script, /"two piece sets": "Completo"/);
+  assert.match(script, /"denim shorts": "Jeans corti"/);
+  assert.match(script, /function normalizeCatalogCategory\(value\)/);
+  assert.match(script, /const catalogCategoryOrder =/);
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /function moveProductGallery\(control, direction\)/);
   assert.match(script, /data-last-stock-gender="uomo"/);

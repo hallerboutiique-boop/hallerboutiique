@@ -1206,6 +1206,35 @@ function normalizeOptionalProductPrice(value) {
   return String(value || "").trim() ? normalizeProductPrice(value) : "";
 }
 
+const catalogCategoryAliases = {
+  "tracksuit": "Tuta",
+  "tracksuits": "Tuta",
+  "two piece set": "Completo",
+  "two piece sets": "Completo",
+  "two-piece set": "Completo",
+  "two-piece sets": "Completo",
+  "long denim": "Jeans lunghi",
+  "denim shoort": "Jeans corti",
+  "denim short": "Jeans corti",
+  "denim shorts": "Jeans corti",
+  "shorts": "Pantaloncini",
+  "jacket": "Giacche leggere",
+  "jackets": "Giacche leggere",
+  "sneakers": "Scarpe",
+  "sneakers uomo": "Scarpe",
+  "sneakers donna": "Scarpe",
+};
+
+const catalogCategoryOrder = {
+  uomo: ["T-Shirts", "Polo", "Completo", "Tuta", "Giacche leggere", "Jeans lunghi", "Jeans corti", "Pantaloncini", "Scarpe", "Borse Uomo"],
+  donna: ["T-Shirts", "Borse Donna", "Scarpe"],
+};
+
+function normalizeCatalogCategory(value) {
+  const category = String(value || "").trim();
+  return catalogCategoryAliases[category.toLowerCase()] || category;
+}
+
 function applyProductOverride(product) {
   const override = productOverrides[product.id] || {};
   return {
@@ -1213,6 +1242,7 @@ function applyProductOverride(product) {
     ...override,
     id: product.id,
     baseName: product.baseName || product.name,
+    category: normalizeCatalogCategory(override.category || product.category),
     original: normalizeProductPrice(override.original || product.original),
     finalPrice: normalizeProductPrice(override.finalPrice || product.finalPrice),
     discount: override.discount || product.discount,
@@ -1236,7 +1266,7 @@ function normalizeCustomProduct(product) {
     name: product.name || "Prodotto",
     description: product.description || "",
     collection: product.collection || "Selezione Haller Boutique",
-    category: product.category || "Nuovi arrivi",
+    category: normalizeCatalogCategory(product.category || "Nuovi arrivi"),
     original: normalizeOptionalProductPrice(product.original),
     finalPrice: normalizeOptionalProductPrice(product.finalPrice),
     discount: product.discount || "",
@@ -1490,7 +1520,16 @@ function getCategoryProducts(gender, category) {
 }
 
 function getCategoriesForGender(gender) {
-  return [...new Set(getGenderProducts(gender).map((product) => product.category).filter(Boolean))];
+  const order = catalogCategoryOrder[gender] || [];
+  return [...new Set(getGenderProducts(gender).map((product) => product.category).filter(Boolean))]
+    .sort((left, right) => {
+      const leftIndex = order.indexOf(left);
+      const rightIndex = order.indexOf(right);
+      if (leftIndex === -1 && rightIndex === -1) return left.localeCompare(right, "it");
+      if (leftIndex === -1) return 1;
+      if (rightIndex === -1) return -1;
+      return leftIndex - rightIndex;
+    });
 }
 
 function getBrands(products) {
