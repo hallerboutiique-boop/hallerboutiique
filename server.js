@@ -262,7 +262,6 @@ async function storeProductImage(name, data, contentType) {
     return `/uploads/${name}`;
   }
 
-  await ensureProductImageStorage();
   const key = `products/${name}`;
   const extension = path.extname(name).toLowerCase();
   await productImageStorage.send(new PutObjectCommand({
@@ -2657,9 +2656,6 @@ await fs.mkdir(dataDir, { recursive: true });
 await pruneStaleStorageTemps({ minAgeMs: 0 });
 await ensureStorage();
 await pruneOrphanProductUploads({ minAgeMs: 0 });
-await ensureProductImageStorage().then(() => pruneOrphanProductObjects({ minAgeMs: 0 })).catch((error) => {
-  console.error(`Tigris initialization skipped: ${error.message}`);
-});
 
 http
   .createServer(async (req, res) => {
@@ -2682,4 +2678,11 @@ http
   })
   .listen(port, "0.0.0.0", () => {
     console.log(`Haller Boutique listening on ${port}`);
+    if (productImageStorage) {
+      setTimeout(() => {
+        ensureProductImageStorage()
+          .then(() => pruneOrphanProductObjects({ minAgeMs: 0 }))
+          .catch((error) => console.error(`Tigris initialization skipped: ${error.message}`));
+      }, 0);
+    }
   });
