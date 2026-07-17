@@ -85,12 +85,13 @@ test("catalog navigation, stable visual search and private last-stock handling a
 });
 
 test("catalog categories, product pages and galleries follow the storefront flow", async () => {
-  const [index, productPage, script, server, styles] = await Promise.all([
+  const [index, productPage, script, server, styles, dockerfile] = await Promise.all([
     readFile("index.html", "utf8"),
     readFile("product.html", "utf8"),
     readFile("script.js", "utf8"),
     readFile("server.js", "utf8"),
     readFile("styles.css", "utf8"),
+    readFile("Dockerfile", "utf8"),
   ]);
   for (const category of ["Completo", "Tuta", "Giacche leggere", "Jeans lunghi", "Jeans corti", "Pantaloncini", "Scarpe"]) {
     assert.match(script, new RegExp(`name: "${category}"`));
@@ -101,6 +102,7 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /data-last-stock-gender="donna"/);
   assert.match(productPage, /data-product-detail/);
   assert.match(server, /"\/product\.html"/);
+  assert.match(dockerfile, /COPY index\.html product\.html/);
   assert.match(index, /class="last-stock-nav"/);
   assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
   assert.match(styles, /\.product-gallery-controls\s*\{/);
