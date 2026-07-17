@@ -1228,8 +1228,24 @@ const catalogCategoryAliases = {
 };
 
 const catalogCategoryOrder = {
-  uomo: ["T-Shirts", "Polo", "Completo", "Tuta", "Giacche leggere", "Jeans lunghi", "Jeans corti", "Pantaloncini", "Scarpe", "Borse Uomo"],
+  uomo: ["T-Shirts", "Polo", "Jeans corti", "Jeans lunghi", "Pantaloncini", "Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"],
   donna: ["T-Shirts", "Borse Donna", "Scarpe"],
+};
+
+const catalogMenuColumns = {
+  uomo: [
+    ["T-Shirts", "Polo", "Jeans corti", "Jeans lunghi", "Pantaloncini"],
+    ["Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"],
+  ],
+};
+
+const catalogMenuLabels = {
+  uomo: {
+    "T-Shirts": "T-Shirt",
+    "Giacche leggere": "Giacca leggera",
+    "Completo": "Completi casual",
+    "Borse Uomo": "Borse",
+  },
 };
 
 function normalizeCatalogCategory(value) {
@@ -1546,14 +1562,28 @@ function renderCatalogNavigation() {
     const panel = document.querySelector(`[data-catalog-nav-panel="${gender}"]`);
     if (!panel) return;
     const categories = getCategoriesForGender(gender);
+    const renderCategoryButton = (category) => {
+      const products = getCategoryProducts(gender, category);
+      const product = products.find((entry) => productPrimaryImage(entry)) || products[0];
+      const label = catalogMenuLabels[gender]?.[category] || category;
+      return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}">${productPreviewMarkup(product, "catalog-nav-preview")}<span>${escapeHtml(label)}</span></button>`;
+    };
+    const configuredColumns = catalogMenuColumns[gender];
+    let categoryMarkup;
+    if (configuredColumns) {
+      const columns = configuredColumns.map((column) => column.filter((category) => categories.includes(category)));
+      const configuredCategories = new Set(configuredColumns.flat());
+      categories.filter((category) => !configuredCategories.has(category)).forEach((category) => {
+        const shortestColumn = columns.reduce((shortest, column) => column.length < shortest.length ? column : shortest, columns[0]);
+        shortestColumn.push(category);
+      });
+      categoryMarkup = columns.map((column) => `<div class="catalog-nav-category-column">${column.map(renderCategoryButton).join("")}</div>`).join("");
+    } else {
+      categoryMarkup = categories.map(renderCategoryButton).join("");
+    }
     panel.innerHTML = `
       <p>${translate("catalog-choose-category")}</p>
-      <div class="catalog-nav-category-grid">
-        ${categories.map((category) => {
-          const product = getCategoryProducts(gender, category).find((entry) => productPrimaryImage(entry)) || getCategoryProducts(gender, category)[0];
-          return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}">${productPreviewMarkup(product, "catalog-nav-preview")}<span>${escapeHtml(category)}</span></button>`;
-        }).join("")}
-      </div>
+      <div class="catalog-nav-category-grid${configuredColumns ? " has-fixed-columns" : ""}">${categoryMarkup}</div>
     `;
   });
 }

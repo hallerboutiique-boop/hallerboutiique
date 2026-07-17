@@ -101,6 +101,11 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /"denim shorts": "Jeans corti"/);
   assert.match(script, /function normalizeCatalogCategory\(value\)/);
   assert.match(script, /const catalogCategoryOrder =/);
+  assert.match(script, /\["T-Shirts", "Polo", "Jeans corti", "Jeans lunghi", "Pantaloncini"\]/);
+  assert.match(script, /\["Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"\]/);
+  assert.match(script, /"Giacche leggere": "Giacca leggera"/);
+  assert.match(script, /"Completo": "Completi casual"/);
+  assert.match(script, /catalog-nav-category-column/);
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /catalogState\.category && !catalogState\.brand/);
   assert.match(script, /data-catalog-results/);
@@ -125,6 +130,7 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(dockerfile, /COPY index\.html product\.html/);
   assert.match(index, /class="last-stock-nav"/);
   assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
+  assert.match(styles, /\.catalog-nav-category-column\s*\{[\s\S]*?grid-auto-rows:\s*minmax\(54px, auto\)/);
   assert.match(styles, /\.product-gallery-dots button::before\s*\{[\s\S]*?width:\s*5px/);
   assert.match(styles, /touch-action:\s*pan-y pinch-zoom/);
   assert.match(styles, /\.product-detail-gallery\.is-gallery-swiping/);
