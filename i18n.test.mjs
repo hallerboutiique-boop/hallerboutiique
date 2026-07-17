@@ -227,7 +227,9 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("originalImageIndexes", JSON\.stringify\(originalImageIndexes\)\)/);
   assert.match(server, /readRequestBuffer\(req, 80 \* 1024 \* 1024\)/);
   assert.match(server, /\.slice\(0, 40\)/);
-  assert.match(server, /const originalSavedByIndex = new Map\(\)/);
+  assert.match(server, /const originalSavedByIndex = new Map\(/);
+  assert.match(server, /const uploadedImages = await Promise\.all/);
+  assert.match(server, /const uploadedOriginals = await Promise\.all/);
   assert.match(server, /sourceSaved = saved\.map/);
   assert.match(server, /originalImages: sourceSaved/);
   assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
@@ -241,6 +243,12 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /await pruneOrphanProductUploads\(\{ minAgeMs: 0 \}\)/);
   assert.match(server, /return await handleApi\(req, res, url\)/);
   assert.match(server, /return json\(res, 507/);
+  assert.match(server, /new S3Client/);
+  assert.match(server, /new PutObjectCommand/);
+  assert.match(server, /new PutBucketCorsCommand/);
+  assert.match(server, /async function pruneOrphanProductObjects/);
+  assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
+  assert.match(adminHtml, /admin\.js\?v=tigris-storage-1/);
 });
 
 test("checkout renders product images from the cart", async () => {

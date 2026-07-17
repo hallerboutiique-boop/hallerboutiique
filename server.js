@@ -4,6 +4,13 @@ import http from "node:http";
 import { isIP } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
+  PutBucketCorsCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = __dirname;
@@ -30,6 +37,16 @@ const replayMaxEvents = 500;
 const geoLookupTimeoutMs = 1800;
 const minimumStorageReserveBytes = 64 * 1024 * 1024;
 const orphanUploadGraceMs = 10 * 60 * 1000;
+const productImageBucketName = String(process.env.BUCKET_NAME || "").trim();
+const productImageStorageEndpoint = String(process.env.AWS_ENDPOINT_URL_S3 || "https://t3.storage.dev").trim();
+const productImageStorageRegion = String(process.env.AWS_REGION || "auto").trim();
+const productImagePublicBaseUrl = productImageBucketName
+  ? String(process.env.TIGRIS_PUBLIC_URL || `https://${productImageBucketName}.t3.tigrisfiles.io`).replace(/\/+$/, "")
+  : "";
+const productImageStorage = productImageBucketName
+  ? new S3Client({ endpoint: productImageStorageEndpoint, region: productImageStorageRegion })
+  : null;
+let productImageStorageReadyPromise = null;
 const geoCache = new Map();
 
 const contentTypes = {
@@ -152,6 +169,9 @@ async function writeProductOverrides(data) {
     custom: Array.isArray(data.custom) ? data.custom : [],
   });
   await pruneOrphanProductUploads();
+  await pruneOrphanProductObjects().catch((error) => {
+    console.error(`Tigris cleanup skipped: ${error.message}`);
+  });
 }
 
 function uploadFileName(value) {
@@ -179,6 +199,124 @@ function referencedProductUploadNames(data) {
     });
   });
   return referenced;
+}
+
+function productObjectKey(value) {
+  if (!productImagePublicBaseUrl || !/^https?:\/\//i.test(String(value || ""))) return "";
+  try {
+    const imageUrl = new URL(value);
+    const publicUrl = new URL(productImagePublicBaseUrl);
+    if (imageUrl.origin !== publicUrl.origin) return "";
+    return decodeURIComponent(imageUrl.pathname.replace(/^\/+/, ""));
+  } catch {
+    return "";
+  }
+}
+
+function referencedProductObjectKeys(data) {
+  const items = data?.items && typeof data.items === "object" ? Object.values(data.items) : [];
+  const custom = Array.isArray(data?.custom) ? data.custom : [];
+  const referenced = new Set();
+  [...items, ...custom].forEach((product) => {
+    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages)].forEach((image) => {
+      const key = productObjectKey(image);
+      if (key) referenced.add(key);
+    });
+  });
+  return referenced;
+}
+
+async function ensureProductImageStorage() {
+  if (!productImageStorage) return false;
+  if (!productImageStorageReadyPromise) {
+    productImageStorageReadyPromise = productImageStorage.send(new PutBucketCorsCommand({
+      Bucket: productImageBucketName,
+      CORSConfiguration: {
+        CORSRules: [{
+          AllowedHeaders: ["*"],
+          AllowedMethods: ["GET", "HEAD"],
+          AllowedOrigins: ["*"],
+          ExposeHeaders: ["Content-Length", "Content-Type", "ETag"],
+          MaxAgeSeconds: 86400,
+        }],
+      },
+    })).then(() => true).catch((error) => {
+      productImageStorageReadyPromise = null;
+      throw error;
+    });
+  }
+  return productImageStorageReadyPromise;
+}
+
+function storedImageContentType(extension, suppliedType) {
+  const cleanType = String(suppliedType || "").split(";")[0].trim().toLowerCase();
+  if (["image/jpeg", "image/png", "image/webp"].includes(cleanType)) return cleanType;
+  return contentTypes[extension] || "application/octet-stream";
+}
+
+async function storeProductImage(name, data, contentType) {
+  if (!productImageStorage) {
+    await ensureProductUploadCapacity(data.length);
+    await fs.mkdir(uploadsDir, { recursive: true });
+    await fs.writeFile(path.join(uploadsDir, name), data);
+    return `/uploads/${name}`;
+  }
+
+  await ensureProductImageStorage();
+  const key = `products/${name}`;
+  const extension = path.extname(name).toLowerCase();
+  await productImageStorage.send(new PutObjectCommand({
+    Bucket: productImageBucketName,
+    Key: key,
+    Body: data,
+    ContentLength: data.length,
+    ContentType: storedImageContentType(extension, contentType),
+    CacheControl: "public, max-age=31536000, immutable",
+    ContentDisposition: "inline",
+  }));
+  return `${productImagePublicBaseUrl}/${key}`;
+}
+
+async function deleteProductObjects(keys) {
+  if (!productImageStorage || !keys.length) return;
+  for (let index = 0; index < keys.length; index += 1000) {
+    await productImageStorage.send(new DeleteObjectsCommand({
+      Bucket: productImageBucketName,
+      Delete: { Objects: keys.slice(index, index + 1000).map((Key) => ({ Key })), Quiet: true },
+    }));
+  }
+}
+
+async function pruneOrphanProductObjects({ minAgeMs = orphanUploadGraceMs } = {}) {
+  if (!productImageStorage) return { removedFiles: 0 };
+  let data;
+  try {
+    data = JSON.parse(await fs.readFile(productsFile, "utf8"));
+  } catch {
+    return { removedFiles: 0 };
+  }
+
+  const referenced = referencedProductObjectKeys(data);
+  const stale = [];
+  const now = Date.now();
+  let continuationToken;
+  do {
+    const page = await productImageStorage.send(new ListObjectsV2Command({
+      Bucket: productImageBucketName,
+      Prefix: "products/",
+      ContinuationToken: continuationToken,
+    }));
+    (page.Contents || []).forEach((object) => {
+      const key = String(object.Key || "");
+      const modifiedAt = object.LastModified instanceof Date ? object.LastModified.getTime() : 0;
+      if (key && !referenced.has(key) && now - modifiedAt >= minAgeMs) stale.push(key);
+    });
+    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (continuationToken);
+
+  await deleteProductObjects(stale);
+  if (stale.length > 0) console.log(`Tigris cleanup removed ${stale.length} orphan product images.`);
+  return { removedFiles: stale.length };
 }
 
 async function pruneStaleStorageTemps({ minAgeMs = 60 * 1000 } = {}) {
@@ -1604,19 +1742,21 @@ async function handleAdminProductImages(req, res) {
 
   const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 8);
   const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 8);
+  if (originalParts.some((part) => {
+    const extension = imageExtension(part.filename, part.contentType);
+    return !extension || extension === ".svg" || part.data.length === 0;
+  })) return badRequest(res, "Foto originale non valida.");
   const requiredBytes = [...imageParts, ...originalParts].reduce((total, part) => total + part.data.length, 0);
-  await ensureProductUploadCapacity(requiredBytes);
-  await fs.mkdir(uploadsDir, { recursive: true });
-  const saved = [];
-  const savedInputIndexes = [];
-  for (const [inputIndex, part] of imageParts.entries()) {
+  if (!productImageStorage) await ensureProductUploadCapacity(requiredBytes);
+  const uploadedImages = await Promise.all(imageParts.map(async (part, inputIndex) => {
     const ext = imageExtension(part.filename, part.contentType);
-    if (!ext || ext === ".svg" || part.data.length === 0) continue;
+    if (!ext || ext === ".svg" || part.data.length === 0) return null;
     const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
-    await fs.writeFile(path.join(uploadsDir, name), part.data);
-    saved.push(`/uploads/${name}`);
-    savedInputIndexes.push(inputIndex);
-  }
+    return { inputIndex, url: await storeProductImage(name, part.data, part.contentType) };
+  }));
+  const validUploadedImages = uploadedImages.filter(Boolean);
+  const saved = validUploadedImages.map((entry) => entry.url);
+  const savedInputIndexes = validUploadedImages.map((entry) => entry.inputIndex);
 
   let originalImageIndexes = [];
   try {
@@ -1625,15 +1765,18 @@ async function handleAdminProductImages(req, res) {
   } catch {
     originalImageIndexes = [];
   }
-  const originalSavedByIndex = new Map();
-  for (const [partIndex, originalPart] of originalParts.entries()) {
+  const uploadedOriginals = await Promise.all(originalParts.map(async (originalPart, partIndex) => {
     const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
-    if (!originalExt || originalExt === ".svg" || originalPart.data.length === 0) return badRequest(res, "Foto originale non valida.");
     const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
-    await fs.writeFile(path.join(uploadsDir, originalName), originalPart.data);
+    const originalUrl = await storeProductImage(originalName, originalPart.data, originalPart.contentType);
     const targetIndex = Number.isInteger(originalImageIndexes[partIndex]) ? originalImageIndexes[partIndex] : partIndex;
-    if (targetIndex >= 0 && targetIndex < imageParts.length) originalSavedByIndex.set(targetIndex, `/uploads/${originalName}`);
-  }
+    return { targetIndex, url: originalUrl };
+  }));
+  const originalSavedByIndex = new Map(
+    uploadedOriginals
+      .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
+      .map((entry) => [entry.targetIndex, entry.url])
+  );
 
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
 
@@ -1718,15 +1861,12 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
 
   const progress = streamProgress ? createProgressStream(res) : null;
   progress?.update(24, "Foto ricevuta");
-  await fs.mkdir(uploadsDir, { recursive: true });
   const name = `ai-product-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
-  await fs.writeFile(path.join(uploadsDir, name), image.data);
-  const imageUrl = `/uploads/${name}`;
+  const imageUrl = await storeProductImage(name, image.data, image.contentType);
   let originalImageUrl = imageUrl;
   if (sourceImage !== image) {
     const originalName = `ai-product-original-${Date.now()}-${randomBytes(4).toString("hex")}${sourceExt}`;
-    await fs.writeFile(path.join(uploadsDir, originalName), sourceImage.data);
-    originalImageUrl = `/uploads/${originalName}`;
+    originalImageUrl = await storeProductImage(originalName, sourceImage.data, sourceImage.contentType);
   }
   const sourceMime = sourceImage.contentType || (sourceExt === ".png" ? "image/png" : sourceExt === ".webp" ? "image/webp" : "image/jpeg");
   const dataUrl = `data:${sourceMime};base64,${sourceImage.data.toString("base64")}`;
@@ -2517,6 +2657,9 @@ await fs.mkdir(dataDir, { recursive: true });
 await pruneStaleStorageTemps({ minAgeMs: 0 });
 await ensureStorage();
 await pruneOrphanProductUploads({ minAgeMs: 0 });
+await ensureProductImageStorage().then(() => pruneOrphanProductObjects({ minAgeMs: 0 })).catch((error) => {
+  console.error(`Tigris initialization skipped: ${error.message}`);
+});
 
 http
   .createServer(async (req, res) => {
