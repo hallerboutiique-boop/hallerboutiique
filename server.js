@@ -28,6 +28,8 @@ const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
 const geoLookupTimeoutMs = 1800;
+const minimumStorageReserveBytes = 64 * 1024 * 1024;
+const orphanUploadGraceMs = 10 * 60 * 1000;
 const geoCache = new Map();
 
 const contentTypes = {
@@ -111,8 +113,13 @@ async function readJson(filePath, fallback) {
 async function writeJson(filePath, data) {
   await ensureStorage();
   const tmp = `${filePath}.${Date.now()}.${randomBytes(6).toString("hex")}.tmp`;
-  await fs.writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
-  await fs.rename(tmp, filePath);
+  try {
+    await fs.writeFile(tmp, `${JSON.stringify(data, null, 2)}\n`, "utf8");
+    await fs.rename(tmp, filePath);
+  } catch (error) {
+    await fs.unlink(tmp).catch(() => undefined);
+    throw error;
+  }
 }
 
 async function readUsers() {
@@ -139,11 +146,100 @@ async function readProductOverrides() {
 }
 
 async function writeProductOverrides(data) {
-  return writeJson(productsFile, {
+  await writeJson(productsFile, {
     updatedAt: new Date().toISOString(),
     items: data.items && typeof data.items === "object" ? data.items : {},
     custom: Array.isArray(data.custom) ? data.custom : [],
   });
+  await pruneOrphanProductUploads();
+}
+
+function uploadFileName(value) {
+  let cleanValue = String(value || "").trim();
+  if (/^https?:\/\//i.test(cleanValue)) {
+    try {
+      cleanValue = new URL(cleanValue).pathname;
+    } catch {
+      return "";
+    }
+  }
+  cleanValue = cleanValue.split(/[?#]/)[0];
+  const match = cleanValue.match(/^\/?uploads\/([^/]+)$/i);
+  return match ? path.basename(match[1]) : "";
+}
+
+function referencedProductUploadNames(data) {
+  const items = data?.items && typeof data.items === "object" ? Object.values(data.items) : [];
+  const custom = Array.isArray(data?.custom) ? data.custom : [];
+  const referenced = new Set();
+  [...items, ...custom].forEach((product) => {
+    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages)].forEach((image) => {
+      const name = uploadFileName(image);
+      if (name) referenced.add(name);
+    });
+  });
+  return referenced;
+}
+
+async function pruneStaleStorageTemps({ minAgeMs = 60 * 1000 } = {}) {
+  const now = Date.now();
+  const entries = await fs.readdir(dataDir, { withFileTypes: true }).catch(() => []);
+  let removedBytes = 0;
+  for (const entry of entries) {
+    if (!entry.isFile() || !entry.name.endsWith(".tmp")) continue;
+    const filePath = path.join(dataDir, entry.name);
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat || now - stat.mtimeMs < minAgeMs) continue;
+    await fs.unlink(filePath).catch(() => undefined);
+    removedBytes += stat.size;
+  }
+  if (removedBytes > 0) console.log(`Storage cleanup removed ${Math.round(removedBytes / 1024 / 1024)} MB of temporary files.`);
+  return removedBytes;
+}
+
+async function pruneOrphanProductUploads({ minAgeMs = orphanUploadGraceMs } = {}) {
+  let data;
+  try {
+    data = JSON.parse(await fs.readFile(productsFile, "utf8"));
+  } catch {
+    return { removedFiles: 0, removedBytes: 0 };
+  }
+  const referenced = referencedProductUploadNames(data);
+  const entries = await fs.readdir(uploadsDir, { withFileTypes: true }).catch(() => []);
+  const now = Date.now();
+  let removedFiles = 0;
+  let removedBytes = 0;
+  for (const entry of entries) {
+    if (!entry.isFile() || referenced.has(entry.name)) continue;
+    const filePath = path.join(uploadsDir, entry.name);
+    const stat = await fs.stat(filePath).catch(() => null);
+    if (!stat || now - stat.mtimeMs < minAgeMs) continue;
+    try {
+      await fs.unlink(filePath);
+      removedFiles += 1;
+      removedBytes += stat.size;
+    } catch {}
+  }
+  if (removedFiles > 0) {
+    console.log(`Storage cleanup removed ${removedFiles} orphan product images (${Math.round(removedBytes / 1024 / 1024)} MB).`);
+  }
+  return { removedFiles, removedBytes };
+}
+
+function storageCapacityError() {
+  const error = new Error("Spazio immagini esaurito. Rimuovi alcune foto non necessarie o aumenta lo spazio Fly, poi riprova.");
+  error.code = "STORAGE_FULL";
+  return error;
+}
+
+function isStorageCapacityError(error) {
+  return error?.code === "ENOSPC" || error?.code === "STORAGE_FULL";
+}
+
+async function ensureProductUploadCapacity(requiredBytes) {
+  const stat = await fs.statfs(dataDir);
+  const availableBytes = Number(stat.bavail) * Number(stat.bsize);
+  if (availableBytes < Number(requiredBytes || 0) + minimumStorageReserveBytes) throw storageCapacityError();
 }
 
 async function readTryOnArchive() {
@@ -1506,8 +1602,11 @@ async function handleAdminProductImages(req, res) {
   const customIndex = overrides.custom.findIndex((product) => product.id === productId);
   if (!base && customIndex === -1) return badRequest(res, "Prodotto non valido.");
 
-  await fs.mkdir(uploadsDir, { recursive: true });
   const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 8);
+  const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 8);
+  const requiredBytes = [...imageParts, ...originalParts].reduce((total, part) => total + part.data.length, 0);
+  await ensureProductUploadCapacity(requiredBytes);
+  await fs.mkdir(uploadsDir, { recursive: true });
   const saved = [];
   const savedInputIndexes = [];
   for (const [inputIndex, part] of imageParts.entries()) {
@@ -1526,7 +1625,6 @@ async function handleAdminProductImages(req, res) {
   } catch {
     originalImageIndexes = [];
   }
-  const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 8);
   const originalSavedByIndex = new Map();
   for (const [partIndex, originalPart] of originalParts.entries()) {
     const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
@@ -2415,7 +2513,10 @@ async function serveStatic(req, res, url) {
   }
 }
 
+await fs.mkdir(dataDir, { recursive: true });
+await pruneStaleStorageTemps({ minAgeMs: 0 });
 await ensureStorage();
+await pruneOrphanProductUploads({ minAgeMs: 0 });
 
 http
   .createServer(async (req, res) => {
@@ -2425,10 +2526,14 @@ http
       if (oauthStart) return startOauth(req, res, oauthStart[1]);
       const oauthEnd = url.pathname.match(/^\/auth\/(google|microsoft)\/callback$/);
       if (oauthEnd) return oauthCallback(req, res, oauthEnd[1], url);
-      if (url.pathname.startsWith("/api/")) return handleApi(req, res, url);
-      return serveStatic(req, res, url);
+      if (url.pathname.startsWith("/api/")) return await handleApi(req, res, url);
+      return await serveStatic(req, res, url);
     } catch (error) {
       console.error(error);
+      if (res.headersSent) return res.destroy();
+      if (isStorageCapacityError(error)) {
+        return json(res, 507, { ok: false, message: storageCapacityError().message });
+      }
       json(res, 500, { ok: false, message: "Errore server." });
     }
   })

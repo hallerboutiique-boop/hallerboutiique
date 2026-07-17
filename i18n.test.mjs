@@ -233,6 +233,14 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
   assert.match(script, /function productPrimaryTryOnImage\(product\)/);
   assert.match(script, /tryOnImage: productPrimaryTryOnImage\(product\)/);
+  assert.match(admin, /async function readAdminApiResponse\(response, fallbackMessage\)/);
+  assert.match(admin, /Caricamento interrotto dal server/);
+  assert.match(server, /async function pruneOrphanProductUploads/);
+  assert.match(server, /async function pruneStaleStorageTemps/);
+  assert.match(server, /async function ensureProductUploadCapacity/);
+  assert.match(server, /await pruneOrphanProductUploads\(\{ minAgeMs: 0 \}\)/);
+  assert.match(server, /return await handleApi\(req, res, url\)/);
+  assert.match(server, /return json\(res, 507/);
 });
 
 test("checkout renders product images from the cart", async () => {

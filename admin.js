@@ -60,19 +60,38 @@ function setAdminMessage(message, type = "") {
 }
 
 async function api(path, options = {}) {
-  const response = await fetch(path, {
-    headers: { "Content-Type": "application/json", ...(options.headers || {}) },
-    ...options,
-  });
-  const data = await response.json();
-  if (!response.ok || data.ok === false) throw new Error(data.message || "Operazione non riuscita.");
-  return data;
+  try {
+    const response = await fetch(path, {
+      headers: { "Content-Type": "application/json", ...(options.headers || {}) },
+      ...options,
+    });
+    return await readAdminApiResponse(response, "Operazione non riuscita.");
+  } catch (error) {
+    if (error instanceof Error && !/fetch|network|load failed|expected pattern/i.test(error.message)) throw error;
+    throw new Error("Connessione al server interrotta. Attendi qualche secondo e riprova.");
+  }
 }
 
 async function uploadApi(path, body, options = {}) {
-  const response = await fetch(path, { method: "POST", body, signal: options.signal });
-  const data = await response.json();
-  if (!response.ok || data.ok === false) throw new Error(data.message || "Upload non riuscito.");
+  try {
+    const response = await fetch(path, { method: "POST", body, signal: options.signal });
+    return await readAdminApiResponse(response, "Upload non riuscito.");
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    if (error instanceof Error && !/fetch|network|load failed|expected pattern/i.test(error.message)) throw error;
+    throw new Error("Caricamento interrotto dal server. Attendi qualche secondo e riprova.");
+  }
+}
+
+async function readAdminApiResponse(response, fallbackMessage) {
+  const raw = await response.text();
+  let data;
+  try {
+    data = raw ? JSON.parse(raw) : {};
+  } catch {
+    throw new Error(response.ok ? fallbackMessage : "Il server non ha completato la richiesta. Riprova.");
+  }
+  if (!response.ok || data.ok === false) throw new Error(data.message || fallbackMessage);
   return data;
 }
 
