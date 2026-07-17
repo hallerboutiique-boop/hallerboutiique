@@ -102,6 +102,9 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /function normalizeCatalogCategory\(value\)/);
   assert.match(script, /const catalogCategoryOrder =/);
   assert.match(script, /function renderProductDetail\(\)/);
+  assert.match(script, /catalogState\.category && !catalogState\.brand/);
+  assert.match(script, /data-catalog-results/);
+  assert.match(script, /catalogState\.brand\s*\? document\.querySelector\("\[data-catalog-results\]"\)/);
   assert.match(script, /function selectProductGallerySlide\(control\)/);
   assert.match(script, /function stepProductGallery\(gallery, direction\)/);
   assert.match(script, /function startProductGallerySwipe\(event\)/);

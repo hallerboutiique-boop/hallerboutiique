@@ -1588,14 +1588,16 @@ function renderCatalog() {
   const title = catalogState.productIds.length
     ? translate("catalog-search-results")
     : `${translate("catalog-viewing")} ${catalogState.gender === "donna" ? translate("women") : translate("men")}`;
-  const brandTiles = catalogState.category ? renderCatalogTiles(categoryProducts, catalogState.gender, catalogState.category) : "";
+  const brandTiles = catalogState.category && !catalogState.brand
+    ? renderCatalogTiles(categoryProducts, catalogState.gender, catalogState.category)
+    : "";
   const productGridClass = catalogState.productIds.length ? "product-grid product-grid-search-result" : "product-grid";
 
   catalogRoot.innerHTML = `
     <section class="catalog-browse">
       <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || catalogState.category || translate("catalog-all-products"))}</h3></header>
       ${brandTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-brand")}</h4><div class="catalog-browse-tile-grid">${brandTiles}<button class="catalog-browse-tile catalog-browse-all" type="button" data-catalog-filter data-catalog-gender="${catalogState.gender}" data-catalog-category="${escapeHtml(catalogState.category)}"><span>${translate("catalog-all-brands")}</span></button></div></section>` : ""}
-      <div class="catalog-results-heading"><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
+      <div class="catalog-results-heading" data-catalog-results><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
       <div class="${productGridClass}">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
     </section>
   `;
@@ -3084,7 +3086,10 @@ document.addEventListener("click", (event) => {
     };
     closeCatalogNavPanels();
     renderCatalog();
-    document.querySelector("#selezione")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const catalogTarget = catalogState.brand
+      ? document.querySelector("[data-catalog-results]")
+      : document.querySelector("#selezione");
+    window.requestAnimationFrame(() => catalogTarget?.scrollIntoView({ behavior: "smooth", block: "start" }));
   }
 
   if (catalogReset) {
