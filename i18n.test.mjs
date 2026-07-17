@@ -104,6 +104,11 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /function selectProductGallerySlide\(control\)/);
   assert.match(script, /function stepProductGallery\(gallery, direction\)/);
+  assert.match(script, /function startProductGallerySwipe\(event\)/);
+  assert.match(script, /function moveProductGallerySwipe\(event\)/);
+  assert.match(script, /function finishProductGallerySwipe\(event\)/);
+  assert.match(script, /deltaX < 0 \? 1 : -1/);
+  assert.match(script, /galleryClickSuppression\.set\(gallery, Date\.now\(\) \+ 500\)/);
   assert.match(script, /event\.clientX < galleryBounds\.left \+ galleryBounds\.width \/ 2 \? -1 : 1/);
   assert.match(script, /data-gallery-click/);
   assert.match(script, /data-gallery-index="\$\{index\}"/);
@@ -118,6 +123,8 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(index, /class="last-stock-nav"/);
   assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
   assert.match(styles, /\.product-gallery-dots button::before\s*\{[\s\S]*?width:\s*5px/);
+  assert.match(styles, /touch-action:\s*pan-y pinch-zoom/);
+  assert.match(styles, /\.product-detail-gallery\.is-gallery-swiping/);
   assert.doesNotMatch(styles, /\.product-gallery-controls\s*\{/);
   assert.match(styles, /\.product-detail\s*\{/);
 });

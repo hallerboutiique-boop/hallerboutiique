@@ -3194,6 +3194,13 @@ body.motion-enabled .product-card:hover {
   cursor: pointer;
 }
 
+[data-gallery-click],
+.product-media-open {
+  touch-action: pan-y pinch-zoom;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
 .product-media-open {
   position: absolute;
   inset: 0;
@@ -3245,6 +3252,12 @@ body.motion-enabled .product-card:hover {
 body.motion-enabled .product-card:hover .product-image {
   filter: saturate(1.08) contrast(1.04);
   transform: none;
+}
+
+.product-media.is-gallery-swiping .product-image.is-active,
+.product-detail-gallery.is-gallery-swiping .product-image.is-active {
+  transform: translateX(var(--gallery-swipe-offset, 0));
+  transition: none;
 }
 
 .discount-badge {

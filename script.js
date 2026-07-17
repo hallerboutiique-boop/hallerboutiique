@@ -12,6 +12,8 @@ let motionScrollFrame = 0;
 let motionScrollDirection = "down";
 let lastMotionScrollY = window.scrollY;
 let siteLanguage = localStorage.getItem("haller-language") || "it";
+let productGallerySwipe = null;
+const galleryClickSuppression = new WeakMap();
 
 const translations = {
   it: {
@@ -1699,6 +1701,79 @@ function stepProductGallery(gallery, direction) {
   setProductGalleryIndex(gallery, (currentIndex + direction + slides.length) % slides.length);
 }
 
+function productGalleryFromSwipeTarget(target) {
+  if (!(target instanceof Element) || target.closest("[data-gallery-dot]")) return null;
+  const surface = target.closest("[data-gallery-click], .product-media-open");
+  const gallery = surface?.closest(".product-media, .product-detail-gallery");
+  return gallery?.querySelectorAll("[data-gallery-slide]").length > 1 ? gallery : null;
+}
+
+function clearProductGallerySwipe() {
+  if (!productGallerySwipe) return;
+  productGallerySwipe.gallery.classList.remove("is-gallery-swiping");
+  productGallerySwipe.gallery.style.removeProperty("--gallery-swipe-offset");
+  productGallerySwipe = null;
+}
+
+function startProductGallerySwipe(event) {
+  if (event.pointerType !== "touch" || event.isPrimary === false) return;
+  const gallery = productGalleryFromSwipeTarget(event.target);
+  if (!gallery) return;
+  clearProductGallerySwipe();
+  productGallerySwipe = {
+    gallery,
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+    lastX: event.clientX,
+    lastY: event.clientY,
+    startedAt: Date.now(),
+    horizontal: false,
+    vertical: false,
+  };
+  event.target.setPointerCapture?.(event.pointerId);
+}
+
+function moveProductGallerySwipe(event) {
+  const swipe = productGallerySwipe;
+  if (!swipe || event.pointerId !== swipe.pointerId || swipe.vertical) return;
+  swipe.lastX = event.clientX;
+  swipe.lastY = event.clientY;
+  const deltaX = swipe.lastX - swipe.startX;
+  const deltaY = swipe.lastY - swipe.startY;
+
+  if (!swipe.horizontal) {
+    if (Math.max(Math.abs(deltaX), Math.abs(deltaY)) < 10) return;
+    if (Math.abs(deltaY) >= Math.abs(deltaX)) {
+      swipe.vertical = true;
+      return;
+    }
+    swipe.horizontal = true;
+    swipe.gallery.classList.add("is-gallery-swiping");
+  }
+
+  if (event.cancelable) event.preventDefault();
+  const offset = Math.max(-56, Math.min(56, deltaX * 0.3));
+  swipe.gallery.style.setProperty("--gallery-swipe-offset", `${offset}px`);
+}
+
+function finishProductGallerySwipe(event) {
+  const swipe = productGallerySwipe;
+  if (!swipe || event.pointerId !== swipe.pointerId) return;
+  const deltaX = event.clientX - swipe.startX;
+  const deltaY = event.clientY - swipe.startY;
+  const elapsed = Date.now() - swipe.startedAt;
+  const threshold = Math.min(64, Math.max(38, swipe.gallery.clientWidth * 0.09));
+  const didSwipe = swipe.horizontal
+    && Math.abs(deltaX) > Math.abs(deltaY) * 1.15
+    && (Math.abs(deltaX) >= threshold || (elapsed < 350 && Math.abs(deltaX) >= 28));
+  const gallery = swipe.gallery;
+  clearProductGallerySwipe();
+  if (!didSwipe) return;
+  stepProductGallery(gallery, deltaX < 0 ? 1 : -1);
+  galleryClickSuppression.set(gallery, Date.now() + 500);
+}
+
 function refreshScrollReveals(root = document) {
   if (!siteMotionEnabled) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -2926,6 +3001,11 @@ if (slides.length > 0) {
   }, 5200);
 }
 
+document.addEventListener("pointerdown", startProductGallerySwipe);
+document.addEventListener("pointermove", moveProductGallerySwipe, { passive: false });
+document.addEventListener("pointerup", finishProductGallerySwipe);
+document.addEventListener("pointercancel", clearProductGallerySwipe);
+
 document.addEventListener("click", (event) => {
   const searchButton = event.target.closest(".search-button");
   const searchClose = event.target.closest("[data-catalog-search-close]");
@@ -2953,6 +3033,7 @@ document.addEventListener("click", (event) => {
     const gallery = gallerySurfaceClick.closest(".product-media, .product-detail-gallery");
     if (gallery?.querySelectorAll("[data-gallery-slide]").length > 1) {
       event.preventDefault();
+      if ((galleryClickSuppression.get(gallery) || 0) > Date.now()) return;
       const galleryBounds = gallery.getBoundingClientRect();
       const direction = event.clientX < galleryBounds.left + galleryBounds.width / 2 ? -1 : 1;
       stepProductGallery(gallery, direction);
