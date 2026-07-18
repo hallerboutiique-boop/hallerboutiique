@@ -4,7 +4,7 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 
 - Prima diapositiva ricavata dal mockup originale
 - Seconda diapositiva con la foto della modella caricata
-- Consegna rapida aggiornata a `18H`
+- Consegna a Milano in 3-4 ore in base alla distanza, anche meno; fuori Milano entro 24 ore
 - Logo originale estratto dal riferimento
 - Palette oro allineata alla scritta della slide donna
 - Footer con icone Instagram, TikTok e Telegram
