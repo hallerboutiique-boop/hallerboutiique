@@ -1924,6 +1924,33 @@ button {
   margin-right: 0;
 }
 
+.read-aloud-button {
+  flex: 0 0 auto;
+  border: 1px solid rgba(var(--gold-rgb), 0.48);
+  border-radius: 50%;
+}
+
+.read-aloud-button.is-active {
+  color: #050505;
+  background: var(--gold);
+  box-shadow: 0 0 14px rgba(var(--gold-rgb), 0.48);
+}
+
+.read-aloud-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+body.read-aloud-enabled main h1,
+body.read-aloud-enabled main h2,
+body.read-aloud-enabled main h3,
+body.read-aloud-enabled main p,
+body.read-aloud-enabled main li,
+body.read-aloud-enabled main label,
+body.read-aloud-enabled main strong {
+  cursor: pointer;
+}
+
 .language-picker {
   position: relative;
 }
@@ -2989,6 +3016,9 @@ body.motion-enabled .benefit-support:hover .benefit-support-icon > svg {
 
 .legal-language-picker {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .legal-back {
