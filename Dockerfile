@@ -12,7 +12,7 @@ RUN corepack enable \
 
 COPY server.js ./
 COPY index.html product.html checkout.html account.html ultimi-disponibili.html admin.html termini.html spedizioni.html privacy.html ./
-COPY styles.css script.js i18n.js accessibility.js account.js admin.js ./
+COPY styles.css script.js i18n.js account.js admin.js ./
 COPY assets ./assets
 
 EXPOSE 8080

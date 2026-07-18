@@ -74,7 +74,6 @@ const publicFiles = new Set([
   "/styles.css",
   "/script.js",
   "/i18n.js",
-  "/accessibility.js",
   "/account.js",
   "/admin.js",
 ]);
