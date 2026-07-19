@@ -1282,6 +1282,56 @@ const catalogMenuLabels = {
   },
 };
 
+const catalogCategoryTranslationKeys = {
+  "T-Shirts": "t-shirts",
+  "Polo": "polo",
+  "Jeans corti": "short-jeans",
+  "Jeans lunghi": "long-jeans",
+  "Pantaloncini": "shorts",
+  "Giacche leggere": "light-jackets",
+  "Tuta": "tracksuits",
+  "Completo": "casual-sets",
+  "Scarpe": "shoes",
+  "Borse Uomo": "bags",
+  "Borse Donna": "bags",
+};
+
+const catalogCategoryTranslations = {
+  it: { "t-shirts": "T-Shirt", polo: "Polo", "short-jeans": "Jeans corti", "long-jeans": "Jeans lunghi", shorts: "Pantaloncini", "light-jackets": "Giacca leggera", tracksuits: "Tuta", "casual-sets": "Completi casual", shoes: "Scarpe", bags: "Borse" },
+  en: { "t-shirts": "T-Shirts", polo: "Polo shirts", "short-jeans": "Short jeans", "long-jeans": "Long jeans", shorts: "Shorts", "light-jackets": "Lightweight jackets", tracksuits: "Tracksuits", "casual-sets": "Casual sets", shoes: "Shoes", bags: "Bags" },
+  fr: { "t-shirts": "T-shirts", polo: "Polos", "short-jeans": "Jeans courts", "long-jeans": "Jeans longs", shorts: "Shorts", "light-jackets": "Vestes legeres", tracksuits: "Survetements", "casual-sets": "Ensembles casual", shoes: "Chaussures", bags: "Sacs" },
+  de: { "t-shirts": "T-Shirts", polo: "Poloshirts", "short-jeans": "Kurze Jeans", "long-jeans": "Lange Jeans", shorts: "Shorts", "light-jackets": "Leichte Jacken", tracksuits: "Trainingsanzuge", "casual-sets": "Casual-Sets", shoes: "Schuhe", bags: "Taschen" },
+  es: { "t-shirts": "Camisetas", polo: "Polos", "short-jeans": "Vaqueros cortos", "long-jeans": "Vaqueros largos", shorts: "Pantalones cortos", "light-jackets": "Chaquetas ligeras", tracksuits: "Chandales", "casual-sets": "Conjuntos casuales", shoes: "Zapatos", bags: "Bolsos" },
+  ro: { "t-shirts": "Tricouri", polo: "Tricouri polo", "short-jeans": "Blugi scurti", "long-jeans": "Blugi lungi", shorts: "Pantaloni scurti", "light-jackets": "Jachete usoare", tracksuits: "Treninguri", "casual-sets": "Seturi casual", shoes: "Pantofi", bags: "Genti" },
+  sq: { "t-shirts": "Bluza", polo: "Polo", "short-jeans": "Xhinse te shkurtra", "long-jeans": "Xhinse te gjata", shorts: "Pantallona te shkurtra", "light-jackets": "Xhaketa te lehta", tracksuits: "Kostume sportive", "casual-sets": "Komplete casual", shoes: "Kepuce", bags: "Canta" },
+};
+
+const catalogCollectionTranslations = {
+  it: { uomo: "Catalogo Uomo", donna: "Catalogo Donna" },
+  en: { uomo: "Men's catalog", donna: "Women's catalog" },
+  fr: { uomo: "Catalogue Homme", donna: "Catalogue Femme" },
+  de: { uomo: "Herrenkatalog", donna: "Damenkatalog" },
+  es: { uomo: "Catalogo Hombre", donna: "Catalogo Mujer" },
+  ro: { uomo: "Catalog Barbati", donna: "Catalog Femei" },
+  sq: { uomo: "Katalogu Meshkuj", donna: "Katalogu Femra" },
+};
+
+function catalogCategoryLabel(category, gender = "") {
+  const key = catalogCategoryTranslationKeys[category];
+  return catalogCategoryTranslations[siteLanguage]?.[key]
+    || catalogCategoryTranslations.it[key]
+    || catalogMenuLabels[gender]?.[category]
+    || category;
+}
+
+function catalogCollectionLabel(product) {
+  const gender = getProductGender(product);
+  return catalogCollectionTranslations[siteLanguage]?.[gender]
+    || catalogCollectionTranslations.it[gender]
+    || product.collection
+    || translate("selection");
+}
+
 function normalizeCatalogCategory(value) {
   const category = String(value || "").trim();
   return catalogCategoryAliases[category.toLowerCase()] || category;
@@ -1490,7 +1540,7 @@ function renderProductDetail() {
         ${createProductMediaMarkup(product, true)}
       </section>
       <section class="product-detail-info">
-        <p class="product-detail-kicker">${escapeHtml(product.collection)} / ${escapeHtml(product.category)}</p>
+        <p class="product-detail-kicker">${escapeHtml(catalogCollectionLabel(product))} / ${escapeHtml(catalogCategoryLabel(product.category, getProductGender(product)))}</p>
         <h1>${escapeHtml(product.name)}</h1>
         <div class="product-prices product-detail-prices" aria-label="${translate("price")}">
           ${product.original ? `<span class="price-original">${escapeHtml(product.original)}</span>` : ""}
@@ -1599,7 +1649,7 @@ function renderCatalogNavigation() {
     const renderCategoryButton = (category) => {
       const products = getCategoryProducts(gender, category);
       const product = products.find((entry) => productPrimaryImage(entry)) || products[0];
-      const label = catalogMenuLabels[gender]?.[category] || category;
+      const label = catalogCategoryLabel(category, gender);
       return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}">${productPreviewMarkup(product, "catalog-nav-preview")}<span>${escapeHtml(label)}</span></button>`;
     };
     const configuredColumns = catalogMenuColumns[gender];
@@ -1659,7 +1709,7 @@ function renderCatalog() {
 
   catalogRoot.innerHTML = `
     <section class="catalog-browse">
-      <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || catalogState.category || translate("catalog-all-products"))}</h3></header>
+      <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || (catalogState.category ? catalogCategoryLabel(catalogState.category, catalogState.gender) : translate("catalog-all-products")))}</h3></header>
       ${brandTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-brand")}</h4><div class="catalog-browse-tile-grid">${brandTiles}<button class="catalog-browse-tile catalog-browse-all" type="button" data-catalog-filter data-catalog-gender="${catalogState.gender}" data-catalog-category="${escapeHtml(catalogState.category)}"><span>${translate("catalog-all-brands")}</span></button></div></section>` : ""}
       <div class="catalog-results-heading" data-catalog-results><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
       <div class="${productGridClass}">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
@@ -1693,7 +1743,7 @@ function renderLastStockCatalog() {
   const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category);
     const brands = getBrands(categoryProducts);
-    return `<section class="last-stock-category"><h3>${escapeHtml(category)}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
+    return `<section class="last-stock-category"><h3>${escapeHtml(catalogCategoryLabel(category, lastStockGender))}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
   }).join("")}</section>` : `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
   root.innerHTML = chooser + section;
   refreshScrollReveals(root);
@@ -1738,7 +1788,7 @@ function renderCatalogSearchResults(query = "") {
     ? getAllProducts().filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();
   root.innerHTML = products.length
-    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(product.category)} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
+    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(catalogCategoryLabel(product.category, getProductGender(product)))} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
     : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`;
   if (window.lucide) window.lucide.createIcons();
 }

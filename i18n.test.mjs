@@ -46,7 +46,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=languages-7/);
+  assert.match(checkout, /script\.js\?v=category-languages-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -110,6 +110,13 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /\["Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"\]/);
   assert.match(script, /"Giacche leggere": "Giacca leggera"/);
   assert.match(script, /"Completo": "Completi casual"/);
+  assert.match(script, /const catalogCategoryTranslations =/);
+  assert.match(script, /function catalogCategoryLabel\(category, gender = ""\)/);
+  assert.match(script, /const label = catalogCategoryLabel\(category, gender\)/);
+  assert.match(script, /catalogCollectionLabel\(product\)/);
+  for (const language of ["it", "en", "fr", "de", "es", "ro", "sq"]) {
+    assert.match(script, new RegExp(`\\n  ${language}: \\{ "t-shirts":`));
+  }
   assert.match(script, /catalog-nav-category-column/);
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /catalogState\.category && !catalogState\.brand/);
