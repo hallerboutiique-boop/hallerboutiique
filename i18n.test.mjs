@@ -7,6 +7,11 @@ const htmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-dispon
 test("one language controller owns every picker", async () => {
   const [i18n, script] = await Promise.all([readFile("i18n.js", "utf8"), readFile("script.js", "utf8")]);
   assert.match(i18n, /picker\.dataset\.i18nBound = "true"/);
+  assert.match(i18n, /ro: "Romana"/);
+  assert.match(i18n, /sq: "Shqip"/);
+  assert.match(i18n, /ro: "🇷🇴"/);
+  assert.match(i18n, /sq: "🇦🇱"/);
+  assert.match(i18n, /menu\.append\(option\)/);
   assert.match(script, /window\.addEventListener\("haller-language-change"/);
   assert.doesNotMatch(script, /languageToggle\.addEventListener/);
 });
@@ -17,7 +22,7 @@ test("Aurora sends and enforces the selected language", async () => {
   assert.match(server, /const siteChatLanguages = \{/);
   assert.match(server, /Rispondi esclusivamente in \$\{languageConfig\.name\}/);
   assert.doesNotMatch(server, /Scrivi in italiano, con tono caldo/);
-  for (const language of ["it", "en", "fr", "de", "es"]) {
+  for (const language of ["it", "en", "fr", "de", "es", "ro", "sq"]) {
     assert.match(server, new RegExp(`\\n  ${language}: \\{ name:`));
   }
 });
@@ -33,22 +38,22 @@ test("action-only UI and try-on use the selected language", async () => {
 test("all pages use the cache-busted unified language script", async () => {
   for (const file of htmlFiles) {
     const html = await readFile(file, "utf8");
-    assert.match(html, /i18n\.js\?v=sitewide-language-5/, file);
-    assert.doesNotMatch(html, /sitewide-language-[1234]/, file);
+    assert.match(html, /i18n\.js\?v=sitewide-language-7/, file);
+    assert.doesNotMatch(html, /sitewide-language-[1-6]/, file);
   }
 });
 
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=purchase-live-1/);
+  assert.match(checkout, /script\.js\?v=languages-7/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
   assert.match(script, /formData\.append\("productImage", image\.blob, image\.filename\)/);
   assert.match(script, /formData\.append\("mode", "bundle"\)/);
   assert.match(script, /formData\.append\("bundleItems", JSON\.stringify\(bundleData\)\)/);
-  for (const language of ["it", "en", "fr", "de", "es"]) {
+  for (const language of ["it", "en", "fr", "de", "es", "ro", "sq"]) {
     assert.match(script, new RegExp(`\\n  ${language}: \\{[\\s\\S]*?"bundle-tryon-title"`));
   }
 });

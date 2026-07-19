@@ -1,6 +1,7 @@
 (() => {
   const languageKey = "haller-language";
-  const names = { it: "Italiano", en: "English", fr: "Francais", de: "Deutsch", es: "Espanol" };
+  const names = { it: "Italiano", en: "English", fr: "Francais", de: "Deutsch", es: "Espanol", ro: "Romana", sq: "Shqip" };
+  const flags = { it: "🇮🇹", en: "🇬🇧", fr: "🇫🇷", de: "🇩🇪", es: "🇪🇸", ro: "🇷🇴", sq: "🇦🇱" };
   const text = {
     it: {},
     en: {
@@ -15,6 +16,12 @@
     es: {
       "Torna alla home": "Volver al inicio", "Home": "Inicio", "Contatti": "Contacto", "Area clienti": "Area de clientes", "Accedi o registrati": "Inicia sesion o registrate", "Accedi": "Iniciar sesion", "Registrati": "Registrarse", "Esci": "Cerrar sesion", "Crea account": "Crear cuenta", "Account attivo": "Cuenta activa", "Accesso rapido": "Acceso rapido", "Continua con": "Continuar con", "Checkout": "Pago", "Pagamento alla consegna o crypto": "Pago contra reembolso o cripto", "Dati cliente": "Datos del cliente", "Nome e cognome": "Nombre completo", "Telefono": "Telefono", "Indirizzo di consegna": "Direccion de entrega", "Indirizzo": "Direccion", "Citta": "Ciudad", "Codice sconto": "Codigo de descuento", "Inserisci codice": "Introduce el codigo", "Applica sconto": "Aplicar descuento", "Pagamento": "Pago", "Contrassegno": "Contra reembolso", "Puoi pagare direttamente al corriere quando ricevi il pacco.": "Puedes pagar directamente al mensajero al recibir el paquete.", "Codice ordine": "Codigo de pedido", "Copia": "Copiar", "Copia indirizzo": "Copiar direccion", "Tracciamento pagamento": "Seguimiento del pago", "TX hash pagamento": "TX hash del pago", "Copia dati pagamento": "Copiar datos de pago", "Conferma ordine": "Confirmar pedido", "Riepilogo": "Resumen", "Prodotto": "Producto", "Metodo di pagamento": "Metodo de pago", "Consegna": "Entrega", "Continua lo shopping": "Seguir comprando", "Pannello riservato": "Area restringida", "Dashboard admin": "Panel de administracion", "Password admin": "Contrasena admin", "Entra": "Entrar", "Aggiorna": "Actualizar", "Metriche": "Metricas", "Ordini": "Pedidos", "Prodotti": "Productos", "Utenti": "Usuarios", "Video": "Videos", "Attivita": "Actividad", "Visite live": "Visitas en directo", "Pagamenti": "Pagos", "Tutti i diritti riservati.": "Todos los derechos reservados."
     }
+  };
+  text.ro = {
+    "Torna alla home": "Inapoi la pagina principala", "Home": "Acasa", "Contatti": "Contact", "Area clienti": "Zona clienti", "Accedi o registrati": "Autentificare sau inregistrare", "Accedi": "Autentificare", "Registrati": "Inregistrare", "Esci": "Iesire", "Crea account": "Creeaza cont", "Account attivo": "Cont activ", "Accesso rapido": "Acces rapid", "Continua con": "Continua cu", "Checkout": "Finalizare comanda", "Pagamento alla consegna o crypto": "Plata la livrare sau crypto", "Dati cliente": "Date client", "Nome e cognome": "Nume complet", "Telefono": "Telefon", "Indirizzo di consegna": "Adresa de livrare", "Indirizzo": "Adresa", "Citta": "Oras", "Città": "Oras", "Codice sconto": "Cod de reducere", "Inserisci codice": "Introdu codul", "Applica sconto": "Aplica reducerea", "Pagamento": "Plata", "Contrassegno": "Plata la livrare", "Puoi pagare direttamente al corriere quando ricevi il pacco.": "Poti plati direct curierului cand primesti coletul.", "Codice ordine": "Cod comanda", "Copia": "Copiaza", "Conferma ordine": "Confirma comanda", "Riepilogo": "Rezumat", "Prodotto": "Produs", "Metodo di pagamento": "Metoda de plata", "Consegna": "Livrare", "Continua lo shopping": "Continua cumparaturile", "Cambia lingua": "Schimba limba", "Tutti i diritti riservati.": "Toate drepturile rezervate.", "Spedizioni": "Livrari", "Termini e condizioni": "Termeni si conditii", "Privacy Policy": "Politica de confidentialitate"
+  };
+  text.sq = {
+    "Torna alla home": "Kthehu ne faqen kryesore", "Home": "Kreu", "Contatti": "Kontakt", "Area clienti": "Zona e klientit", "Accedi o registrati": "Hyr ose regjistrohu", "Accedi": "Hyr", "Registrati": "Regjistrohu", "Esci": "Dil", "Crea account": "Krijo llogari", "Account attivo": "Llogari aktive", "Accesso rapido": "Hyrje e shpejte", "Continua con": "Vazhdo me", "Checkout": "Pagesa", "Pagamento alla consegna o crypto": "Pagese ne dorezim ose kripto", "Dati cliente": "Te dhenat e klientit", "Nome e cognome": "Emri dhe mbiemri", "Telefono": "Telefoni", "Indirizzo di consegna": "Adresa e dorezimit", "Indirizzo": "Adresa", "Citta": "Qyteti", "Città": "Qyteti", "Codice sconto": "Kodi i uljes", "Inserisci codice": "Vendos kodin", "Applica sconto": "Apliko uljen", "Pagamento": "Pagesa", "Contrassegno": "Pagese ne dorezim", "Puoi pagare direttamente al corriere quando ricevi il pacco.": "Mund ta paguani korrierin kur te merrni pakon.", "Codice ordine": "Kodi i porosise", "Copia": "Kopjo", "Conferma ordine": "Konfirmo porosine", "Riepilogo": "Permbledhje", "Prodotto": "Produkti", "Metodo di pagamento": "Menyra e pageses", "Consegna": "Dorezimi", "Continua lo shopping": "Vazhdo blerjet", "Cambia lingua": "Ndrysho gjuhen", "Tutti i diritti riservati.": "Te gjitha te drejtat e rezervuara.", "Spedizioni": "Dergesat", "Termini e condizioni": "Kushtet dhe afatet", "Privacy Policy": "Politika e privatesise"
   };
   const extraText = {
     en: {
@@ -53,7 +60,7 @@
   Object.entries(extraText).forEach(([code, values]) => Object.assign(text[code], values));
 
   const supportedLanguages = new Set(Object.keys(names));
-  const changeLanguageLabels = { it: "Cambia lingua", en: "Change language", fr: "Changer de langue", de: "Sprache andern", es: "Cambiar idioma" };
+  const changeLanguageLabels = { it: "Cambia lingua", en: "Change language", fr: "Changer de langue", de: "Sprache andern", es: "Cambiar idioma", ro: "Schimba limba", sq: "Ndrysho gjuhen" };
   const originals = new WeakMap();
   const attributeOriginals = new WeakMap();
   const legalOriginals = new WeakMap();
@@ -125,8 +132,18 @@
     if (picker.dataset.i18nBound === "true") return;
     const toggle = picker.querySelector(".language-toggle");
     const menu = picker.querySelector(".language-menu");
-    const options = picker.querySelectorAll("[data-language-option]");
     if (!toggle || !menu) return;
+    Object.entries(flags).forEach(([code, flag]) => {
+      if (menu.querySelector(`[data-language-option="${code}"]`)) return;
+      const option = document.createElement("button");
+      option.type = "button";
+      option.setAttribute("role", "menuitemradio");
+      option.setAttribute("aria-label", names[code]);
+      option.dataset.languageOption = code;
+      option.textContent = flag;
+      menu.append(option);
+    });
+    const options = picker.querySelectorAll("[data-language-option]");
     picker.dataset.i18nBound = "true";
     const refresh = () => {
       const current = language();
