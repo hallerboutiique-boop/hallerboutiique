@@ -11,6 +11,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import sharp from "sharp";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = __dirname;
@@ -30,6 +31,7 @@ const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
+const tryOnInputMaxDimension = 2048;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
@@ -1137,6 +1139,55 @@ function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
 }
 
+async function normalizeTryOnImage(image, label) {
+  if (!image?.data?.length) {
+    const error = new Error(`Immagine try-on vuota: ${label}.`);
+    error.code = "INVALID_TRYON_IMAGE";
+    throw error;
+  }
+
+  try {
+    const source = sharp(image.data, {
+      failOn: "error",
+      limitInputPixels: 100_000_000,
+      sequentialRead: true,
+    });
+    const metadata = await source.metadata();
+    if (!metadata.width || !metadata.height) throw new Error("Dimensioni immagine non disponibili.");
+
+    const data = await source
+      .rotate()
+      .resize({
+        width: tryOnInputMaxDimension,
+        height: tryOnInputMaxDimension,
+        fit: "inside",
+        withoutEnlargement: true,
+      })
+      .flatten({ background: "#ffffff" })
+      .toColourspace("srgb")
+      .jpeg({ quality: 96, chromaSubsampling: "4:4:4", mozjpeg: true })
+      .toBuffer();
+
+    if (!data.length) throw new Error("Conversione immagine vuota.");
+    return { data, mime: "image/jpeg", filename: `${label}.jpg` };
+  } catch (cause) {
+    const error = new Error(`Immagine try-on non valida: ${label}.`);
+    error.code = "INVALID_TRYON_IMAGE";
+    error.cause = cause;
+    throw error;
+  }
+}
+
+async function normalizeTryOnInput(input) {
+  const userImage = await normalizeTryOnImage(input.userImage, "customer");
+  const productImages = [];
+  const sourceProductImages = Array.isArray(input.productImages) ? input.productImages : [];
+  for (let index = 0; index < sourceProductImages.length; index += 1) {
+    productImages.push(await normalizeTryOnImage(sourceProductImages[index], `product-${index + 1}`));
+  }
+  return { ...input, userImage, productImages };
+}
+
 function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
   const form = new FormData();
   const bundleIncludesBag = bundleItems.some((item) => /\b(?:bag|bags|borsa|borse|purse|handbag|sac)\b/i.test(`${item.name} ${item.category} ${item.sizeType}`));
@@ -1213,7 +1264,8 @@ async function requestTryOnEdit(form) {
 }
 
 async function generateTryOnImage(input) {
-  return requestTryOnEdit(buildTryOnForm(input));
+  const normalizedInput = await normalizeTryOnInput(input);
+  return requestTryOnEdit(buildTryOnForm(normalizedInput));
 }
 
 function signPayload(payload) {
@@ -1558,6 +1610,7 @@ const tryOnLanguages = {
 
 function tryOnFailureMessage(error, copy) {
   if (error?.name === "AbortError") return copy.timeout;
+  if (error?.code === "INVALID_TRYON_IMAGE") return copy.rejected;
   const status = Number(error?.status || 0);
   if (status === 400 || status === 413 || status === 415) return copy.rejected;
   if (status === 408 || status === 429 || status >= 500) return copy.busy;
