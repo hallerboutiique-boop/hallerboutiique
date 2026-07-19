@@ -163,6 +163,16 @@ const catalogTranslations = {
 
 Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
+const purchaseNotificationTranslations = {
+  it: { "purchase-demo": "Demo live", "purchase-copy": "{name} da {city} ha scelto", "purchase-time": "Pochi istanti fa", "purchase-close": "Chiudi notifica acquisto" },
+  en: { "purchase-demo": "Live demo", "purchase-copy": "{name} from {city} chose", "purchase-time": "A few moments ago", "purchase-close": "Close purchase notification" },
+  fr: { "purchase-demo": "Demo en direct", "purchase-copy": "{name}, de {city}, a choisi", "purchase-time": "Il y a quelques instants", "purchase-close": "Fermer la notification d'achat" },
+  de: { "purchase-demo": "Live-Demo", "purchase-copy": "{name} aus {city} hat gewahlt", "purchase-time": "Vor wenigen Augenblicken", "purchase-close": "Kaufbenachrichtigung schliessen" },
+  es: { "purchase-demo": "Demo en directo", "purchase-copy": "{name}, de {city}, ha elegido", "purchase-time": "Hace unos instantes", "purchase-close": "Cerrar notificacion de compra" },
+};
+
+Object.entries(purchaseNotificationTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
 }
@@ -3178,6 +3188,86 @@ if (discountButton && discountInput && discountMessage) {
 
 setupCheckoutPayments();
 setupBundleTryOn();
+
+const demoPurchaseProfiles = {
+  it: [{ name: "Giulia", city: "Milano" }, { name: "Marco", city: "Roma" }, { name: "Sofia", city: "Torino" }, { name: "Luca", city: "Bologna" }],
+  en: [{ name: "Emily", city: "London" }, { name: "James", city: "Manchester" }, { name: "Olivia", city: "Bristol" }],
+  fr: [{ name: "Camille", city: "Paris" }, { name: "Louis", city: "Lyon" }, { name: "Lea", city: "Nice" }],
+  de: [{ name: "Mia", city: "Berlin" }, { name: "Jonas", city: "Munchen" }, { name: "Emma", city: "Hamburg" }],
+  es: [{ name: "Lucia", city: "Madrid" }, { name: "Hugo", city: "Barcelona" }, { name: "Marta", city: "Valencia" }],
+};
+
+function setupPurchaseNotifications() {
+  if (isReplayView || document.querySelector("[data-purchase-notification]")) return;
+
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    `<aside class="purchase-notification" data-purchase-notification aria-live="polite" aria-atomic="true" hidden></aside>`
+  );
+
+  const root = document.querySelector("[data-purchase-notification]");
+  let notificationIndex = 0;
+  let hideTimer = 0;
+  let nextTimer = 0;
+
+  const hideNotification = () => {
+    window.clearTimeout(hideTimer);
+    root.classList.remove("is-visible");
+    window.setTimeout(() => {
+      if (!root.classList.contains("is-visible")) root.hidden = true;
+    }, 320);
+  };
+
+  const showNotification = () => {
+    const products = getAllProducts().filter((product) => productPrimaryImage(product));
+    if (products.length === 0) return;
+    const profiles = demoPurchaseProfiles[siteLanguage] || demoPurchaseProfiles.it;
+    const product = products[notificationIndex % products.length];
+    const profile = profiles[notificationIndex % profiles.length];
+    const purchaseCopy = translate("purchase-copy")
+      .replace("{name}", profile.name)
+      .replace("{city}", profile.city);
+    const image = productPrimaryImage(product);
+    notificationIndex += 1;
+
+    root.innerHTML = `
+      <a class="purchase-notification-media" href="${escapeHtml(productPageUrl(product))}" aria-label="${escapeHtml(product.name)}">
+        <img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(product.name)}" loading="eager" decoding="async">
+      </a>
+      <div class="purchase-notification-copy">
+        <span class="purchase-notification-label"><i data-lucide="radio" aria-hidden="true"></i>${escapeHtml(translate("purchase-demo"))}</span>
+        <p>${escapeHtml(purchaseCopy)}</p>
+        <a href="${escapeHtml(productPageUrl(product))}">${escapeHtml(product.name)}</a>
+        <small>${escapeHtml(translate("purchase-time"))}</small>
+      </div>
+      <button type="button" data-purchase-notification-close aria-label="${escapeHtml(translate("purchase-close"))}"><i data-lucide="x" aria-hidden="true"></i></button>
+    `;
+    root.hidden = false;
+    window.requestAnimationFrame(() => root.classList.add("is-visible"));
+    root.querySelector("[data-purchase-notification-close]")?.addEventListener("click", hideNotification);
+    if (window.lucide) window.lucide.createIcons();
+    hideTimer = window.setTimeout(hideNotification, 8000);
+  };
+
+  const scheduleNext = () => {
+    nextTimer = window.setTimeout(() => {
+      showNotification();
+      scheduleNext();
+    }, 180000);
+  };
+
+  window.setTimeout(() => {
+    showNotification();
+    scheduleNext();
+  }, 3000);
+
+  window.addEventListener("pagehide", () => {
+    window.clearTimeout(hideTimer);
+    window.clearTimeout(nextTimer);
+  }, { once: true });
+}
+
+setupPurchaseNotifications();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";
 let chatHistory = [];

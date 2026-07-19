@@ -3918,6 +3918,132 @@ body.motion-enabled .product-actions .buy-action:hover {
   color: #ff8585;
 }
 
+.purchase-notification[hidden] {
+  display: none;
+}
+
+.purchase-notification {
+  position: fixed;
+  z-index: 84;
+  left: 24px;
+  bottom: 24px;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 32px;
+  width: min(390px, calc(100vw - 48px));
+  min-height: 104px;
+  align-items: center;
+  gap: 11px;
+  padding: 9px;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.64);
+  border-radius: 8px;
+  background: rgba(12, 12, 12, 0.97);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, 0.62), 0 0 18px rgba(var(--gold-rgb), 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-28px, 0, 0);
+  transition: opacity 280ms ease, transform 320ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.purchase-notification.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0);
+}
+
+.purchase-notification-media {
+  display: block;
+  width: 74px;
+  height: 86px;
+  overflow: hidden;
+  border: 1px solid rgba(var(--gold-rgb), 0.3);
+  border-radius: 6px;
+  background: #181818;
+}
+
+.purchase-notification-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.purchase-notification-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.purchase-notification-label {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+  text-transform: uppercase;
+  font-size: 9px;
+  line-height: 1;
+  font-weight: 800;
+}
+
+.purchase-notification-label svg {
+  width: 12px;
+  height: 12px;
+}
+
+.purchase-notification-copy p,
+.purchase-notification-copy small {
+  margin: 0;
+  color: var(--text);
+}
+
+.purchase-notification-copy p {
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.25;
+}
+
+.purchase-notification-copy > a {
+  overflow: hidden;
+  color: var(--text-strong);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.purchase-notification-copy > a:hover,
+.purchase-notification-copy > a:focus-visible {
+  color: var(--gold);
+}
+
+.purchase-notification-copy small {
+  font-size: 9px;
+}
+
+.purchase-notification > button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  align-self: start;
+  place-items: center;
+  color: var(--text);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.purchase-notification > button:hover,
+.purchase-notification > button:focus-visible {
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.1);
+}
+
+.purchase-notification > button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .site-chat {
   position: fixed;
   right: 24px;
@@ -4016,6 +4142,10 @@ body.motion-enabled .product-actions .buy-action:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .purchase-notification {
+    transition: none;
+  }
+
   .site-chat-launcher,
   .site-chat-panel {
     animation: none;
@@ -4263,6 +4393,26 @@ body.motion-enabled .product-actions .buy-action:hover {
 
   .last-stock-gender + .last-stock-gender {
     margin-top: 34px;
+  }
+
+  .purchase-notification {
+    right: 12px;
+    bottom: 88px;
+    left: 12px;
+    grid-template-columns: 64px minmax(0, 1fr) 30px;
+    width: auto;
+    min-height: 94px;
+    gap: 9px;
+    padding: 8px;
+  }
+
+  .purchase-notification-media {
+    width: 64px;
+    height: 76px;
+  }
+
+  .purchase-notification-copy > a {
+    font-size: 12px;
   }
 
   .site-chat {

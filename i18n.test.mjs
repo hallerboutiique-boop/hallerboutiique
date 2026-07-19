@@ -262,3 +262,15 @@ test("checkout renders product images from the cart", async () => {
   assert.match(styles, /\.checkout-summary-product-image img\s*\{[\s\S]*?object-fit:\s*contain/);
   assert.match(styles, /\.checkout-summary-remove\s*\{/);
 });
+
+test("demo purchase notifications use the requested timing on every storefront page", async () => {
+  const [script, styles] = await Promise.all([readFile("script.js", "utf8"), readFile("styles.css", "utf8")]);
+  assert.match(script, /function setupPurchaseNotifications\(\)/);
+  assert.match(script, /window\.setTimeout\(\(\) => \{[\s\S]*?showNotification\(\);[\s\S]*?scheduleNext\(\);[\s\S]*?\}, 3000\)/);
+  assert.match(script, /\}, 180000\)/);
+  assert.match(script, /hideTimer = window\.setTimeout\(hideNotification, 8000\)/);
+  assert.match(script, /const purchaseNotificationTranslations = \{/);
+  assert.match(script, /setupPurchaseNotifications\(\);/);
+  assert.match(styles, /\.purchase-notification\s*\{[\s\S]*?z-index:\s*84/);
+  assert.match(styles, /@media \(max-width: 560px\)[\s\S]*?\.purchase-notification\s*\{[\s\S]*?bottom:\s*88px/);
+});
