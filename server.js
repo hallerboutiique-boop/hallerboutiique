@@ -62,6 +62,7 @@ const contentTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
+  ".avif": "image/avif",
 };
 const publicFiles = new Set([
   "/index.html",
@@ -79,7 +80,10 @@ const publicFiles = new Set([
   "/account.js",
   "/admin.js",
 ]);
-const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
+const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".avif"]);
+const transformableImageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
+const imageTransformQueryParams = ["width", "height", "quality", "format"];
+const optimizedImageFormats = new Set(["avif", "webp", "jpeg", "jpg", "png"]);
 
 const oauthProviders = {
   google: {
@@ -267,7 +271,7 @@ async function verifyProductImageStorage() {
 
 function storedImageContentType(extension, suppliedType) {
   const cleanType = String(suppliedType || "").split(";")[0].trim().toLowerCase();
-  if (["image/jpeg", "image/png", "image/webp"].includes(cleanType)) return cleanType;
+  if (["image/jpeg", "image/png", "image/webp", "image/avif"].includes(cleanType)) return cleanType;
   return contentTypes[extension] || "application/octet-stream";
 }
 
@@ -1132,6 +1136,7 @@ function fieldValue(parts, name, max = 260) {
 function imageMimeFromExtension(ext) {
   if (ext === ".png") return "image/png";
   if (ext === ".webp") return "image/webp";
+  if (ext === ".avif") return "image/avif";
   return "image/jpeg";
 }
 
@@ -1423,6 +1428,75 @@ function imageDataFromDataUrl(value) {
   const ext = imageExtension("preview", match[1]);
   if (!ext) return null;
   return { data: Buffer.from(match[2], "base64"), ext };
+}
+
+function boundedImageInteger(value, { min = 1, max = 3000, fallback = null } = {}) {
+  if (value === null || value === undefined || value === "") return fallback;
+  const number = Number.parseInt(String(value), 10);
+  if (!Number.isFinite(number)) return fallback;
+  return Math.min(max, Math.max(min, number));
+}
+
+function requestedOptimizedImageFormat(url, ext, acceptHeader = "") {
+  const requested = String(url.searchParams.get("format") || "").trim().toLowerCase();
+  if (requested === "auto") {
+    const accept = String(acceptHeader || "").toLowerCase();
+    if (accept.includes("image/avif")) return "avif";
+    if (accept.includes("image/webp")) return "webp";
+  }
+  if (optimizedImageFormats.has(requested)) return requested === "jpg" ? "jpeg" : requested;
+  return ext === ".jpg" || ext === ".jpeg" ? "jpeg" : ext.replace(/^\./, "");
+}
+
+function optimizedImageContentType(format) {
+  if (format === "jpg" || format === "jpeg") return "image/jpeg";
+  return contentTypes[`.${format}`] || "application/octet-stream";
+}
+
+function hasImageTransformRequest(url) {
+  return imageTransformQueryParams.some((param) => url.searchParams.has(param));
+}
+
+async function serveOptimizedStaticImage(req, res, url, filePath, ext) {
+  if (!transformableImageExtensions.has(ext) || !hasImageTransformRequest(url)) return false;
+
+  const width = boundedImageInteger(url.searchParams.get("width"), { min: 16, max: 3000 });
+  const height = boundedImageInteger(url.searchParams.get("height"), { min: 16, max: 3000 });
+  const quality = boundedImageInteger(url.searchParams.get("quality"), { min: 1, max: 100, fallback: 86 });
+  const format = requestedOptimizedImageFormat(url, ext, req.headers.accept);
+
+  let image = sharp(filePath, {
+    failOn: "none",
+    limitInputPixels: 100_000_000,
+    sequentialRead: true,
+  }).rotate();
+
+  if (width || height) {
+    image = image.resize({
+      width: width || undefined,
+      height: height || undefined,
+      fit: "inside",
+      withoutEnlargement: true,
+    });
+  }
+
+  image = image.toColorspace("srgb");
+  if (format === "avif") image = image.avif({ quality, effort: 4 });
+  else if (format === "webp") image = image.webp({ quality, effort: 4 });
+  else if (format === "jpeg") image = image.jpeg({ quality, mozjpeg: true });
+  else if (format === "png") image = image.png({ compressionLevel: 9, effort: 8 });
+
+  const data = await image.toBuffer();
+  res.writeHead(200, {
+    "Content-Type": optimizedImageContentType(format),
+    "Content-Length": data.length,
+    "X-Content-Type-Options": "nosniff",
+    "Permissions-Policy": "geolocation=(self)",
+    "Cache-Control": "public, max-age=31536000, immutable",
+    "Vary": "Accept",
+  });
+  res.end(data);
+  return true;
 }
 
 async function archiveTryOn({ customerImage, generated, productId, productName, category }) {
@@ -2711,12 +2785,16 @@ async function serveStatic(req, res, url) {
     const stat = await fs.stat(filePath);
     if (!stat.isFile()) return notFound(res);
     const ext = path.extname(filePath).toLowerCase();
+    if (await serveOptimizedStaticImage(req, res, url, filePath, ext)) return;
+    const cacheControl = ext === ".html"
+      ? "no-cache"
+      : "public, max-age=31536000, immutable";
     res.writeHead(200, {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,
       "X-Content-Type-Options": "nosniff",
       "Permissions-Policy": "geolocation=(self)",
-      "Cache-Control": ext === ".html" ? "no-cache" : "public, max-age=604800",
+      "Cache-Control": cacheControl,
     });
     createReadStream(filePath).pipe(res);
   } catch {

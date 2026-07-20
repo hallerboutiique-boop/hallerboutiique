@@ -1199,6 +1199,15 @@ function createSizesMarkup(product) {
 }
 
 const productImageVersion = "tryon-ai-products-1";
+const productImageOptimization = {
+  cdnBase: String(window.HALLER_CDN_BASE || document.querySelector("meta[name='asset-cdn-base']")?.content || "").replace(/\/+$/, ""),
+  presets: {
+    card: { width: 720, widths: [360, 540, 720, 900], sizes: "(max-width: 640px) 92vw, (max-width: 1100px) 45vw, 320px", quality: 86 },
+    detail: { width: 1800, widths: [720, 1080, 1440, 1800, 2400], sizes: "(max-width: 900px) 96vw, 58vw", quality: 90 },
+    preview: { width: 360, widths: [240, 360, 540], sizes: "(max-width: 700px) 44vw, 180px", quality: 84 },
+    thumb: { width: 180, widths: [120, 180, 240], sizes: "96px", quality: 82 },
+  },
+};
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.png",
@@ -1220,6 +1229,52 @@ function withProductImageVersion(src) {
   const value = String(src || "");
   if (!value || value.startsWith("data:")) return value;
   return `${value}${value.includes("?") ? "&" : "?"}v=${productImageVersion}`;
+}
+
+function withAssetCdn(src) {
+  const value = String(src || "");
+  if (!productImageOptimization.cdnBase || !value || value.startsWith("data:") || /^https?:\/\//i.test(value)) return value;
+  return `${productImageOptimization.cdnBase}/${value.replace(/^\/+/, "")}`;
+}
+
+function canOptimizeImage(src) {
+  const value = String(src || "").split("?")[0].toLowerCase();
+  return /\.(png|jpe?g|webp)$/.test(value);
+}
+
+function appendImageParams(src, params = {}) {
+  const value = String(src || "");
+  if (!value || value.startsWith("data:")) return value;
+  const entries = Object.entries(params).filter(([, entryValue]) => entryValue !== undefined && entryValue !== "");
+  if (!entries.length) return value;
+  const query = entries.map(([key, entryValue]) => `${encodeURIComponent(key)}=${encodeURIComponent(entryValue)}`).join("&");
+  return `${value}${value.includes("?") ? "&" : "?"}${query}`;
+}
+
+function optimizedProductImage(src, presetName = "card", overrides = {}) {
+  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
+  const base = withProductImageVersion(withAssetCdn(src));
+  if (!canOptimizeImage(src)) return base;
+  return appendImageParams(base, {
+    width: overrides.width || preset.width,
+    quality: overrides.quality || preset.quality,
+    format: overrides.format || "webp",
+  });
+}
+
+function optimizedProductSrcset(src, presetName = "card") {
+  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
+  if (!canOptimizeImage(src)) return "";
+  return preset.widths.map((width) => `${optimizedProductImage(src, presetName, { width })} ${width}w`).join(", ");
+}
+
+function responsiveImageAttributes(src, presetName = "card") {
+  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
+  const srcset = optimizedProductSrcset(src, presetName);
+  return `
+      src="${escapeHtml(optimizedProductImage(src, presetName))}"
+      ${srcset ? `srcset="${escapeHtml(srcset)}" sizes="${escapeHtml(preset.sizes)}"` : ""}
+  `;
 }
 
 function normalizeProductPrice(value) {
@@ -1411,6 +1466,7 @@ function productPageUrl(product) {
 
 function createProductMediaMarkup(product, detail = false) {
   const gallery = getProductGallery(product);
+  const imagePreset = detail ? "detail" : "card";
 
   if (gallery.length === 0) {
     return `
@@ -1423,10 +1479,11 @@ function createProductMediaMarkup(product, detail = false) {
   const slides = gallery.map((image, index) => `
     <img
       class="product-image product-gallery-slide${index === 0 ? " is-active" : ""}"
-      src="${withProductImageVersion(image)}"
+      ${responsiveImageAttributes(image, imagePreset)}
       alt="${escapeHtml(product.name)}${gallery.length > 1 ? ` - ${index + 1}` : ""}"
       loading="${detail && index === 0 ? "eager" : "lazy"}"
       decoding="async"
+      fetchpriority="${detail && index === 0 ? "high" : "auto"}"
       data-gallery-slide
       ${gallery.length > 1 ? "data-gallery-click" : ""}
     >
@@ -1605,7 +1662,7 @@ function getProductBrand(product) {
 function productPreviewMarkup(product, className = "catalog-preview-media") {
   const image = product && productPrimaryImage(product);
   return image
-    ? `<span class="${className}"><img src="${withProductImageVersion(image)}" alt="" loading="lazy" decoding="async"></span>`
+    ? `<span class="${className}"><img ${responsiveImageAttributes(image, "preview")} alt="" loading="lazy" decoding="async"></span>`
     : `<span class="${className} catalog-preview-empty"><i data-lucide="image"></i></span>`;
 }
 
@@ -2534,7 +2591,7 @@ function renderBundleTryOn() {
       <article class="bundle-tryon-product">
         <span class="bundle-tryon-number">${index + 1}</span>
         ${item.image
-          ? `<img src="${escapeHtml(withProductImageVersion(item.image))}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">`
+          ? `<img ${responsiveImageAttributes(item.image, "thumb")} alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">`
           : `<span class="bundle-tryon-product-placeholder"><i data-lucide="image-off"></i></span>`}
         <strong>${escapeHtml(item.name)}</strong>
       </article>
@@ -2737,7 +2794,7 @@ function renderCheckoutProductSummary() {
     const image = getCheckoutItemImage(item);
     const size = String(item.size || "").trim();
     const imageMarkup = image
-      ? `<img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
+      ? `<img ${responsiveImageAttributes(image, "thumb")} alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
       : `<span class="checkout-summary-product-placeholder"><i data-lucide="image"></i></span>`;
     return `
       <article class="checkout-summary-product">
@@ -3308,7 +3365,7 @@ function setupPurchaseNotifications() {
 
     root.innerHTML = `
       <a class="purchase-notification-media" href="${escapeHtml(productPageUrl(product))}" aria-label="${escapeHtml(product.name)}">
-        <img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(product.name)}" loading="eager" decoding="async">
+        <img ${responsiveImageAttributes(image, "thumb")} alt="${escapeHtml(product.name)}" loading="eager" decoding="async">
       </a>
       <div class="purchase-notification-copy">
         <span class="purchase-notification-label"><i data-lucide="radio" aria-hidden="true"></i>${escapeHtml(translate("purchase-demo"))}</span>
@@ -3379,13 +3436,13 @@ function setupSiteChat() {
     `
       <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique" data-i18n-aria-label="chat-label">
         <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale" data-i18n-aria-label="chat-open">
-          <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+          <img src="assets/chat-assistant-avatar.png?v=tryon-ai-products-1&width=160&quality=84&format=webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
           <span class="site-chat-online-copy"><strong>Aurora</strong><small data-i18n="chat-online">Online</small></span>
           <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="assets/chat-assistant-avatar.png" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+            <img src="assets/chat-assistant-avatar.png?v=tryon-ai-products-1&width=160&quality=84&format=webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
             <div><strong>Aurora</strong><span data-i18n="chat-status">Assistente online</span></div>
             <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale" data-i18n-aria-label="chat-close"><i data-lucide="x"></i></button>
           </header>
