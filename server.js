@@ -24,6 +24,8 @@ const uploadsDir = path.join(dataDir, "uploads");
 const tryOnDir = path.join(dataDir, "try-on");
 const tryOnArchiveFile = path.join(dataDir, "try-on.json");
 const port = Number(process.env.PORT || 8080);
+const apexHostname = "hallerboutiique.com";
+const canonicalHostname = "www.hallerboutiique.com";
 const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-me";
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openaiApiKey = process.env.OPENAI_API_KEY || "";
@@ -2810,6 +2812,14 @@ await pruneOrphanProductUploads({ minAgeMs: 0 });
 http
   .createServer(async (req, res) => {
     try {
+      const requestHostname = String(req.headers.host || "").split(":")[0].toLowerCase();
+      if (requestHostname === apexHostname) {
+        res.writeHead(308, {
+          Location: `https://${canonicalHostname}${req.url || "/"}`,
+          "Cache-Control": "public, max-age=3600",
+        });
+        return res.end();
+      }
       const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
       const oauthStart = url.pathname.match(/^\/auth\/(google|microsoft)\/start$/);
       if (oauthStart) return startOauth(req, res, oauthStart[1]);
