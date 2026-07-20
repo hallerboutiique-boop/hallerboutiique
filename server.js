@@ -501,13 +501,15 @@ async function optimizeExistingProductImages({ primaryOnly = false, force = fals
     try {
       const existing = cleanProductImageRenditions(task.product.imageRenditions, task.product.images);
       previous = existing;
-      if (!force && await productImageRenditionsExist(existing[task.image])) {
+      const existingRenditionsAvailable = await productImageRenditionsExist(existing[task.image]);
+      if (!force && !refreshHighQuality && existingRenditionsAvailable) {
         productImageOptimizationStatus.skipped += 1;
       } else {
         const source = await readProductImageSource(task.sourceImage);
         const fingerprint = createHash("sha256").update(source).digest("hex").slice(0, 16);
         const name = `${slugifyProduct(task.id)}-responsive-${fingerprint}.webp`;
-        const renditions = await createProductImageRenditions(name, source, existing[task.image], { refreshHighQuality });
+        const reusableRenditions = force || !existingRenditionsAvailable ? [] : existing[task.image];
+        const renditions = await createProductImageRenditions(name, source, reusableRenditions, { refreshHighQuality });
         if (!renditions.length) throw new Error("Nessuna variante generata.");
         task.product.imageRenditions = {
           ...cleanProductImageRenditions(task.product.imageRenditions, task.product.images),

@@ -284,6 +284,8 @@ test("responsive product images preserve originals and keep the navigation menu 
   const [index, script, server] = await Promise.all([readFile("index.html", "utf8"), readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.match(server, /const productImageRenditionWidths = \[480, 720, 1080, 1440\]/);
   assert.match(server, /webp\(\{ quality: width >= 1080 \? 98 : 95/);
+  assert.match(server, /const existingRenditionsAvailable = await productImageRenditionsExist/);
+  assert.match(server, /const reusableRenditions = force \|\| !existingRenditionsAvailable \? \[\] : existing\[task\.image\]/);
   assert.match(script, /function productImageSrcset\(product, image\)/);
   assert.match(script, /function productZoomImageSource\(product, image, index\)/);
   assert.match(script, /data-original-src=/);
