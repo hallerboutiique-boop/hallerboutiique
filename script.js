@@ -1198,9 +1198,10 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "tryon-ai-products-1";
+const productImageVersion = "bunny-responsive-1";
 const productImageOptimization = {
   cdnBase: String(window.HALLER_CDN_BASE || document.querySelector("meta[name='asset-cdn-base']")?.content || "").replace(/\/+$/, ""),
+  format: "auto",
   presets: {
     card: { width: 720, widths: [360, 540, 720, 900], sizes: "(max-width: 640px) 92vw, (max-width: 1100px) 45vw, 320px", quality: 86 },
     detail: { width: 1800, widths: [720, 1080, 1440, 1800, 2400], sizes: "(max-width: 900px) 96vw, 58vw", quality: 90 },
@@ -1258,7 +1259,7 @@ function optimizedProductImage(src, presetName = "card", overrides = {}) {
   return appendImageParams(base, {
     width: overrides.width || preset.width,
     quality: overrides.quality || preset.quality,
-    format: overrides.format || "webp",
+    format: overrides.format || productImageOptimization.format,
   });
 }
 
@@ -3436,13 +3437,13 @@ function setupSiteChat() {
     `
       <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique" data-i18n-aria-label="chat-label">
         <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale" data-i18n-aria-label="chat-open">
-          <img src="assets/chat-assistant-avatar.png?v=tryon-ai-products-1&width=160&quality=84&format=webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+          <img src="assets/chat-assistant-avatar.png?v=bunny-responsive-1&width=160&quality=84&format=auto" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
           <span class="site-chat-online-copy"><strong>Aurora</strong><small data-i18n="chat-online">Online</small></span>
           <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="assets/chat-assistant-avatar.png?v=tryon-ai-products-1&width=160&quality=84&format=webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+            <img src="assets/chat-assistant-avatar.png?v=bunny-responsive-1&width=160&quality=84&format=auto" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
             <div><strong>Aurora</strong><span data-i18n="chat-status">Assistente online</span></div>
             <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale" data-i18n-aria-label="chat-close"><i data-lucide="x"></i></button>
           </header>
