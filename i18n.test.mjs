@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const htmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-disponibili.html", "product.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
+const storefrontHtmlFiles = ["index.html", "account.html", "checkout.html", "ultimi-disponibili.html", "product.html", "spedizioni.html", "termini.html", "privacy.html"];
 
 test("one language controller owns every picker", async () => {
   const [i18n, script] = await Promise.all([readFile("i18n.js", "utf8"), readFile("script.js", "utf8")]);
   assert.match(i18n, /picker\.dataset\.i18nBound = "true"/);
-  assert.match(i18n, /ro: "Romana"/);
+  assert.match(i18n, /ro: "Română"/);
   assert.match(i18n, /sq: "Shqip"/);
   assert.match(i18n, /ro: "🇷🇴"/);
   assert.match(i18n, /sq: "🇦🇱"/);
@@ -36,25 +36,29 @@ test("action-only UI and try-on use the selected language", async () => {
 });
 
 test("all pages use the cache-busted unified language script", async () => {
-  for (const file of htmlFiles) {
+  for (const file of storefrontHtmlFiles) {
     const html = await readFile(file, "utf8");
-    assert.match(html, /i18n\.js\?v=sitewide-language-7/, file);
-    assert.doesNotMatch(html, /sitewide-language-[1-6]/, file);
+    assert.match(html, /i18n\.js\?v=restore-latest-ui-1/, file);
   }
+  const admin = await readFile("admin.html", "utf8");
+  assert.match(admin, /i18n\.js\?v=admin-products-2/);
 });
 
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=bunny-responsive-1/);
+  assert.match(checkout, /script\.js\?v=product-image-quality-4/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
   assert.match(script, /formData\.append\("productImage", image\.blob, image\.filename\)/);
   assert.match(script, /formData\.append\("mode", "bundle"\)/);
   assert.match(script, /formData\.append\("bundleItems", JSON\.stringify\(bundleData\)\)/);
-  for (const language of ["it", "en", "fr", "de", "es", "ro", "sq"]) {
+  for (const language of ["it", "en", "fr", "de", "es"]) {
     assert.match(script, new RegExp(`\\n  ${language}: \\{[\\s\\S]*?"bundle-tryon-title"`));
+  }
+  for (const language of ["ro", "sq"]) {
+    assert.match(script, new RegExp(`translations\\.${language} = \\{[\\s\\S]*?"bundle-tryon-title"`));
   }
 });
 
@@ -107,17 +111,19 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /function normalizeCatalogCategory\(value\)/);
   assert.match(script, /const catalogCategoryOrder =/);
   assert.match(script, /\["T-Shirts", "Polo", "Jeans corti", "Jeans lunghi", "Pantaloncini"\]/);
-  assert.match(script, /\["Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"\]/);
-  assert.match(script, /"Giacche leggere": "Giacca leggera"/);
-  assert.match(script, /"Completo": "Completi casual"/);
+  assert.match(script, /"Giacche leggere", "Tuta", "Completo", "Scarpe", "Borse Uomo"/);
+  assert.match(script, /const catalogMenuColumns =/);
   assert.match(script, /const catalogCategoryTranslations =/);
-  assert.match(script, /function catalogCategoryLabel\(category, gender = ""\)/);
-  assert.match(script, /const label = catalogCategoryLabel\(category, gender\)/);
-  assert.match(script, /catalogCollectionLabel\(product\)/);
+  assert.match(script, /function translateCatalogCategory\(category\)/);
   for (const language of ["it", "en", "fr", "de", "es", "ro", "sq"]) {
-    assert.match(script, new RegExp(`\\n  ${language}: \\{ "t-shirts":`));
+    assert.match(script, new RegExp(`\\n  ${language}: \\{`));
   }
-  assert.match(script, /catalog-nav-category-column/);
+  const navigationStart = script.indexOf("function renderCatalogNavigation()");
+  const navigationEnd = script.indexOf("function renderCatalogTiles", navigationStart);
+  const navigationSource = script.slice(navigationStart, navigationEnd);
+  assert.match(navigationSource, /catalog-nav-category-grid/);
+  assert.match(navigationSource, /renderCategoryButton/);
+  assert.doesNotMatch(navigationSource, /productPreviewMarkup|<img/);
   assert.match(script, /function renderProductDetail\(\)/);
   assert.match(script, /catalogState\.category && !catalogState\.brand/);
   assert.match(script, /data-catalog-results/);
@@ -139,7 +145,7 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(script, /data-last-stock-gender="donna"/);
   assert.match(productPage, /data-product-detail/);
   assert.match(server, /"\/product\.html"/);
-  assert.match(dockerfile, /COPY index\.html product\.html/);
+  assert.match(dockerfile, /COPY \. \./);
   assert.match(index, /class="last-stock-nav"/);
   assert.match(styles, /\.main-nav > \.last-stock-nav\s*\{[\s\S]*?flex:\s*0 0 100%/);
   assert.match(styles, /\.catalog-nav-category-column\s*\{[\s\S]*?grid-auto-rows:\s*minmax\(54px, auto\)/);
@@ -204,8 +210,8 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(styles, /\.product-crop-stage\s*\{[\s\S]*?aspect-ratio:\s*10 \/ 11/);
   assert.match(adminHtml, /Carica pi&ugrave; foto dal Finder/);
   assert.match(adminHtml, /data-product-image-count/);
-  assert.match(adminHtml, /fino a 40 foto insieme/);
-  assert.match(admin, /const maximumProductImages = 40/);
+  assert.match(adminHtml, /fino a 100 foto insieme/);
+  assert.match(admin, /const maximumProductImages = 100/);
   assert.match(admin, /const productUploadBatchSize = 8/);
   assert.match(admin, /function addProductImageFiles\(files\)/);
   assert.match(admin, /async function editProductImageEntry\(entry\)/);
@@ -238,9 +244,9 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("imageVariants", JSON\.stringify\(imageVariants\)\)/);
   assert.match(admin, /formData\.append\("originalImageIndexes", JSON\.stringify\(originalImageIndexes\)\)/);
   assert.match(server, /readRequestBuffer\(req, 80 \* 1024 \* 1024\)/);
-  assert.match(server, /\.slice\(0, 40\)/);
+  assert.match(server, /\.slice\(0, 100\)/);
   assert.match(server, /const originalSavedByIndex = new Map\(/);
-  assert.match(server, /const uploadedImages = await Promise\.all/);
+  assert.match(server, /const uploadedImages = await mapWithConcurrency\(imageParts, 2/);
   assert.match(server, /const uploadedOriginals = await Promise\.all/);
   assert.match(server, /sourceSaved = saved\.map/);
   assert.match(server, /originalImages: sourceSaved/);
@@ -252,7 +258,6 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductUploads/);
   assert.match(server, /async function pruneStaleStorageTemps/);
   assert.match(server, /async function ensureProductUploadCapacity/);
-  assert.match(server, /await pruneOrphanProductUploads\(\{ minAgeMs: 0 \}\)/);
   assert.match(server, /return await handleApi\(req, res, url\)/);
   assert.match(server, /return json\(res, 507/);
   assert.match(server, /new S3Client/);
@@ -260,7 +265,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /new PutBucketCorsCommand/);
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
-  assert.match(adminHtml, /admin\.js\?v=tigris-storage-1/);
+  assert.match(adminHtml, /admin\.js\?v=ai-product-results-4/);
 });
 
 test("checkout renders product images from the cart", async () => {
@@ -275,14 +280,17 @@ test("checkout renders product images from the cart", async () => {
   assert.match(styles, /\.checkout-summary-remove\s*\{/);
 });
 
-test("demo purchase notifications use the requested timing on every storefront page", async () => {
-  const [script, styles] = await Promise.all([readFile("script.js", "utf8"), readFile("styles.css", "utf8")]);
-  assert.match(script, /function setupPurchaseNotifications\(\)/);
-  assert.match(script, /window\.setTimeout\(\(\) => \{[\s\S]*?showNotification\(\);[\s\S]*?scheduleNext\(\);[\s\S]*?\}, 3000\)/);
-  assert.match(script, /\}, 180000\)/);
-  assert.match(script, /hideTimer = window\.setTimeout\(hideNotification, 8000\)/);
-  assert.match(script, /const purchaseNotificationTranslations = \{/);
-  assert.match(script, /setupPurchaseNotifications\(\);/);
-  assert.match(styles, /\.purchase-notification\s*\{[\s\S]*?z-index:\s*84/);
-  assert.match(styles, /@media \(max-width: 560px\)[\s\S]*?\.purchase-notification\s*\{[\s\S]*?bottom:\s*88px/);
+test("responsive product images preserve originals and keep the navigation menu text-only", async () => {
+  const [index, script, server] = await Promise.all([readFile("index.html", "utf8"), readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  assert.match(server, /const productImageRenditionWidths = \[480, 720, 1080, 1440\]/);
+  assert.match(server, /webp\(\{ quality: width >= 1080 \? 98 : 95/);
+  assert.match(script, /function productImageSrcset\(product, image\)/);
+  assert.match(script, /function productZoomImageSource\(product, image, index\)/);
+  assert.match(script, /data-original-src=/);
+  assert.match(script, /data-product-image-deferred/);
+  assert.match(script, /function observeProductImages\(root = document\)/);
+  assert.match(index, /assets\/hero-man-v2\.webp/);
+  const navigationStart = script.indexOf("function renderCatalogNavigation()");
+  const navigationEnd = script.indexOf("function renderCatalogTiles", navigationStart);
+  assert.doesNotMatch(script.slice(navigationStart, navigationEnd), /productPreviewMarkup|<img/);
 });

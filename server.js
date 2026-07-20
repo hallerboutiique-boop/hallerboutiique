@@ -6,12 +6,16 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DeleteObjectsCommand,
+  HeadObjectCommand,
   ListObjectsV2Command,
   PutBucketCorsCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
+
+sharp.cache(false);
+sharp.concurrency(1);
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = __dirname;
@@ -33,7 +37,6 @@ const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
-const tryOnInputMaxDimension = 2048;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
@@ -41,6 +44,8 @@ const replayMaxEvents = 500;
 const geoLookupTimeoutMs = 1800;
 const minimumStorageReserveBytes = 64 * 1024 * 1024;
 const orphanUploadGraceMs = 10 * 60 * 1000;
+const productImageRenditionWidths = [480, 720, 1080, 1440];
+const productImageSourceLimitBytes = 40 * 1024 * 1024;
 const productImageBucketName = String(process.env.BUCKET_NAME || "").trim();
 const productImageStorageEndpoint = String(process.env.AWS_ENDPOINT_URL_S3 || "https://t3.storage.dev").trim();
 const productImageStorageRegion = String(process.env.AWS_REGION || "auto").trim();
@@ -51,7 +56,24 @@ const productImageStorage = productImageBucketName
   ? new S3Client({ endpoint: productImageStorageEndpoint, region: productImageStorageRegion })
   : null;
 let productImageStorageReadyPromise = null;
+let productImageOptimizationJob = null;
+let productMutationQueue = Promise.resolve();
+let productImageOptimizationStatus = {
+  state: "idle",
+  total: 0,
+  processed: 0,
+  optimized: 0,
+  skipped: 0,
+  failed: 0,
+  current: "",
+};
 const geoCache = new Map();
+
+function enqueueProductMutation(mutation) {
+  const result = productMutationQueue.then(mutation, mutation);
+  productMutationQueue = result.catch(() => {});
+  return result;
+}
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -64,7 +86,6 @@ const contentTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
-  ".avif": "image/avif",
 };
 const publicFiles = new Set([
   "/index.html",
@@ -82,10 +103,7 @@ const publicFiles = new Set([
   "/account.js",
   "/admin.js",
 ]);
-const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp", ".avif"]);
-const transformableImageExtensions = new Set([".png", ".jpg", ".jpeg", ".webp", ".avif"]);
-const imageTransformQueryParams = ["width", "height", "quality", "format"];
-const optimizedImageFormats = new Set(["avif", "webp", "jpeg", "jpg", "png"]);
+const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
 const oauthProviders = {
   google: {
@@ -176,10 +194,6 @@ async function writeProductOverrides(data) {
     items: data.items && typeof data.items === "object" ? data.items : {},
     custom: Array.isArray(data.custom) ? data.custom : [],
   });
-  await pruneOrphanProductUploads();
-  await pruneOrphanProductObjects().catch((error) => {
-    console.error(`Tigris cleanup skipped: ${error.message}`);
-  });
 }
 
 function uploadFileName(value) {
@@ -201,7 +215,9 @@ function referencedProductUploadNames(data) {
   const custom = Array.isArray(data?.custom) ? data.custom : [];
   const referenced = new Set();
   [...items, ...custom].forEach((product) => {
-    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages)].forEach((image) => {
+    const renditionImages = Object.values(cleanProductImageRenditions(product?.imageRenditions, product?.images))
+      .flatMap((entries) => entries.map((entry) => entry.url));
+    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages), ...renditionImages].forEach((image) => {
       const name = uploadFileName(image);
       if (name) referenced.add(name);
     });
@@ -226,7 +242,9 @@ function referencedProductObjectKeys(data) {
   const custom = Array.isArray(data?.custom) ? data.custom : [];
   const referenced = new Set();
   [...items, ...custom].forEach((product) => {
-    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages)].forEach((image) => {
+    const renditionImages = Object.values(cleanProductImageRenditions(product?.imageRenditions, product?.images))
+      .flatMap((entries) => entries.map((entry) => entry.url));
+    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages), ...renditionImages].forEach((image) => {
       const key = productObjectKey(image);
       if (key) referenced.add(key);
     });
@@ -273,7 +291,7 @@ async function verifyProductImageStorage() {
 
 function storedImageContentType(extension, suppliedType) {
   const cleanType = String(suppliedType || "").split(";")[0].trim().toLowerCase();
-  if (["image/jpeg", "image/png", "image/webp", "image/avif"].includes(cleanType)) return cleanType;
+  if (["image/jpeg", "image/png", "image/webp"].includes(cleanType)) return cleanType;
   return contentTypes[extension] || "application/octet-stream";
 }
 
@@ -297,6 +315,251 @@ async function storeProductImage(name, data, contentType) {
     ContentDisposition: "inline",
   }));
   return `${productImagePublicBaseUrl}/${key}`;
+}
+
+async function storeProductImageRendition(name, data) {
+  try {
+    await fs.mkdir(uploadsDir, { recursive: true });
+    const target = path.join(uploadsDir, name);
+    const existingSize = await fs.stat(target).then((stat) => stat.size, () => 0);
+    await ensureProductUploadCapacity(Math.max(0, data.length - existingSize));
+    const temporary = `${target}.${randomBytes(6).toString("hex")}.tmp`;
+    try {
+      await fs.writeFile(temporary, data);
+      await fs.rename(temporary, target);
+    } catch (error) {
+      await fs.unlink(temporary).catch(() => undefined);
+      throw error;
+    }
+    return `/uploads/${name}`;
+  } catch (error) {
+    if (isStorageCapacityError(error) && productImageStorage) {
+      return storeProductImage(name, data, "image/webp");
+    }
+    throw error;
+  }
+}
+
+async function mapWithConcurrency(items, concurrency, worker) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await worker(items[index], index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function createProductImageRenditions(name, data, existingEntries = [], { refreshHighQuality = false } = {}) {
+  try {
+    const metadata = await sharp(data, { failOn: "none" }).metadata();
+    const orientation = Number(metadata.orientation || 1);
+    const sourceWidth = orientation >= 5 && orientation <= 8 ? metadata.height : metadata.width;
+    if (!Number.isFinite(sourceWidth) || sourceWidth < 1) return [];
+
+    const widths = [...new Set(productImageRenditionWidths.map((width) => Math.min(width, sourceWidth)))];
+    const baseName = path.basename(name, path.extname(name));
+    const existingByWidth = new Map(
+      (Array.isArray(existingEntries) ? existingEntries : [])
+        .filter((entry) => entry?.url && Number.isInteger(Number(entry.width)) && Number(entry.width) > 0)
+        .filter((entry) => !refreshHighQuality || Number(entry.width) < 1080)
+        .map((entry) => [Number(entry.width), entry])
+    );
+    const renditions = [];
+    for (const width of widths) {
+      const existing = existingByWidth.get(width);
+      if (existing) {
+        renditions.push(existing);
+        continue;
+      }
+      let pipeline = sharp(data, { failOn: "none" })
+        .rotate()
+        .resize({ width, withoutEnlargement: true, fit: "inside" });
+      if (width >= 1080) pipeline = pipeline.sharpen(0.55);
+      const output = await pipeline
+        .webp({ quality: width >= 1080 ? 98 : 95, alphaQuality: 100, smartSubsample: true, effort: 3 })
+        .toBuffer({ resolveWithObject: true });
+      const renditionName = `${baseName}-${output.info.width}w.webp`;
+      const url = await storeProductImageRendition(renditionName, output.data);
+      renditions.push({
+        url,
+        width: output.info.width,
+        height: output.info.height,
+        type: "image/webp",
+      });
+    }
+    return renditions;
+  } catch (error) {
+    console.error(`Responsive product image skipped for ${name}: ${error.message}`);
+    return [];
+  }
+}
+
+function isLocalRequest(req) {
+  return ["127.0.0.1", "::1", "::ffff:127.0.0.1"].includes(String(req.socket.remoteAddress || ""));
+}
+
+async function readProductImageSource(image) {
+  const value = String(image || "").split("?")[0];
+  let filePath = "";
+  if (value.startsWith("/uploads/")) {
+    filePath = path.normalize(path.join(uploadsDir, value.slice("/uploads/".length)));
+    if (!filePath.startsWith(`${uploadsDir}${path.sep}`)) throw new Error("Percorso upload non valido.");
+  } else if (value.startsWith("assets/")) {
+    filePath = path.normalize(path.join(publicDir, value));
+    if (!filePath.startsWith(`${publicDir}${path.sep}`)) throw new Error("Percorso asset non valido.");
+  }
+
+  if (filePath) {
+    const stat = await fs.stat(filePath);
+    if (!stat.isFile() || stat.size > productImageSourceLimitBytes) throw new Error("Immagine sorgente troppo grande.");
+    return fs.readFile(filePath);
+  }
+
+  if (!/^https:\/\//i.test(value)) throw new Error("Sorgente immagine non supportata.");
+  const sourceUrl = new URL(value);
+  if (!productImagePublicBaseUrl || sourceUrl.origin !== new URL(productImagePublicBaseUrl).origin) {
+    throw new Error("Origine immagine esterna non consentita.");
+  }
+  const response = await fetch(sourceUrl, { signal: AbortSignal.timeout(30000) });
+  if (!response.ok) throw new Error(`Download immagine non riuscito (${response.status}).`);
+  const contentLength = Number(response.headers.get("content-length") || 0);
+  if (contentLength > productImageSourceLimitBytes) throw new Error("Immagine sorgente troppo grande.");
+  const data = Buffer.from(await response.arrayBuffer());
+  if (!data.length || data.length > productImageSourceLimitBytes) throw new Error("Immagine sorgente non valida.");
+  return data;
+}
+
+async function persistProductImageOptimization(data) {
+  await writeJson(productsFile, {
+    updatedAt: new Date().toISOString(),
+    items: data.items,
+    custom: data.custom,
+  });
+}
+
+async function productImageRenditionsExist(entries) {
+  if (!Array.isArray(entries) || entries.length === 0) return false;
+  const checks = await mapWithConcurrency(entries, 5, async (entry) => {
+    const key = productObjectKey(entry?.url);
+    if (key && productImageStorage) {
+      try {
+        await productImageStorage.send(new HeadObjectCommand({ Bucket: productImageBucketName, Key: key }));
+        return true;
+      } catch (error) {
+        if (error?.name === "NotFound" || error?.$metadata?.httpStatusCode === 404) return false;
+        throw error;
+      }
+    }
+    const uploadName = uploadFileName(entry?.url);
+    if (uploadName) return fs.access(path.join(uploadsDir, uploadName)).then(() => true, () => false);
+    return false;
+  });
+  return checks.every(Boolean);
+}
+
+async function optimizeExistingProductImages({ primaryOnly = false, force = false, productId = "", refreshHighQuality = false } = {}) {
+  const data = await readProductOverrides();
+  const products = [
+    ...Object.entries(data.items).map(([id, product]) => ({ id, product })),
+    ...data.custom.map((product, index) => ({ id: product.id || `custom-${index}`, product })),
+  ].filter((entry) => !productId || entry.id === productId);
+  const tasks = products
+    .flatMap(({ id, product }) => {
+      const originals = cleanProductImages(product.originalImages);
+      return cleanProductImages(product.images).map((image, index) => ({
+        id,
+        product,
+        image,
+        sourceImage: product.imageVariant === "cropped" ? image : originals[index] || image,
+        index,
+      }));
+    })
+    .filter((task) => !primaryOnly || task.index === 0)
+    .sort((left, right) => {
+      const priority = (index) => index === 1 ? -1 : index;
+      return priority(left.index) - priority(right.index);
+    });
+
+  productImageOptimizationStatus = {
+    state: "running",
+    total: tasks.length,
+    processed: 0,
+    optimized: 0,
+    skipped: 0,
+    failed: 0,
+    current: "",
+  };
+
+  await mapWithConcurrency(tasks, productId ? 1 : primaryOnly ? 2 : 4, async (task) => {
+    productImageOptimizationStatus.current = `${task.id}: ${task.image}`;
+    let previous = {};
+    try {
+      const existing = cleanProductImageRenditions(task.product.imageRenditions, task.product.images);
+      previous = existing;
+      if (!force && await productImageRenditionsExist(existing[task.image])) {
+        productImageOptimizationStatus.skipped += 1;
+      } else {
+        const source = await readProductImageSource(task.sourceImage);
+        const fingerprint = createHash("sha256").update(source).digest("hex").slice(0, 16);
+        const name = `${slugifyProduct(task.id)}-responsive-${fingerprint}.webp`;
+        const renditions = await createProductImageRenditions(name, source, existing[task.image], { refreshHighQuality });
+        if (!renditions.length) throw new Error("Nessuna variante generata.");
+        task.product.imageRenditions = {
+          ...cleanProductImageRenditions(task.product.imageRenditions, task.product.images),
+          [task.image]: renditions,
+        };
+        await persistProductImageOptimization(data);
+        productImageOptimizationStatus.optimized += 1;
+      }
+    } catch (error) {
+      const remaining = cleanProductImageRenditions(task.product.imageRenditions, task.product.images);
+      if (Array.isArray(previous[task.image]) && previous[task.image].length) {
+        remaining[task.image] = previous[task.image];
+      } else {
+        delete remaining[task.image];
+      }
+      task.product.imageRenditions = remaining;
+      await persistProductImageOptimization(data).catch(() => undefined);
+      productImageOptimizationStatus.failed += 1;
+      console.error(`Product image optimization failed for ${task.image}: ${error.message}`);
+    } finally {
+      productImageOptimizationStatus.processed += 1;
+    }
+  });
+
+  await persistProductImageOptimization(data);
+  productImageOptimizationStatus = {
+    ...productImageOptimizationStatus,
+    state: productImageOptimizationStatus.failed ? "completed_with_errors" : "completed",
+    current: "",
+  };
+}
+
+function handleProductImageOptimization(req, res, url) {
+  if (!isLocalRequest(req)) return notFound(res);
+  if (req.method === "GET") return json(res, 200, { ok: true, ...productImageOptimizationStatus });
+  if (req.method !== "POST") return notFound(res);
+  if (!productImageOptimizationJob) {
+    productImageOptimizationJob = optimizeExistingProductImages({
+      primaryOnly: url.searchParams.get("scope") === "previews",
+      force: url.searchParams.get("force") === "1",
+      productId: cleanTrackingString(url.searchParams.get("product"), 120),
+      refreshHighQuality: url.searchParams.get("high") === "1",
+    })
+      .catch((error) => {
+        productImageOptimizationStatus = { ...productImageOptimizationStatus, state: "failed", current: "", message: error.message };
+        console.error(`Product image optimization stopped: ${error.message}`);
+      })
+      .finally(() => {
+        productImageOptimizationJob = null;
+      });
+  }
+  return json(res, 202, { ok: true, ...productImageOptimizationStatus });
 }
 
 async function deleteProductObjects(keys) {
@@ -451,6 +714,19 @@ async function writeAnalytics(data) {
   });
 
   return writeJson(analyticsFile, data);
+}
+
+let analyticsMutationQueue = Promise.resolve();
+
+function mutateAnalytics(mutator) {
+  const operation = analyticsMutationQueue.then(async () => {
+    const analytics = await readAnalytics();
+    const result = await mutator(analytics);
+    await writeAnalytics(analytics);
+    return result;
+  });
+  analyticsMutationQueue = operation.catch(() => undefined);
+  return operation;
 }
 
 function json(res, status, body, headers = {}) {
@@ -860,16 +1136,18 @@ async function readDefaultProducts() {
 
 function mergeProduct(product, overrides) {
   const override = overrides[product.id] || {};
+  const images = Array.isArray(override.images) ? override.images : product.images;
   return {
     ...product,
     ...override,
     id: product.id,
     baseName: product.name,
     custom: false,
-    images: Array.isArray(override.images) ? override.images : product.images,
+    images,
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
       : Array.isArray(product.originalImages) ? product.originalImages : product.images,
+    imageRenditions: cleanProductImageRenditions(override.imageRenditions, images),
   };
 }
 
@@ -879,7 +1157,37 @@ function cleanProductImages(images) {
     .map((image) => cleanTrackingString(image, 260))
     .filter(Boolean)
     .filter((image) => image.startsWith("assets/") || image.startsWith("/") || /^https?:\/\//i.test(image))
-    .slice(0, 40);
+    .slice(0, 100);
+}
+
+function cleanProductImageRenditions(value, images = []) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const allowedImages = new Set(cleanProductImages(images));
+  const clean = {};
+  Object.entries(value).forEach(([source, entries]) => {
+    const cleanSource = cleanProductImages([source])[0];
+    if (!cleanSource || !allowedImages.has(cleanSource) || !Array.isArray(entries)) return;
+    const seenWidths = new Set();
+    const renditions = entries
+      .map((entry) => {
+        const url = cleanProductImages([entry?.url])[0];
+        const width = Number(entry?.width);
+        const height = Number(entry?.height);
+        if (!url || !Number.isInteger(width) || width < 1 || width > 5000 || seenWidths.has(width)) return null;
+        seenWidths.add(width);
+        return {
+          url,
+          width,
+          ...(Number.isInteger(height) && height > 0 && height <= 7000 ? { height } : {}),
+          type: "image/webp",
+        };
+      })
+      .filter(Boolean)
+      .sort((left, right) => left.width - right.width)
+      .slice(0, productImageRenditionWidths.length);
+    if (renditions.length) clean[cleanSource] = renditions;
+  });
+  return clean;
 }
 
 function cleanProductSizes(sizes) {
@@ -896,8 +1204,10 @@ function cleanProductInventory(inventory) {
 function cleanProductPatch(body) {
   const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
   const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
+  const images = cleanProductImages(body.images);
   return {
     name: cleanTrackingString(body.name, 180) || "Prodotto",
+    brand: cleanTrackingString(body.brand, 100),
     description: cleanTrackingString(body.description, 700),
     original: cleanTrackingString(body.original, 40),
     finalPrice: cleanTrackingString(body.finalPrice, 40),
@@ -907,8 +1217,9 @@ function cleanProductPatch(body) {
     sizeType,
     sizes: cleanProductSizes(body.sizes),
     inventory: cleanProductInventory(body.inventory),
-    images: cleanProductImages(body.images),
+    images,
     originalImages: cleanProductImages(body.originalImages),
+    imageRenditions: cleanProductImageRenditions(body.imageRenditions, images),
     imageVariant,
     updatedAt: new Date().toISOString(),
   };
@@ -969,6 +1280,7 @@ function cleanAiSuggestion(suggestion, imageUrl) {
   const body = suggestion && typeof suggestion === "object" ? suggestion : {};
   const patch = cleanProductPatch({
     name: body.name,
+    brand: body.brand,
     description: body.description,
     collection: body.collection,
     category: body.category,
@@ -976,13 +1288,28 @@ function cleanAiSuggestion(suggestion, imageUrl) {
     finalPrice: formatAiPrice(body.finalPrice),
     discount: body.discount,
     sizeType: body.sizeType,
+    sizes: body.sizes,
     images: [imageUrl],
   });
   return {
     ...patch,
     confidence: cleanTrackingString(body.confidence, 40) || "media",
-    sources: Array.isArray(body.sources) ? body.sources.map((source) => cleanTrackingString(source, 220)).filter(Boolean).slice(0, 4) : [],
+    sources: cleanAiSources(body.sources, patch.brand),
   };
+}
+
+function cleanAiSources(sources, brand) {
+  const cleaned = Array.isArray(sources)
+    ? sources.map((source) => cleanTrackingString(source, 220)).filter(Boolean).slice(0, 4)
+    : [];
+  if (!/louis\s*vuitton/i.test(String(brand || ""))) return cleaned;
+  return cleaned.filter((source) => {
+    try {
+      return new URL(source).hostname.toLowerCase() === "it.louisvuitton.com";
+    } catch {
+      return false;
+    }
+  });
 }
 
 function responseOutputText(data) {
@@ -1053,9 +1380,10 @@ async function analyzeProductImageWithAi(dataUrl) {
   const schema = {
     type: "object",
     additionalProperties: false,
-    required: ["name", "description", "collection", "category", "original", "finalPrice", "discount", "sizeType", "confidence", "sources"],
+    required: ["name", "brand", "description", "collection", "category", "original", "finalPrice", "discount", "sizeType", "sizes", "confidence", "sources"],
     properties: {
       name: { type: "string" },
+      brand: { type: "string" },
       description: { type: "string" },
       collection: { type: "string" },
       category: { type: "string" },
@@ -1063,16 +1391,26 @@ async function analyzeProductImageWithAi(dataUrl) {
       finalPrice: { type: "string" },
       discount: { type: "string" },
       sizeType: { type: "string", enum: ["clothing", "sneakers", "none"] },
+      sizes: { type: "array", items: { type: "string" } },
       confidence: { type: "string", enum: ["alta", "media", "bassa"] },
       sources: { type: "array", items: { type: "string" } },
     },
   };
   const prompt = [
     "Analizza questa immagine prodotto per l'admin di Haller Boutique.",
-    "Usa la ricerca web per verificare marca, modello e categoria quando possibile.",
+    "Rileva prima la marca e usa la ricerca web per verificare marca, modello, titolo e caratteristiche del prodotto.",
+    "Se riconosci la marca, usa come riferimento primario e obbligatorio solo il sito web ufficiale della marca: non usare marketplace, rivenditori, social network, Wikipedia, comparatori, blog o aggregatori per creare titolo e descrizione.",
+    "REGOLA OBBLIGATORIA LOUIS VUITTON: se la marca rilevata e Louis Vuitton, incluso quando riconosci il monogramma LV, consulta e usa esclusivamente il sito italiano https://it.louisvuitton.com/ e pagine appartenenti al dominio it.louisvuitton.com. Non usare altre versioni nazionali, altri domini o fonti terze.",
+    "Per Louis Vuitton non fermarti alla homepage: naviga e cerca all'interno di it.louisvuitton.com, apri le pagine di categoria, i risultati di ricerca interni e le schede prodotto pertinenti, quindi confronta modello, forma, materiali, colori, finiture e codice prodotto con cio che vedi nella foto.",
+    "Per Louis Vuitton consulta piu pagine ufficiali quando disponibili e inserisci in sources fino a quattro pagine effettivamente aperte, dando priorita alla scheda esatta del prodotto. Se il modello esatto non e verificabile nelle pagine ufficiali, non inventarlo: usa un titolo generico Louis Vuitton basato sulla foto e indica solo caratteristiche confermate.",
+    "Il campo sources deve contenere la pagina prodotto ufficiale consultata o, se non disponibile, una pagina pertinente dello stesso dominio ufficiale; non inserire fonti di terze parti.",
+    "Scrivi il titolo in italiano mantenendo marca e nome ufficiale del modello verificati sul sito della marca.",
+    "Scrivi la descrizione in italiano in modo originale, accurato e commerciale, usando i fatti trovati sul sito ufficiale ma senza copiare, tradurre letteralmente o riprodurre troppo da vicino la descrizione ufficiale.",
+    "Se la marca e il suo sito ufficiale non sono verificabili, non usare fonti di terze parti: crea un titolo e una descrizione generici basati solo su ciò che è visibile nell'immagine e lascia sources vuoto.",
     "Non inventare marchi o modelli non riconoscibili: se non sei sicuro, usa un nome generico premium.",
     "Scegli collection tra Catalogo Uomo, Catalogo Donna o Selezione Haller Boutique.",
     "Scegli category in italiano, ad esempio Sneakers Uomo, Sneakers Donna, Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo, Accessori.",
+    "Per sizes restituisci solo le taglie ufficialmente previste per il modello quando sono verificabili sul sito della marca; altrimenti restituisci un array vuoto.",
     "Per original, finalPrice e discount restituisci sempre stringhe vuote: i prezzi vengono inseriti manualmente dall'admin.",
   ].join(" ");
   const basePayload = {
@@ -1138,61 +1476,11 @@ function fieldValue(parts, name, max = 260) {
 function imageMimeFromExtension(ext) {
   if (ext === ".png") return "image/png";
   if (ext === ".webp") return "image/webp";
-  if (ext === ".avif") return "image/avif";
   return "image/jpeg";
 }
 
 function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
-}
-
-async function normalizeTryOnImage(image, label) {
-  if (!image?.data?.length) {
-    const error = new Error(`Immagine try-on vuota: ${label}.`);
-    error.code = "INVALID_TRYON_IMAGE";
-    throw error;
-  }
-
-  try {
-    const source = sharp(image.data, {
-      failOn: "error",
-      limitInputPixels: 100_000_000,
-      sequentialRead: true,
-    });
-    const metadata = await source.metadata();
-    if (!metadata.width || !metadata.height) throw new Error("Dimensioni immagine non disponibili.");
-
-    const data = await source
-      .rotate()
-      .resize({
-        width: tryOnInputMaxDimension,
-        height: tryOnInputMaxDimension,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .flatten({ background: "#ffffff" })
-      .toColourspace("srgb")
-      .jpeg({ quality: 96, chromaSubsampling: "4:4:4", mozjpeg: true })
-      .toBuffer();
-
-    if (!data.length) throw new Error("Conversione immagine vuota.");
-    return { data, mime: "image/jpeg", filename: `${label}.jpg` };
-  } catch (cause) {
-    const error = new Error(`Immagine try-on non valida: ${label}.`);
-    error.code = "INVALID_TRYON_IMAGE";
-    error.cause = cause;
-    throw error;
-  }
-}
-
-async function normalizeTryOnInput(input) {
-  const userImage = await normalizeTryOnImage(input.userImage, "customer");
-  const productImages = [];
-  const sourceProductImages = Array.isArray(input.productImages) ? input.productImages : [];
-  for (let index = 0; index < sourceProductImages.length; index += 1) {
-    productImages.push(await normalizeTryOnImage(sourceProductImages[index], `product-${index + 1}`));
-  }
-  return { ...input, userImage, productImages };
 }
 
 function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
@@ -1271,8 +1559,7 @@ async function requestTryOnEdit(form) {
 }
 
 async function generateTryOnImage(input) {
-  const normalizedInput = await normalizeTryOnInput(input);
-  return requestTryOnEdit(buildTryOnForm(normalizedInput));
+  return requestTryOnEdit(buildTryOnForm(input));
 }
 
 function signPayload(payload) {
@@ -1430,75 +1717,6 @@ function imageDataFromDataUrl(value) {
   const ext = imageExtension("preview", match[1]);
   if (!ext) return null;
   return { data: Buffer.from(match[2], "base64"), ext };
-}
-
-function boundedImageInteger(value, { min = 1, max = 3000, fallback = null } = {}) {
-  if (value === null || value === undefined || value === "") return fallback;
-  const number = Number.parseInt(String(value), 10);
-  if (!Number.isFinite(number)) return fallback;
-  return Math.min(max, Math.max(min, number));
-}
-
-function requestedOptimizedImageFormat(url, ext, acceptHeader = "") {
-  const requested = String(url.searchParams.get("format") || "").trim().toLowerCase();
-  if (requested === "auto") {
-    const accept = String(acceptHeader || "").toLowerCase();
-    if (accept.includes("image/avif")) return "avif";
-    if (accept.includes("image/webp")) return "webp";
-  }
-  if (optimizedImageFormats.has(requested)) return requested === "jpg" ? "jpeg" : requested;
-  return ext === ".jpg" || ext === ".jpeg" ? "jpeg" : ext.replace(/^\./, "");
-}
-
-function optimizedImageContentType(format) {
-  if (format === "jpg" || format === "jpeg") return "image/jpeg";
-  return contentTypes[`.${format}`] || "application/octet-stream";
-}
-
-function hasImageTransformRequest(url) {
-  return imageTransformQueryParams.some((param) => url.searchParams.has(param));
-}
-
-async function serveOptimizedStaticImage(req, res, url, filePath, ext) {
-  if (!transformableImageExtensions.has(ext) || !hasImageTransformRequest(url)) return false;
-
-  const width = boundedImageInteger(url.searchParams.get("width"), { min: 16, max: 3000 });
-  const height = boundedImageInteger(url.searchParams.get("height"), { min: 16, max: 3000 });
-  const quality = boundedImageInteger(url.searchParams.get("quality"), { min: 1, max: 100, fallback: 86 });
-  const format = requestedOptimizedImageFormat(url, ext, req.headers.accept);
-
-  let image = sharp(filePath, {
-    failOn: "none",
-    limitInputPixels: 100_000_000,
-    sequentialRead: true,
-  }).rotate();
-
-  if (width || height) {
-    image = image.resize({
-      width: width || undefined,
-      height: height || undefined,
-      fit: "inside",
-      withoutEnlargement: true,
-    });
-  }
-
-  image = image.toColorspace("srgb");
-  if (format === "avif") image = image.avif({ quality, effort: 4 });
-  else if (format === "webp") image = image.webp({ quality, effort: 4 });
-  else if (format === "jpeg") image = image.jpeg({ quality, mozjpeg: true });
-  else if (format === "png") image = image.png({ compressionLevel: 9, effort: 8 });
-
-  const data = await image.toBuffer();
-  res.writeHead(200, {
-    "Content-Type": optimizedImageContentType(format),
-    "Content-Length": data.length,
-    "X-Content-Type-Options": "nosniff",
-    "Permissions-Policy": "geolocation=(self)",
-    "Cache-Control": "public, max-age=31536000, immutable",
-    "Vary": "Accept",
-  });
-  res.end(data);
-  return true;
 }
 
 async function archiveTryOn({ customerImage, generated, productId, productName, category }) {
@@ -1661,7 +1879,9 @@ async function handleProducts(req, res) {
     return { ...publicProduct, isLastAvailable: inventory === 1 };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
-  json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) });
+  json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) }, {
+    "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+  });
 }
 
 function cleanChatMessage(value) {
@@ -1674,8 +1894,8 @@ const siteChatLanguages = {
   fr: { name: "francais", locale: "fr-FR", invalidProfile: "Saisissez votre prenom, votre nom et une adresse e-mail valide pour continuer.", emptyMessage: "Ecrivez un message pour commencer la conversation.", unavailable: "L'assistante virtuelle est temporairement indisponible.", fallback: "Un detail m'a echappe. Pouvez-vous reformuler ?" },
   de: { name: "Deutsch", locale: "de-DE", invalidProfile: "Geben Sie Vorname, Nachname und eine gultige E-Mail-Adresse ein.", emptyMessage: "Schreiben Sie eine Nachricht, um das Gesprach zu beginnen.", unavailable: "Der virtuelle Assistent ist vorubergehend nicht verfugbar.", fallback: "Mir ist ein Detail entgangen. Konnen Sie das bitte anders formulieren?" },
   es: { name: "espanol", locale: "es-ES", invalidProfile: "Introduce tu nombre, apellidos y un correo valido para continuar.", emptyMessage: "Escribe un mensaje para iniciar la conversacion.", unavailable: "La asistente virtual no esta disponible temporalmente.", fallback: "Se me ha escapado un detalle. Puedes reformularlo?" },
-  ro: { name: "romana", locale: "ro-RO", invalidProfile: "Introdu numele, prenumele si o adresa de email valida.", emptyMessage: "Scrie un mesaj pentru a incepe conversatia.", unavailable: "Asistenta este temporar indisponibila.", fallback: "Mi-a scapat un detaliu. Poti reformula?" },
-  sq: { name: "shqip", locale: "sq-AL", invalidProfile: "Vendos emrin, mbiemrin dhe nje email te vlefshem.", emptyMessage: "Shkruaj nje mesazh per te filluar biseden.", unavailable: "Asistentja nuk eshte perkohesisht e disponueshme.", fallback: "Me shpetoi nje detaj. Mund ta riformulosh?" },
+  sq: { name: "shqip", locale: "sq-AL", invalidProfile: "Vendosni emrin, mbiemrin dhe nje adrese email te vlefshme per te vazhduar.", emptyMessage: "Shkruani nje mesazh per te filluar biseden.", unavailable: "Asistentja virtuale nuk eshte perkohesisht e disponueshme.", fallback: "Me shpetoi nje detaj. Mund ta riformuloni?" },
+  ro: { name: "română", locale: "ro-RO", invalidProfile: "Introdu prenumele, numele si o adresa de e-mail valida pentru a continua.", emptyMessage: "Scrie un mesaj pentru a incepe conversatia.", unavailable: "Asistenta virtuala este temporar indisponibila.", fallback: "Mi-a scapat un detaliu. Poti reformula?" },
 };
 
 const tryOnLanguages = {
@@ -1684,13 +1904,12 @@ const tryOnLanguages = {
   fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", received: "Photo reçue", prepared: "Vetement reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Tous les articles du panier sont prets", bundleGenerating: "Generation de la tenue complete", bundlePreview: "Tenue complete reçue", timeout: "La generation a pris trop de temps. Reessayez.", busy: "Le service d'essayage est momentanement occupe. Reessayez bientot.", rejected: "Une image ne peut pas etre traitee. Utilisez une photo JPG, PNG ou WebP nette.", unavailable: "L'essayage est indisponible." },
   de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Alle Warenkorbartikel sind bereit", bundleGenerating: "Komplettes Outfit wird erstellt", bundlePreview: "Komplettes Outfit empfangen", timeout: "Die Generierung hat zu lange gedauert. Versuchen Sie es erneut.", busy: "Der Anprobe-Service ist vorubergehend ausgelastet. Versuchen Sie es gleich noch einmal.", rejected: "Ein Bild kann nicht verarbeitet werden. Verwenden Sie ein klares JPG-, PNG- oder WebP-Foto.", unavailable: "Die Anprobe ist nicht verfugbar." },
   es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", received: "Foto recibida", prepared: "Prenda real del catalogo preparada", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Todos los articulos del carrito estan listos", bundleGenerating: "Generando el conjunto completo", bundlePreview: "Conjunto completo recibido", timeout: "La generacion ha tardado demasiado. Vuelve a intentarlo.", busy: "El servicio de prueba esta ocupado temporalmente. Intentalo de nuevo en breve.", rejected: "Una imagen no se puede procesar. Usa una foto JPG, PNG o WebP nitida.", unavailable: "La prueba no esta disponible." },
-  ro: { notConfigured: "Proba AI nu este configurata.", upload: "Incarca fotografia.", format: "Format neacceptat. Foloseste JPG, PNG sau WebP.", bundleImages: "Sunt necesare fotografiile originale ale tuturor produselor.", received: "Fotografie primita", prepared: "Produsul real este pregatit", generating: "Se genereaza proba AI", preview: "Previzualizare primita", bundlePrepared: "Toate produsele sunt gata", bundleGenerating: "Se genereaza tinuta completa", bundlePreview: "Tinuta completa a fost primita", timeout: "Generarea a durat prea mult. Incearca din nou.", busy: "Serviciul este ocupat. Incearca din nou in curand.", rejected: "O imagine nu poate fi procesata. Foloseste o fotografie clara JPG, PNG sau WebP.", unavailable: "Proba nu este disponibila." },
-  sq: { notConfigured: "Prova AI nuk eshte konfiguruar.", upload: "Ngarko foton.", format: "Format i paperkrahur. Perdorni JPG, PNG ose WebP.", bundleImages: "Duhen fotot origjinale te te gjitha produkteve.", received: "Fotoja u mor", prepared: "Produkti real eshte gati", generating: "Po krijohet prova AI", preview: "Pamja paraprake u mor", bundlePrepared: "Te gjitha produktet jane gati", bundleGenerating: "Po krijohet veshja e plote", bundlePreview: "Veshja e plote u mor", timeout: "Krijimi zgjati shume. Provo perseri.", busy: "Sherbimi eshte i zene. Provo perseri pas pak.", rejected: "Nje imazh nuk mund te perpunohet. Perdorni nje foto te qarte JPG, PNG ose WebP.", unavailable: "Prova nuk eshte e disponueshme." },
+  sq: { notConfigured: "Prova me AI nuk eshte konfiguruar.", upload: "Ngarkoni foton tuaj.", format: "Formati i imazhit nuk mbeshtetet. Perdorni JPG, PNG ose WebP.", bundleImages: "Nevojiten fotot origjinale te te gjitha produkteve te bundle-it.", received: "Fotoja u mor", prepared: "Veshja reale e katalogut u pergatit", generating: "Po gjenerohet prova me AI", preview: "Pamja paraprake u mor", bundlePrepared: "Te gjithe artikujt e shportes jane gati", bundleGenerating: "Po gjenerohet veshja e plote", bundlePreview: "Veshja e plote u mor", timeout: "Gjenerimi zgjati shume. Provoni perseri.", busy: "Sherbimi i proves eshte perkohesisht i zene. Provoni perseri pas pak.", rejected: "Nje nga imazhet nuk mund te perpunohen. Perdorni nje foto te qarte JPG, PNG ose WebP.", unavailable: "Prova nuk eshte e disponueshme." },
+  ro: { notConfigured: "Proba AI nu este configurata.", upload: "Incarca fotografia ta.", format: "Format de imagine neacceptat. Foloseste JPG, PNG sau WebP.", bundleImages: "Sunt necesare fotografiile originale ale tuturor produselor din bundle.", received: "Fotografie primita", prepared: "Articolul real din catalog este pregatit", generating: "Se genereaza proba AI", preview: "Previzualizare primita", bundlePrepared: "Toate articolele din cos sunt gata", bundleGenerating: "Se genereaza tinuta completa", bundlePreview: "Tinuta completa a fost primita", timeout: "Generarea a durat prea mult. Incearca din nou.", busy: "Serviciul de proba este temporar ocupat. Incearca din nou in curand.", rejected: "Una dintre imagini nu poate fi procesata. Foloseste o fotografie clara JPG, PNG sau WebP.", unavailable: "Proba nu este disponibila." },
 };
 
 function tryOnFailureMessage(error, copy) {
   if (error?.name === "AbortError") return copy.timeout;
-  if (error?.code === "INVALID_TRYON_IMAGE") return copy.rejected;
   const status = Number(error?.status || 0);
   if (status === 400 || status === 413 || status === 415) return copy.rejected;
   if (status === 408 || status === 429 || status >= 500) return copy.busy;
@@ -1805,9 +2024,9 @@ async function handleSiteChat(req, res) {
 
 async function handleAdminProducts(req, res) {
   if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
-  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
 
   if (req.method === "GET") {
+    const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
     return json(res, 200, {
       ok: true,
       products: [
@@ -1819,48 +2038,54 @@ async function handleAdminProducts(req, res) {
 
   if (req.method === "POST") {
     const body = await parseBody(req);
-    const id = cleanTrackingString(body.id, 120);
-    const defaultProduct = defaults.find((product) => product.id === id);
-    const customIndex = overrides.custom.findIndex((product) => product.id === id);
+    return enqueueProductMutation(async () => {
+      const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+      const id = cleanTrackingString(body.id, 120);
+      const defaultProduct = defaults.find((product) => product.id === id);
+      const customIndex = overrides.custom.findIndex((product) => product.id === id);
 
-    if (defaultProduct) {
-      overrides.items[id] = cleanProductPatch(body);
-      await writeProductOverrides(overrides);
-      return json(res, 200, { ok: true, product: mergeProduct(defaultProduct, overrides.items) });
-    }
+      if (defaultProduct) {
+        overrides.items[id] = cleanProductPatch(body);
+        await writeProductOverrides(overrides);
+        return json(res, 200, { ok: true, product: mergeProduct(defaultProduct, overrides.items) });
+      }
 
-    if (customIndex !== -1) {
-      const current = overrides.custom[customIndex];
-      overrides.custom[customIndex] = cleanCustomProduct({
-        ...current,
-        ...body,
-        id: current.id,
-        createdAt: current.createdAt,
+      if (customIndex !== -1) {
+        const current = overrides.custom[customIndex];
+        overrides.custom[customIndex] = cleanCustomProduct({
+          ...current,
+          ...body,
+          id: current.id,
+          createdAt: current.createdAt,
+        });
+        await writeProductOverrides(overrides);
+        return json(res, 200, { ok: true, product: mergeCustomProduct(overrides.custom[customIndex]) });
+      }
+
+      const patch = cleanProductPatch(body);
+      const product = cleanCustomProduct({
+        ...patch,
+        id: makeUniqueCustomProductId(patch.name, overrides),
       });
+      overrides.custom.unshift(product);
       await writeProductOverrides(overrides);
-      return json(res, 200, { ok: true, product: mergeCustomProduct(overrides.custom[customIndex]) });
-    }
-
-    const patch = cleanProductPatch(body);
-    const product = cleanCustomProduct({
-      ...patch,
-      id: makeUniqueCustomProductId(patch.name, overrides),
+      return json(res, 201, { ok: true, product: mergeCustomProduct(product) });
     });
-    overrides.custom.unshift(product);
-    await writeProductOverrides(overrides);
-    return json(res, 201, { ok: true, product: mergeCustomProduct(product) });
   }
 
   if (req.method === "DELETE") {
     const body = await parseBody(req);
-    const id = cleanTrackingString(body.id, 120);
-    if (defaults.some((product) => product.id === id)) {
-      delete overrides.items[id];
-    } else {
-      overrides.custom = overrides.custom.filter((product) => product.id !== id);
-    }
-    await writeProductOverrides(overrides);
-    return json(res, 200, { ok: true });
+    return enqueueProductMutation(async () => {
+      const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+      const id = cleanTrackingString(body.id, 120);
+      if (defaults.some((product) => product.id === id)) {
+        delete overrides.items[id];
+      } else {
+        overrides.custom = overrides.custom.filter((product) => product.id !== id);
+      }
+      await writeProductOverrides(overrides);
+      return json(res, 200, { ok: true });
+    });
   }
 
   return notFound(res);
@@ -1895,15 +2120,22 @@ async function handleAdminProductImages(req, res) {
   })) return badRequest(res, "Foto originale non valida.");
   const requiredBytes = [...imageParts, ...originalParts].reduce((total, part) => total + part.data.length, 0);
   if (!productImageStorage) await ensureProductUploadCapacity(requiredBytes);
-  const uploadedImages = await Promise.all(imageParts.map(async (part, inputIndex) => {
+  const uploadedImages = await mapWithConcurrency(imageParts, 2, async (part, inputIndex) => {
     const ext = imageExtension(part.filename, part.contentType);
     if (!ext || ext === ".svg" || part.data.length === 0) return null;
     const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
-    return { inputIndex, url: await storeProductImage(name, part.data, part.contentType) };
-  }));
+    const url = await storeProductImage(name, part.data, part.contentType);
+    const renditions = await createProductImageRenditions(name, part.data);
+    return { inputIndex, url, renditions };
+  });
   const validUploadedImages = uploadedImages.filter(Boolean);
   const saved = validUploadedImages.map((entry) => entry.url);
   const savedInputIndexes = validUploadedImages.map((entry) => entry.inputIndex);
+  const uploadedImageRenditions = Object.fromEntries(
+    validUploadedImages
+      .filter((entry) => entry.renditions.length)
+      .map((entry) => [entry.url, entry.renditions])
+  );
 
   let originalImageIndexes = [];
   try {
@@ -1940,19 +2172,24 @@ async function handleAdminProductImages(req, res) {
   const sourceSaved = saved.map((image, savedIndex) => originalSavedByIndex.get(savedInputIndexes[savedIndex]) || image);
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
-    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 40);
+    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 100);
   };
 
   let product;
   if (base) {
     const existing = overrides.items[productId] || {};
+    const images = mergeUploadedImages(existing.images, saved);
     overrides.items[productId] = {
       ...base,
       ...existing,
       id: undefined,
       baseName: undefined,
-      images: mergeUploadedImages(existing.images, saved),
+      images,
       originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      imageRenditions: cleanProductImageRenditions({
+        ...(existing.imageRenditions || {}),
+        ...uploadedImageRenditions,
+      }, images),
       imageVariant: makePrimary ? imageVariant : existing.imageVariant || "original",
       updatedAt: new Date().toISOString(),
     };
@@ -1961,17 +2198,28 @@ async function handleAdminProductImages(req, res) {
     product = mergeProduct(base, overrides.items);
   } else {
     const existing = overrides.custom[customIndex];
+    const images = mergeUploadedImages(existing.images, saved);
     overrides.custom[customIndex] = cleanCustomProduct({
       ...existing,
-      images: mergeUploadedImages(existing.images, saved),
+      images,
       originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      imageRenditions: {
+        ...(existing.imageRenditions || {}),
+        ...uploadedImageRenditions,
+      },
       imageVariant: makePrimary ? imageVariant : existing.imageVariant || "original",
     });
     product = mergeCustomProduct(overrides.custom[customIndex]);
   }
   await writeProductOverrides(overrides);
 
-  json(res, 200, { ok: true, images: saved, originalImages: sourceSaved, product });
+  json(res, 200, {
+    ok: true,
+    images: saved,
+    originalImages: sourceSaved,
+    imageRenditions: uploadedImageRenditions,
+    product,
+  });
 }
 
 async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
@@ -2010,6 +2258,7 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   progress?.update(24, "Foto ricevuta");
   const name = `ai-product-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
   const imageUrl = await storeProductImage(name, image.data, image.contentType);
+  const imageRenditions = await createProductImageRenditions(name, image.data);
   let originalImageUrl = imageUrl;
   if (sourceImage !== image) {
     const originalName = `ai-product-original-${Date.now()}-${randomBytes(4).toString("hex")}${sourceExt}`;
@@ -2026,6 +2275,7 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
     const suggestion = {
       ...cleanAiSuggestion(rawSuggestion, imageUrl),
       originalImages: [originalImageUrl],
+      imageRenditions: imageRenditions.length ? { [imageUrl]: imageRenditions } : {},
       imageVariant,
     };
     const result = { ok: true, image: imageUrl, originalImage: originalImageUrl, suggestion };
@@ -2254,7 +2504,7 @@ async function handleTrack(req, res) {
   const ipAddress = cleanIp(ip);
   const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
-  const analytics = await readAnalytics();
+  await mutateAnalytics(async (analytics) => {
   const existing = analytics.sessions[sessionId] || {};
   const ipLocation =
     existing.ipLocation && (existing.ipLocation.country || existing.ipLocation.city)
@@ -2328,7 +2578,7 @@ async function handleTrack(req, res) {
     replayCount: replayEvents.length,
   });
 
-  await writeAnalytics(analytics);
+  });
   json(res, 200, { ok: true, sessionId });
 }
 
@@ -2412,24 +2662,24 @@ async function handleCreateOrder(req, res) {
   await writeOrders(orders.slice(-2000));
   await reduceProductInventory(products);
 
-  const analytics = await readAnalytics();
-  const session = analytics.sessions[sessionId];
-  if (session) {
-    session.orderPlaced = true;
-    session.orderAt = now;
-    session.lastSeenAt = now;
-  }
-  analytics.events.push({
-    id: `evt_${randomBytes(8).toString("hex")}`,
-    at: now,
-    type: "order_confirmed",
-    sessionId,
-    visitorId: order.visitorId,
-    path: "/checkout.html",
-    product: products.map((product) => product.name).join("; ").slice(0, 180),
-    method: order.paymentMethod,
+  await mutateAnalytics(async (analytics) => {
+    const session = analytics.sessions[sessionId];
+    if (session) {
+      session.orderPlaced = true;
+      session.orderAt = now;
+      session.lastSeenAt = now;
+    }
+    analytics.events.push({
+      id: `evt_${randomBytes(8).toString("hex")}`,
+      at: now,
+      type: "order_confirmed",
+      sessionId,
+      visitorId: order.visitorId,
+      path: "/checkout.html",
+      product: products.map((product) => product.name).join("; ").slice(0, 180),
+      method: order.paymentMethod,
+    });
   });
-  await writeAnalytics(analytics);
 
   json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total } });
 }
@@ -2735,6 +2985,7 @@ async function oauthCallback(req, res, providerKey, url) {
 }
 
 async function handleApi(req, res, url) {
+  if (url.pathname === "/api/internal/product-image-optimization") return handleProductImageOptimization(req, res, url);
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
@@ -2787,16 +3038,15 @@ async function serveStatic(req, res, url) {
     const stat = await fs.stat(filePath);
     if (!stat.isFile()) return notFound(res);
     const ext = path.extname(filePath).toLowerCase();
-    if (await serveOptimizedStaticImage(req, res, url, filePath, ext)) return;
-    const cacheControl = ext === ".html"
-      ? "no-cache"
-      : "public, max-age=31536000, immutable";
+    const imageAsset = [".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico"].includes(ext);
     res.writeHead(200, {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,
       "X-Content-Type-Options": "nosniff",
       "Permissions-Policy": "geolocation=(self)",
-      "Cache-Control": cacheControl,
+      "Cache-Control": ext === ".html"
+        ? "no-cache"
+        : imageAsset ? "public, max-age=31536000, immutable" : "public, max-age=604800",
     });
     createReadStream(filePath).pipe(res);
   } catch {
@@ -2805,9 +3055,7 @@ async function serveStatic(req, res, url) {
 }
 
 await fs.mkdir(dataDir, { recursive: true });
-await pruneStaleStorageTemps({ minAgeMs: 0 });
 await ensureStorage();
-await pruneOrphanProductUploads({ minAgeMs: 0 });
 
 http
   .createServer(async (req, res) => {
@@ -2843,7 +3091,6 @@ http
         verifyProductImageStorage()
           .then(() => {
             console.log("Tigris product image storage ready.");
-            return pruneOrphanProductObjects({ minAgeMs: 0 });
           })
           .catch((error) => console.error(`Tigris storage verification failed: ${error.message}`));
         ensureProductImageStorage()

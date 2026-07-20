@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Haller Boutique</title>
     <meta name="description" content="Haller Boutique: lusso, qualita e stile." data-i18n-content="meta-description">
+    <link rel="dns-prefetch" href="//hallerboutiique-products.t3.tigrisfiles.io">
+    <link rel="preconnect" href="https://hallerboutiique-products.t3.tigrisfiles.io" crossorigin>
+    <link rel="preload" href="/api/products" as="fetch" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=languages-7-1">
+    <link rel="stylesheet" href="styles.css?v=product-image-quality-4">
   </head>
   <body>
     <header class="site-header">
@@ -40,6 +43,8 @@
               <button type="button" role="menuitemradio" aria-label="Français" aria-checked="false" data-language-option="fr"><span class="language-flag" aria-hidden="true">🇫🇷</span></button>
               <button type="button" role="menuitemradio" aria-label="Deutsch" aria-checked="false" data-language-option="de"><span class="language-flag" aria-hidden="true">🇩🇪</span></button>
               <button type="button" role="menuitemradio" aria-label="Español" aria-checked="false" data-language-option="es"><span class="language-flag" aria-hidden="true">🇪🇸</span></button>
+              <button type="button" role="menuitemradio" aria-label="Shqip" aria-checked="false" data-language-option="sq"><span class="language-flag" aria-hidden="true">🇦🇱</span></button>
+              <button type="button" role="menuitemradio" aria-label="Română" aria-checked="false" data-language-option="ro"><span class="language-flag" aria-hidden="true">🇷🇴</span></button>
             </div>
           </div>
         </div>
@@ -63,15 +68,7 @@
     <main>
       <section class="hero-slider" aria-label="Diapositive promozionali">
         <article class="hero-slide hero-slide-man has-copy is-active" aria-label="Lusso qualita stile">
-          <img
-            src="assets/hero-man.png?v=bunny-responsive-1&width=1800&quality=88&format=auto"
-            srcset="assets/hero-man.png?v=bunny-responsive-1&width=640&quality=88&format=auto 640w, assets/hero-man.png?v=bunny-responsive-1&width=960&quality=88&format=auto 960w, assets/hero-man.png?v=bunny-responsive-1&width=1280&quality=88&format=auto 1280w, assets/hero-man.png?v=bunny-responsive-1&width=1800&quality=88&format=auto 1800w"
-            sizes="(max-width: 760px) 100vw, 52vw"
-            alt="Haller Boutique, lusso qualita stile"
-            loading="eager"
-            decoding="async"
-            fetchpriority="high"
-          >
+          <img src="assets/hero-man-v2.webp?v=hero-man-light-1" width="1536" height="1024" alt="Ragazzo Haller Boutique di spalle davanti al Duomo" loading="eager" fetchpriority="high" decoding="async">
           <div class="promo-copy">
             <h1 class="hero-title-stacked" data-i18n-html="hero-title">LUSSO<br>QUALITÀ<br>STILE</h1>
             <p data-i18n-html="hero-description">Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
@@ -79,14 +76,7 @@
           </div>
         </article>
         <article class="hero-slide hero-slide-woman has-copy" aria-label="Nuova selezione donna">
-          <img
-            src="assets/hero-woman.jpg?v=bunny-responsive-1&width=1800&quality=88&format=auto"
-            srcset="assets/hero-woman.jpg?v=bunny-responsive-1&width=640&quality=88&format=auto 640w, assets/hero-woman.jpg?v=bunny-responsive-1&width=960&quality=88&format=auto 960w, assets/hero-woman.jpg?v=bunny-responsive-1&width=1280&quality=88&format=auto 1280w, assets/hero-woman.jpg?v=bunny-responsive-1&width=1800&quality=88&format=auto 1800w"
-            sizes="(max-width: 760px) 100vw, 52vw"
-            alt="Modella Haller Boutique davanti al Duomo"
-            loading="lazy"
-            decoding="async"
-          >
+          <img src="assets/hero-woman.jpg?v=storefront-speed-1" width="1536" height="1024" alt="Modella Haller Boutique davanti al Duomo" loading="lazy" fetchpriority="low" decoding="async">
           <div class="promo-copy">
             <h1 class="hero-title-stacked" data-i18n-html="hero-title">LUSSO<br>QUALITÀ<br>STILE</h1>
             <p data-i18n-html="hero-description">Scopri le ultime novit&agrave;<br>delle migliori marche.</p>
@@ -172,7 +162,7 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="i18n.js?v=sitewide-language-7"></script>
-    <script src="script.js?v=bunny-responsive-1"></script>
+    <script src="i18n.js?v=restore-latest-ui-1"></script>
+    <script src="script.js?v=product-image-quality-4"></script>
   </body>
 </html>

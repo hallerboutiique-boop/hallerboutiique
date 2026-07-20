@@ -10,6 +10,8 @@ const replayPlayer = document.querySelector("[data-replay-player]");
 const adminProductsRoot = document.querySelector("[data-admin-products]");
 const productForm = document.querySelector("[data-product-form]");
 const productSearch = document.querySelector("[data-product-search]");
+const newProductButton = document.querySelector("[data-product-new]");
+const productEditorTitle = document.querySelector("[data-product-editor-title]");
 const productMessage = document.querySelector("[data-product-message]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
@@ -23,6 +25,9 @@ const aiProductStatus = document.querySelector("[data-ai-product-status]");
 const aiProductProgress = document.querySelector("[data-ai-product-progress]");
 const aiProductProgressBar = document.querySelector("[data-ai-product-progress-bar]");
 const aiProductProgressLabel = document.querySelector("[data-ai-product-progress-label]");
+const aiProductResults = document.querySelector("[data-ai-product-results]");
+const aiProductResultsCount = document.querySelector("[data-ai-product-results-count]");
+const aiProductResultsTrack = document.querySelector("[data-ai-product-results-track]");
 const productCropDialog = document.querySelector("[data-product-crop-dialog]");
 const productCropStage = document.querySelector("[data-product-crop-stage]");
 const productCropImage = document.querySelector("[data-product-crop-image]");
@@ -48,10 +53,78 @@ let productImageKeySequence = 0;
 let productImageDrag = null;
 let suppressProductImageClickUntil = 0;
 let productImagePositionTimer = 0;
-const maximumProductImages = 40;
+let aiBatchResults = [];
+const maximumProductImages = 100;
 const productUploadBatchSize = 8;
+const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
+const aiProductResultsStorageKey = "haller-admin-ai-product-results";
+
+function storedAiProductResultIds() {
+  try {
+    const ids = JSON.parse(sessionStorage.getItem(aiProductResultsStorageKey) || "[]");
+    return Array.isArray(ids) ? ids.filter((id) => typeof id === "string").slice(0, maximumProductImages) : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberAiProductResults(results) {
+  const ids = results.map((entry) => entry.product?.id).filter(Boolean);
+  try {
+    sessionStorage.setItem(aiProductResultsStorageKey, JSON.stringify(ids));
+  } catch {}
+}
+
+function renderAiProductResults() {
+  if (!aiProductResults || !aiProductResultsTrack || !aiProductResultsCount) return;
+  aiProductResults.hidden = aiBatchResults.length === 0;
+  if (!aiBatchResults.length) return;
+
+  const completed = aiBatchResults.filter((entry) => entry.status === "success").length;
+  const failed = aiBatchResults.filter((entry) => entry.status === "error").length;
+  aiProductResultsCount.textContent = `${completed} creati su ${aiBatchResults.length}${failed ? ` · ${failed} non riusciti` : ""}`;
+  aiProductResultsTrack.innerHTML = aiBatchResults.map((entry, index) => {
+    const product = entry.product;
+    const image = product?.images?.[0] || "";
+    if (entry.status === "success" && product) {
+      return `
+        <button class="ai-product-result-card is-success" type="button" data-product-id="${escapeHtml(product.id)}">
+          <span class="ai-product-result-thumb">
+            ${image ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">` : `<i data-lucide="image"></i>`}
+          </span>
+          <span class="ai-product-result-copy">
+            <small>Prodotto ${index + 1}</small>
+            <strong>${escapeHtml(product.name)}</strong>
+            <span>${escapeHtml(product.brand || product.category || "Prodotto AI")}</span>
+            <em>Apri e modifica</em>
+          </span>
+        </button>`;
+    }
+    if (entry.status === "error") {
+      return `
+        <article class="ai-product-result-card is-error">
+          <span class="ai-product-result-thumb"><i data-lucide="circle-alert"></i></span>
+          <span class="ai-product-result-copy">
+            <small>Foto ${index + 1}</small>
+            <strong>${escapeHtml(entry.fileName || "Immagine")}</strong>
+            <span>${escapeHtml(entry.message || "Creazione non riuscita")}</span>
+          </span>
+        </article>`;
+    }
+    return `
+      <article class="ai-product-result-card is-pending">
+        <span class="ai-product-result-thumb"><i data-lucide="loader-circle"></i></span>
+        <span class="ai-product-result-copy">
+          <small>Foto ${index + 1}</small>
+          <strong>${escapeHtml(entry.fileName || "Immagine")}</strong>
+          <span>Analisi AI in corso...</span>
+        </span>
+      </article>`;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
 
 function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
@@ -257,7 +330,7 @@ function syncProductImageFields() {
   productForm.elements.imageVariant.value = productImageEntries[0]?.variant || "original";
 }
 
-function setProductImageEntries(images = [], originals = [], primaryVariant = "original") {
+function setProductImageEntries(images = [], originals = [], primaryVariant = "original", imageRenditions = {}) {
   clearProductImageEntries();
   productImageEntries = images.slice(0, maximumProductImages).map((image, index) => {
     const originalImage = originals[index] || image;
@@ -265,6 +338,7 @@ function setProductImageEntries(images = [], originals = [], primaryVariant = "o
       key: nextProductImageKey(),
       image,
       originalImage,
+      renditions: Array.isArray(imageRenditions?.[image]) ? imageRenditions[image] : [],
       variant: index === 0 ? primaryVariant : originalImage !== image ? "cropped" : "original",
       pendingImage: null,
       originalFile: null,
@@ -576,15 +650,16 @@ function createCroppedProductImage() {
     0,
     cropState.sourceHeight - sourceCropHeight
   );
-  const outputScale = Math.min(1, 1600 / Math.max(sourceCropWidth, sourceCropHeight));
-  const outputWidth = Math.max(1, Math.round(sourceCropWidth * outputScale));
-  const outputHeight = Math.max(1, Math.round(sourceCropHeight * outputScale));
+  const outputWidth = Math.max(1, Math.round(sourceCropWidth));
+  const outputHeight = Math.max(1, Math.round(sourceCropHeight));
   const sourceFile = cropState.file;
   const canvas = document.createElement("canvas");
   canvas.width = outputWidth;
   canvas.height = outputHeight;
   const context = canvas.getContext("2d");
   if (!context) throw new Error("Impossibile preparare il ritaglio.");
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
   context.drawImage(
     productCropImage,
     sourceX,
@@ -606,7 +681,7 @@ function createCroppedProductImage() {
         resolve({ blob, name: cropOutputName(sourceFile, blob.type) });
       },
       "image/webp",
-      0.92
+      1
     );
   });
 }
@@ -653,12 +728,124 @@ async function createAiProductFromImage(image, { originalFile, variant = "origin
       ...(data.suggestion || {}),
       images: data.suggestion?.images || (data.image ? [data.image] : []),
       originalImages: data.suggestion?.originalImages || (data.originalImage ? [data.originalImage] : []),
+      imageRenditions: data.suggestion?.imageRenditions || {},
       imageVariant: data.suggestion?.imageVariant || variant,
     };
     fillAiProductDraft(suggestion);
     setAiProductProgress(100, "Bozza prodotto pronta", "success");
     setAiProductStatus("Bozza AI pronta. Controlla i dati e premi Salva prodotto.", "success");
     setProductMessage("Bozza prodotto creata con AI.", "success");
+  } catch (error) {
+    setAiProductProgress(100, "Analisi non riuscita", "error");
+    setAiProductStatus(error.message, "error");
+    setProductMessage(error.message, "error");
+  } finally {
+    aiProductButton.disabled = false;
+    aiProductImage.value = "";
+  }
+}
+
+async function analyzeAndSaveAiProductFile(file) {
+  const formData = new FormData();
+  formData.append("image", file, file.name);
+  formData.append("imageVariant", "original");
+  const data = await uploadApi("/api/admin/ai-product", formData);
+  const suggestion = data.suggestion || {};
+  const images = Array.isArray(suggestion.images) && suggestion.images.length
+    ? suggestion.images
+    : data.image ? [data.image] : [];
+  if (!images.length) throw new Error("L'AI non ha restituito l'immagine prodotto.");
+
+  const payload = {
+    name: suggestion.name || "Prodotto",
+    brand: suggestion.brand || "",
+    description: suggestion.description || "",
+    collection: suggestion.collection || "Selezione Haller Boutique",
+    category: suggestion.category || "",
+    original: "",
+    finalPrice: "",
+    discount: "",
+    sizeType: suggestion.sizeType || "none",
+    sizes: Array.isArray(suggestion.sizes) ? suggestion.sizes : [],
+    inventory: "",
+    images,
+    originalImages: Array.isArray(suggestion.originalImages) && suggestion.originalImages.length
+      ? suggestion.originalImages
+      : data.originalImage ? [data.originalImage] : images,
+    imageRenditions: suggestion.imageRenditions || {},
+    imageVariant: suggestion.imageVariant || "original",
+  };
+  const saved = await api("/api/admin/products", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+  return saved.product;
+}
+
+async function createAiProductFromFiles(files) {
+  const selectedFiles = Array.from(files || []);
+  if (!selectedFiles.length) return;
+  if (selectedFiles.length > maximumProductImages) {
+    throw new Error(`Puoi creare fino a ${maximumProductImages} prodotti alla volta.`);
+  }
+  if (selectedFiles.some((file) => !file.type.startsWith("image/") || !file.size || file.size > maximumProductImageBytes)) {
+    throw new Error("Usa immagini JPG, PNG o WebP fino a 20 MB ciascuna.");
+  }
+
+  const createdProducts = [];
+  const failedProducts = [];
+  aiBatchResults = selectedFiles.map((file) => ({ fileName: file.name, status: "pending", product: null, message: "" }));
+  renderAiProductResults();
+  let nextFileIndex = 0;
+  let completedCount = 0;
+  aiProductButton.disabled = true;
+  setAiProductProgress(1, `Avvio analisi AI di ${selectedFiles.length} immagini`);
+  setAiProductStatus(`L'AI sta creando ${selectedFiles.length} prodotti distinti...`);
+  setProductMessage("");
+
+  try {
+    const worker = async () => {
+      while (nextFileIndex < selectedFiles.length) {
+        const fileIndex = nextFileIndex;
+        nextFileIndex += 1;
+        const file = selectedFiles[fileIndex];
+        try {
+          const product = await analyzeAndSaveAiProductFile(file);
+          if (product) {
+            createdProducts.push(product);
+            aiBatchResults[fileIndex] = { fileName: file.name, status: "success", product, message: "" };
+          }
+        } catch (error) {
+          failedProducts.push({ file: file.name, message: error.message });
+          aiBatchResults[fileIndex] = { fileName: file.name, status: "error", product: null, message: error.message };
+        } finally {
+          renderAiProductResults();
+          completedCount += 1;
+          const message = `Analisi AI ${completedCount} di ${selectedFiles.length} · ${createdProducts.length} prodotti creati`;
+          setAiProductProgress((completedCount / selectedFiles.length) * 100, message);
+          setAiProductStatus(message);
+        }
+      }
+    };
+    const workers = Array.from(
+      { length: Math.min(aiProductConcurrency, selectedFiles.length) },
+      () => worker()
+    );
+    await Promise.all(workers);
+
+    if (!createdProducts.length) {
+      throw new Error(failedProducts[0]?.message || "L'AI non ha creato nessun prodotto.");
+    }
+    selectedProductId = createdProducts[createdProducts.length - 1].id;
+    await loadProducts();
+    rememberAiProductResults(aiBatchResults);
+    renderAiProductResults();
+    const summary = failedProducts.length
+      ? `${createdProducts.length} prodotti creati, ${failedProducts.length} non riusciti.`
+      : `${createdProducts.length} prodotti creati con AI.`;
+    setAiProductProgress(100, summary, failedProducts.length ? "error" : "success");
+    setAiProductStatus(summary, failedProducts.length ? "error" : "success");
+    setProductMessage("I prodotti creati sono nel catalogo e restano modificabili.", "success");
   } catch (error) {
     setAiProductProgress(100, "Analisi non riuscita", "error");
     setAiProductStatus(error.message, "error");
@@ -681,6 +868,7 @@ async function handleSelectedProductImage(image, source, variant) {
   revokeProductImagePreview(entry);
   entry.pendingImage = image;
   entry.originalFile = source.originalFile;
+  entry.renditions = [];
   entry.variant = variant;
   entry.previewUrl = URL.createObjectURL(image.blob || image);
   selectedProductImageKey = entry.key;
@@ -730,6 +918,7 @@ async function uploadPendingProductImages(productId) {
       revokeProductImagePreview(entry);
       entry.image = data.images[index];
       entry.originalImage = data.originalImages?.[index] || data.images[index];
+      entry.renditions = data.imageRenditions?.[entry.image] || [];
       entry.pendingImage = null;
       entry.originalFile = null;
       entry.previewUrl = "";
@@ -773,6 +962,7 @@ function addProductImageFiles(files) {
     key: nextProductImageKey(),
     image: "",
     originalImage: "",
+    renditions: [],
     variant: "original",
     pendingImage: { blob: file, name: file.name },
     originalFile: file,
@@ -1095,9 +1285,11 @@ function renderTopProducts(products) {
 
 function fillProductForm(product) {
   if (!productForm || !product) return;
+  if (productEditorTitle) productEditorTitle.textContent = "Modifica prodotto";
   selectedProductId = product.id;
   productForm.elements.id.value = product.id;
   productForm.elements.name.value = product.name || "";
+  productForm.elements.brand.value = product.brand || "";
   productForm.elements.collection.value = product.collection || "";
   productForm.elements.category.value = product.category || "";
   if (productForm.elements.description) productForm.elements.description.value = product.description || "";
@@ -1107,16 +1299,23 @@ function fillProductForm(product) {
   productForm.elements.sizeType.value = product.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
-  setProductImageEntries(product.images || [], product.originalImages || product.images || [], product.imageVariant || "original");
+  setProductImageEntries(
+    product.images || [],
+    product.originalImages || product.images || [],
+    product.imageVariant || "original",
+    product.imageRenditions || {}
+  );
   setProductMessage("");
   renderAdminProducts();
 }
 
 function fillAiProductDraft(suggestion) {
   if (!productForm || !suggestion) return;
+  if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
   selectedProductId = "";
   productForm.elements.id.value = "";
   productForm.elements.name.value = suggestion.name || "";
+  productForm.elements.brand.value = suggestion.brand || "";
   productForm.elements.collection.value = suggestion.collection || "Selezione Haller Boutique";
   productForm.elements.category.value = suggestion.category || "";
   if (productForm.elements.description) productForm.elements.description.value = suggestion.description || "";
@@ -1126,15 +1325,53 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.sizeType.value = suggestion.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
   productForm.elements.inventory.value = "";
-  setProductImageEntries(suggestion.images || [], suggestion.originalImages || suggestion.images || [], suggestion.imageVariant || "original");
+  setProductImageEntries(
+    suggestion.images || [],
+    suggestion.originalImages || suggestion.images || [],
+    suggestion.imageVariant || "original",
+    suggestion.imageRenditions || {}
+  );
   renderAdminProducts();
+}
+
+function startNewProduct() {
+  if (!productForm) return;
+  interruptProductUpload();
+  selectedProductId = "";
+  productForm.reset();
+  productForm.elements.id.value = "";
+  productForm.elements.originalImages.value = "";
+  productForm.elements.imageVariant.value = "original";
+  productForm.elements.sizeType.value = "none";
+  setProductImageEntries([], [], "original", {});
+  if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
+  setProductMessage("Compila tutti i dati: marca, collezione e categoria possono essere nuove.");
+  setProductUploadStatus("Puoi selezionare fino a 100 foto insieme.");
+  renderAdminProducts();
+  productForm.elements.name.focus();
+  productForm.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function updateProductSuggestions() {
+  const fields = [
+    ["product-brands", "brand"],
+    ["product-collections", "collection"],
+    ["product-categories", "category"],
+  ];
+  fields.forEach(([id, key]) => {
+    const list = document.getElementById(id);
+    if (!list) return;
+    const values = [...new Set(adminProducts.map((product) => String(product[key] || "").trim()).filter(Boolean))]
+      .sort((left, right) => left.localeCompare(right, "it"));
+    list.innerHTML = values.map((value) => `<option value="${escapeHtml(value)}"></option>`).join("");
+  });
 }
 
 function filteredAdminProducts() {
   const query = (productSearch?.value || "").trim().toLowerCase();
   if (!query) return adminProducts;
   return adminProducts.filter((product) =>
-    [product.name, product.collection, product.category, product.discount]
+    [product.name, product.brand, product.collection, product.category, product.discount]
       .filter(Boolean)
       .some((value) => String(value).toLowerCase().includes(query))
   );
@@ -1162,7 +1399,7 @@ function renderAdminProducts() {
           </span>
           <span class="admin-product-text">
             <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+            <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
             <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${Number.isInteger(product.inventory) ? `${product.inventory} in inventario` : "inventario da definire"}${product.custom ? " · custom" : ""}</small>
           </span>
         </button>
@@ -1176,7 +1413,20 @@ function renderAdminProducts() {
 async function loadProducts() {
   const data = await api("/api/admin/products");
   adminProducts = data.products || [];
+  if (!aiBatchResults.length) {
+    aiBatchResults = storedAiProductResultIds()
+      .map((id) => adminProducts.find((product) => product.id === id))
+      .filter(Boolean)
+      .map((product) => ({ fileName: "", status: "success", product, message: "" }));
+  } else {
+    aiBatchResults = aiBatchResults.map((entry) => {
+      if (entry.status !== "success" || !entry.product?.id) return entry;
+      return { ...entry, product: adminProducts.find((product) => product.id === entry.product.id) || entry.product };
+    });
+  }
+  updateProductSuggestions();
   renderAdminProducts();
+  renderAiProductResults();
   const selected = adminProducts.find((product) => product.id === selectedProductId);
   if (selected) {
     fillProductForm(selected);
@@ -1712,10 +1962,24 @@ productCropOriginal?.addEventListener("click", async () => {
 productForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setProductMessage("Salvataggio in corso...");
-  const productId = productForm.elements.id.value;
+  let productId = productForm.elements.id.value;
   try {
-    if (productImageEntries.some((entry) => entry.pendingImage)) {
-      if (!productId) throw new Error("Salva prima il prodotto, poi aggiungi le immagini.");
+    const pendingImages = productImageEntries.some((entry) => entry.pendingImage);
+    if (pendingImages && !productId) {
+      const initialPayload = Object.fromEntries(new FormData(productForm));
+      initialPayload.images = [];
+      initialPayload.originalImages = [];
+      initialPayload.imageRenditions = {};
+      const created = await api("/api/admin/products", {
+        method: "POST",
+        body: JSON.stringify(initialPayload),
+      });
+      productId = created.product?.id || "";
+      if (!productId) throw new Error("Creazione del prodotto non riuscita.");
+      productForm.elements.id.value = productId;
+      selectedProductId = productId;
+    }
+    if (pendingImages) {
       await uploadPendingProductImages(productId);
     }
     syncProductImageFields();
@@ -1724,6 +1988,11 @@ productForm?.addEventListener("submit", async (event) => {
     payload.originalImages = productImageEntries
       .filter((entry) => entry.image)
       .map((entry) => entry.originalImage || entry.image);
+    payload.imageRenditions = Object.fromEntries(
+      productImageEntries
+        .filter((entry) => entry.image && entry.renditions.length)
+        .map((entry) => [entry.image, entry.renditions])
+    );
     payload.imageVariant = productImageEntries[0]?.variant || "original";
     const data = await api("/api/admin/products", {
       method: "POST",
@@ -1741,6 +2010,8 @@ productForm?.addEventListener("submit", async (event) => {
     resetProductUploadState();
   }
 });
+
+newProductButton?.addEventListener("click", startNewProduct);
 
 document.querySelector("[data-product-reset]")?.addEventListener("click", async () => {
   const id = productForm?.elements.id.value;
@@ -1763,10 +2034,6 @@ document.querySelector("[data-product-reset]")?.addEventListener("click", async 
 });
 
 productImageButton?.addEventListener("click", () => {
-  if (!productForm?.elements.id.value) {
-    setProductMessage("Seleziona prima un prodotto.", "error");
-    return;
-  }
   productImageUpload?.click();
 });
 
@@ -1776,8 +2043,7 @@ productUploadCancel?.addEventListener("click", () => {
 
 productImageUpload?.addEventListener("change", () => {
   const files = [...(productImageUpload.files || [])];
-  const productId = productForm?.elements.id.value;
-  if (!productId || files.length === 0) return;
+  if (files.length === 0) return;
   try {
     addProductImageFiles(files);
   } catch (error) {
@@ -1792,15 +2058,27 @@ aiProductButton?.addEventListener("click", () => {
   aiProductImage?.click();
 });
 
-aiProductImage?.addEventListener("change", () => {
-  const file = aiProductImage.files?.[0];
-  if (!file) return;
+aiProductImage?.addEventListener("change", async () => {
+  const files = Array.from(aiProductImage.files || []);
+  if (!files.length) return;
   try {
-    openProductCropper(file, { type: "ai" });
+    if (files.length === 1) {
+      openProductCropper(files[0], { type: "ai" });
+      return;
+    }
+    await createAiProductFromFiles(files);
   } catch (error) {
     setAiProductStatus(error.message, "error");
     aiProductImage.value = "";
   }
+});
+
+document.querySelectorAll("[data-ai-products-scroll]").forEach((button) => {
+  button.addEventListener("click", () => {
+    const direction = Number(button.dataset.aiProductsScroll) || 1;
+    const distance = Math.max(280, (aiProductResultsTrack?.clientWidth || 320) * 0.82);
+    aiProductResultsTrack?.scrollBy({ left: direction * distance, behavior: "smooth" });
+  });
 });
 
 document.querySelectorAll("[data-admin-tab]").forEach((tab) => {

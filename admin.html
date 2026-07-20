@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css?v=languages-7-1">
+    <link rel="stylesheet" href="styles.css?v=ai-product-results-4">
   </head>
   <body>
     <header class="site-header">
@@ -24,7 +24,7 @@
         <div class="header-actions">
           <div class="language-picker" data-language-picker>
             <button class="icon-button language-toggle" type="button" aria-label="Cambia lingua" aria-expanded="false"><i data-lucide="globe"></i></button>
-            <div class="language-menu" role="menu"><button type="button" data-language-option="it" aria-label="Italiano">🇮🇹</button><button type="button" data-language-option="en" aria-label="English">🇬🇧</button><button type="button" data-language-option="fr" aria-label="Francais">🇫🇷</button><button type="button" data-language-option="de" aria-label="Deutsch">🇩🇪</button><button type="button" data-language-option="es" aria-label="Espanol">🇪🇸</button></div>
+            <div class="language-menu" role="menu"><button type="button" data-language-option="it" aria-label="Italiano">🇮🇹</button><button type="button" data-language-option="en" aria-label="English">🇬🇧</button><button type="button" data-language-option="fr" aria-label="Francais">🇫🇷</button><button type="button" data-language-option="de" aria-label="Deutsch">🇩🇪</button><button type="button" data-language-option="es" aria-label="Espanol">🇪🇸</button><button type="button" data-language-option="sq" aria-label="Shqip">🇦🇱</button><button type="button" data-language-option="ro" aria-label="Română">🇷🇴</button></div>
           </div>
           <a class="icon-button" href="account.html" aria-label="Account">
             <i data-lucide="user-round"></i>
@@ -148,12 +148,23 @@
           </section>
 
           <section class="admin-tab-panel" data-admin-panel-tab="products">
+            <div class="product-section-heading">
+              <div>
+                <span>Gestione catalogo</span>
+                <h2>Prodotti</h2>
+                <p>Crea un articolo completo con marca, collezione, categoria, prezzi, disponibilit&agrave; e immagini.</p>
+              </div>
+              <button class="admin-new-product-button" type="button" data-product-new>
+                <i data-lucide="plus"></i>
+                <span>Nuovo prodotto</span>
+              </button>
+            </div>
             <section class="dashboard-card dashboard-card-wide product-ai-card">
               <div>
                 <h2>Aggiunta prodotto con AI</h2>
-                <p>Carica una foto dal Finder: l'AI analizza immagine, cerca sul web e prepara nome, descrizione, categoria, prezzo e taglie.</p>
+                <p>Carica fino a 100 immagini: l'AI analizza ogni foto separatamente, consulta il sito ufficiale della marca e crea un prodotto distinto con titolo, descrizione originale, categoria e taglie.</p>
               </div>
-              <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" data-ai-product-image>
+              <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" multiple data-ai-product-image>
               <button type="button" data-ai-product-button>
                 <i data-lucide="sparkles"></i>
                 <span>Crea prodotto con AI</span>
@@ -164,7 +175,24 @@
                 </div>
                 <span data-ai-product-progress-label></span>
               </div>
-              <small data-ai-product-status>La bozza resta modificabile prima del salvataggio.</small>
+              <small data-ai-product-status>Con una sola foto prepari una bozza; con pi&ugrave; foto l'AI crea automaticamente un prodotto modificabile per ogni immagine.</small>
+              <section class="ai-product-results" data-ai-product-results hidden>
+                <header>
+                  <div>
+                    <strong>Prodotti caricati con AI</strong>
+                    <span data-ai-product-results-count></span>
+                  </div>
+                  <div class="ai-product-scroll-controls" aria-label="Scorri prodotti caricati">
+                    <button class="ai-product-scroll-button" type="button" aria-label="Prodotti precedenti" data-ai-products-scroll="-1">
+                      <i data-lucide="chevron-left"></i>
+                    </button>
+                    <button class="ai-product-scroll-button" type="button" aria-label="Prodotti successivi" data-ai-products-scroll="1">
+                      <i data-lucide="chevron-right"></i>
+                    </button>
+                  </div>
+                </header>
+                <div class="ai-product-results-track" data-ai-product-results-track></div>
+              </section>
             </section>
             <div class="product-admin-layout">
               <section class="dashboard-card">
@@ -177,7 +205,7 @@
               </section>
 
               <section class="dashboard-card dashboard-card-wide product-editor-card">
-                <h2>Modifica prodotto</h2>
+                <h2 data-product-editor-title>Modifica prodotto</h2>
                 <form class="product-editor-form" data-product-form>
                   <input type="hidden" name="id">
                   <input type="hidden" name="originalImages">
@@ -187,12 +215,19 @@
                     <input name="name" placeholder="Nome prodotto" required>
                   </label>
                   <label>
+                    <span>Marca</span>
+                    <input name="brand" list="product-brands" placeholder="Es. Gucci" required>
+                    <datalist id="product-brands"></datalist>
+                  </label>
+                  <label>
                     <span>Collezione</span>
-                    <input name="collection" placeholder="Catalogo Uomo">
+                    <input name="collection" list="product-collections" placeholder="Catalogo Uomo" required>
+                    <datalist id="product-collections"></datalist>
                   </label>
                   <label>
                     <span>Categoria</span>
-                    <input name="category" placeholder="Sneakers Uomo">
+                    <input name="category" list="product-categories" placeholder="Sneakers Uomo" required>
+                    <datalist id="product-categories"></datalist>
                   </label>
                   <label class="product-editor-description">
                     <span>Descrizione</span>
@@ -239,14 +274,14 @@
                         <span>Interrompi</span>
                       </button>
                     </div>
-                    <small data-product-upload-status>Puoi selezionare fino a 40 foto insieme.</small>
+                    <small data-product-upload-status>Puoi selezionare fino a 100 foto insieme.</small>
                   </div>
                   <div class="product-gallery-editor-header">
                     <div>
                       <span>Ordine immagini sul sito</span>
                       <small>Trascina le foto oppure imposta il numero. La posizione 1 &egrave; la copertina.</small>
                     </div>
-                    <strong data-product-image-count>0 / 40</strong>
+                    <strong data-product-image-count>0 / 100</strong>
                   </div>
                   <div class="product-preview-grid" data-product-previews>
                     <p class="admin-empty">Nessuna immagine caricata per questo prodotto.</p>
@@ -377,7 +412,7 @@
     </footer>
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <script src="i18n.js?v=sitewide-language-7"></script>
-    <script src="admin.js?v=tigris-storage-1"></script>
+    <script src="i18n.js?v=admin-products-2"></script>
+    <script src="admin.js?v=ai-product-results-4"></script>
   </body>
 </html>

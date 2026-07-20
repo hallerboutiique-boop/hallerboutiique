@@ -15,6 +15,8 @@ const accountCopy = {
   fr: { customer: "Client", phone: "Telephone : {value}", phoneMissing: "Telephone non renseigne", oauth: "La connexion {providers} est prete sur le site et necessite seulement les identifiants OAuth.", working: "Operation en cours...", created: "Compte cree.", signedIn: "Connexion reussie.", failed: "Echec de l'operation." },
   de: { customer: "Kunde", phone: "Telefon: {value}", phoneMissing: "Telefonnummer nicht angegeben", oauth: "Die Anmeldung mit {providers} ist vorbereitet und benotigt nur noch die OAuth-Zugangsdaten.", working: "Vorgang lauft...", created: "Konto erstellt.", signedIn: "Anmeldung erfolgreich.", failed: "Vorgang fehlgeschlagen." },
   es: { customer: "Cliente", phone: "Telefono: {value}", phoneMissing: "Telefono no indicado", oauth: "El acceso con {providers} esta listo y solo necesita las credenciales OAuth.", working: "Operacion en curso...", created: "Cuenta creada.", signedIn: "Sesion iniciada.", failed: "La operacion ha fallado." },
+  sq: { customer: "Klient", phone: "Telefoni: {value}", phoneMissing: "Numri i telefonit nuk eshte vendosur", oauth: "Hyrja me {providers} eshte gati ne faqe dhe kerkon vetem kredencialet OAuth.", working: "Veprimi ne proces...", created: "Llogaria u krijua.", signedIn: "Hyrja u krye.", failed: "Veprimi deshtoi." },
+  ro: { customer: "Client", phone: "Telefon: {value}", phoneMissing: "Numarul de telefon nu a fost introdus", oauth: "Autentificarea cu {providers} este pregatita pe site si necesita doar datele OAuth.", working: "Operatiune in curs...", created: "Cont creat.", signedIn: "Autentificare reusita.", failed: "Operatiunea a esuat." },
 };
 
 function accountText(key, replacements = {}) {

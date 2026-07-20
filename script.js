@@ -13,6 +13,12 @@ let motionScrollDirection = "down";
 let lastMotionScrollY = window.scrollY;
 let siteLanguage = localStorage.getItem("haller-language") || "it";
 let productGallerySwipe = null;
+let productImageObserver = null;
+let prioritizedProductImage = false;
+let productImageZoomScale = 1;
+let productImageZoomGesture = null;
+let productImageZoomLoadToken = 0;
+let productImageZoomHighResolutionImage = null;
 const galleryClickSuppression = new WeakMap();
 
 const translations = {
@@ -30,12 +36,6 @@ const translations = {
   },
   es: {
     "meta-description": "Haller Boutique: lujo, calidad y estilo.", search: "Buscar", "go-checkout": "Ir al pago", "change-language": "Cambiar idioma", "main-menu": "Menu principal", home: "Inicio", "new-arrivals": "Novedades", men: "Hombre", women: "Mujer", "hero-title": "Lujo<br>Calidad<br>Estilo", "hero-description": "Descubre las ultimas novedades<br>de las mejores marcas.", "discover-now": "Descubrir ahora", "payment-title": "Pago contra reembolso y cripto", "payment-description": "Contra reembolso o cripto<br>con seguridad", "support-title": "Asistencia 24/7", "support-description": "Siempre estamos<br>disponibles", "location-banner": "Permite la ubicacion para ver los plazos de entrega en tiempo real.", selection: "Seleccion", info: "Info", "whatsapp-support": "Asistencia WhatsApp", shipping: "Envios", terms: "Terminos y condiciones", "follow-social": "Siguenos en redes sociales", copyright: "Copyright 2017 Haller Boutique. Todos los derechos reservados.", sizes: "Tallas", price: "Precio", "add-cart": "Anadir al carrito", "buy-now": "Comprar ahora", "try-on": "Probar", "image-placeholder": "Imagen proximamente"
-  },
-  ro: {
-    "meta-description": "Haller Boutique: lux, calitate si stil.", search: "Cauta", "go-checkout": "Mergi la finalizare", "change-language": "Schimba limba", "main-menu": "Meniu principal", home: "Acasa", "new-arrivals": "Noutati", men: "Barbati", women: "Femei", "hero-title": "LUX<br>CALITATE<br>STIL", "hero-description": "Descopera cele mai noi articole<br>de la cele mai bune marci.", "discover-now": "Descopera acum", "payment-title": "Plata la livrare si crypto", "payment-description": "Plata la livrare sau crypto<br>in siguranta", "support-title": "Asistenta 24/7", "support-description": "Suntem mereu<br>disponibili", "location-banner": "Permite localizarea pentru a vedea timpul de livrare in timp real.", selection: "Selectie", info: "Info", "whatsapp-support": "Asistenta WhatsApp", shipping: "Livrari", terms: "Termeni si conditii", "follow-social": "Urmareste-ne pe retelele sociale", copyright: "Copyright 2017 Haller Boutique. Toate drepturile rezervate.", sizes: "Marimi", price: "Pret", "add-cart": "Adauga in cos", "buy-now": "Cumpara acum", "try-on": "Probeaza", "image-placeholder": "Imagine disponibila in curand"
-  },
-  sq: {
-    "meta-description": "Haller Boutique: luks, cilesi dhe stil.", search: "Kerko", "go-checkout": "Shko te pagesa", "change-language": "Ndrysho gjuhen", "main-menu": "Menuja kryesore", home: "Kreu", "new-arrivals": "Te rejat", men: "Meshkuj", women: "Femra", "hero-title": "LUKS<br>CILESI<br>STIL", "hero-description": "Zbulo produktet me te reja<br>nga markat me te mira.", "discover-now": "Zbulo tani", "payment-title": "Pagese ne dorezim dhe kripto", "payment-description": "Pagese ne dorezim ose kripto<br>ne menyre te sigurt", "support-title": "Asistence 24/7", "support-description": "Jemi gjithmone<br>te disponueshem", "location-banner": "Lejo vendndodhjen per te pare kohen e dorezimit ne kohe reale.", selection: "Perzgjedhje", info: "Info", "whatsapp-support": "Asistence WhatsApp", shipping: "Dergesat", terms: "Kushtet dhe afatet", "follow-social": "Na ndiqni ne rrjetet sociale", copyright: "Copyright 2017 Haller Boutique. Te gjitha te drejtat e rezervuara.", sizes: "Masat", price: "Cmimi", "add-cart": "Shto ne shporte", "buy-now": "Bli tani", "try-on": "Provoje", "image-placeholder": "Imazhi vjen se shpejti"
   }
 };
 
@@ -139,14 +139,6 @@ const interfaceTranslations = {
 
 Object.entries(interfaceTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
-Object.assign(translations.ro, {
-  "sizes-available": "Marimi disponibile", added: "Adaugat", "cookie-label": "Preferinte cookie", "cookie-kicker": "Confidentialitate Haller Boutique", "cookie-title": "Cookie-uri, sesiune si locatie", "cookie-description": "Folosim cookie-uri necesare functionarii site-ului. Cu acordul tau putem colecta statistici, reluari ale sesiunii si locatia precisa pentru securitate, comenzi si analiza vizitelor.", "cookie-required": "Necesare", "cookie-required-description": "Cos, finalizare, autentificare si preferinte.", "cookie-analytics": "Statistici site", "cookie-analytics-description": "Vizite, dispozitiv, browser, pagini si conversii.", "cookie-replay": "Reluare sesiune", "cookie-replay-description": "Miscari, clicuri si derulare cu campurile mascate.", "cookie-location": "Locatie precisa", "cookie-location-description": "Coordonate GPS si ora, numai dupa autorizare.", "cookie-necessary-only": "Doar necesare", "cookie-metrics-only": "Doar statistici", "cookie-customize": "Personalizeaza", "cookie-save": "Salveaza", "cookie-accept-all": "Accepta tot", "chat-label": "Asistent Haller Boutique", "chat-open": "Deschide asistenta", "chat-close": "Inchide asistenta", "chat-avatar-alt": "Portretul Aurorei, asistenta online", "chat-online": "Online", "chat-status": "Asistenta online", "chat-intro": "Inainte de a incepe, lasa-mi datele tale pentru a te ajuta mai bine.", "first-name": "Prenume", "last-name": "Nume", email: "Email", phone: "Telefon", optional: "optional", "chat-privacy": "Datele sunt folosite numai pentru asistenta in aceasta conversatie.", "chat-start": "Incepe conversatia", "chat-sizes": "Marimi", "chat-track-order": "Urmareste comanda", "chat-prompt-sizes": "Ma ajuti sa aleg marimea potrivita?", "chat-prompt-order": "Vreau sa urmaresc comanda. Codul meu este HB-", "chat-placeholder": "Scrie aici...", "chat-send": "Trimite mesaj", "chat-greeting": "Buna {name}, sunt Aurora, asistenta Haller Boutique. Cum te pot ajuta?", "chat-thinking": "Un moment, verific.", "chat-error": "Nu pot raspunde acum.", "checkout-to-confirm": "De confirmat", "checkout-to-fill": "De completat", copied: "Copiat", "copy-this-text": "Copiaza textul", "wallet-missing": "Portofel lipsa", cod: "Plata la livrare", "confirming-order": "Comanda se confirma", "order-not-saved": "Comanda nu a fost salvata.", "order-confirmed": "Comanda confirmata", "order-confirmed-note": "Comanda {code} confirmata. Total {total}.", "order-save-failed": "Comanda nu a putut fi salvata.", "discount-applied": "Cod introdus. Va fi verificat la confirmare.", "discount-empty": "Introdu un cod de reducere.", "tryon-close": "Inchide proba", "tryon-product": "Probeaza produsul", "tryon-product-name": "Probeaza {product}", "tryon-description": "Incarca o fotografie frontala pentru a genera previzualizarea.", "tryon-upload": "Incarca fotografia", "tryon-result-empty": "Rezultatul va aparea aici.", "tryon-generate": "Genereaza proba AI", "tryon-upload-first": "Incarca mai intai fotografia.", "tryon-ready": "Previzualizare gata", "tryon-generation-failed": "Generare esuata", "tryon-unavailable": "Proba nu este disponibila."
-});
-
-Object.assign(translations.sq, {
-  "sizes-available": "Masat e disponueshme", added: "U shtua", "cookie-label": "Preferencat e cookie-ve", "cookie-kicker": "Privatesia Haller Boutique", "cookie-title": "Cookie, sesioni dhe vendndodhja", "cookie-description": "Perdorim cookie te domosdoshme per funksionimin e faqes. Me pelqimin tuaj mund te mbledhim statistika, perseritje te sesionit dhe vendndodhje per sigurine dhe porosite.", "cookie-required": "Te domosdoshme", "cookie-required-description": "Shporta, pagesa, hyrja dhe preferencat.", "cookie-analytics": "Statistikat e faqes", "cookie-analytics-description": "Vizitat, pajisja, shfletuesi, faqet dhe konvertimet.", "cookie-replay": "Perseritja e sesionit", "cookie-replay-description": "Levizje, klikime dhe rreshqitje me fushat e fshehura.", "cookie-location": "Vendndodhja e sakte", "cookie-location-description": "Koordinatat GPS dhe koha, vetem pas autorizimit.", "cookie-necessary-only": "Vetem te domosdoshme", "cookie-metrics-only": "Vetem statistika", "cookie-customize": "Personalizo", "cookie-save": "Ruaj", "cookie-accept-all": "Prano te gjitha", "chat-label": "Asistentja Haller Boutique", "chat-open": "Hap asistencen", "chat-close": "Mbyll asistencen", "chat-avatar-alt": "Portreti i Aurores, asistente online", "chat-online": "Online", "chat-status": "Asistente online", "chat-intro": "Para se te fillojme, me lini te dhenat tuaja qe t'ju ndihmoj me mire.", "first-name": "Emri", "last-name": "Mbiemri", email: "Email", phone: "Telefoni", optional: "opsional", "chat-privacy": "Te dhenat perdoren vetem per asistence ne kete bisede.", "chat-start": "Fillo biseden", "chat-sizes": "Masat", "chat-track-order": "Gjurmo porosine", "chat-prompt-sizes": "A mund te me ndihmosh te zgjedh masen?", "chat-prompt-order": "Dua te gjurmoj porosine. Kodi im eshte HB-", "chat-placeholder": "Shkruaj ketu...", "chat-send": "Dergo mesazhin", "chat-greeting": "Pershendetje {name}, jam Aurora, asistentja e Haller Boutique. Si mund t'ju ndihmoj?", "chat-thinking": "Nje moment, po kontrolloj.", "chat-error": "Nuk mund te pergjigjem tani.", "checkout-to-confirm": "Per t'u konfirmuar", "checkout-to-fill": "Per t'u plotesuar", copied: "U kopjua", "copy-this-text": "Kopjo tekstin", "wallet-missing": "Portofoli mungon", cod: "Pagese ne dorezim", "confirming-order": "Porosia po konfirmohet", "order-not-saved": "Porosia nuk u ruajt.", "order-confirmed": "Porosia u konfirmua", "order-confirmed-note": "Porosia {code} u konfirmua. Totali {total}.", "order-save-failed": "Porosia nuk mund te ruhej.", "discount-applied": "Kodi u vendos dhe do te verifikohet ne konfirmim.", "discount-empty": "Vendos nje kod uljeje.", "tryon-close": "Mbyll proven", "tryon-product": "Provo produktin", "tryon-product-name": "Provo {product}", "tryon-description": "Ngarko nje foto ballore per te krijuar pamjen paraprake.", "tryon-upload": "Ngarko foton", "tryon-result-empty": "Rezultati do te shfaqet ketu.", "tryon-generate": "Krijo proven AI", "tryon-upload-first": "Ngarko fillimisht foton.", "tryon-ready": "Pamja paraprake eshte gati", "tryon-generation-failed": "Krijimi deshtoi", "tryon-unavailable": "Prova nuk eshte e disponueshme."
-});
-
 const bundleTryOnTranslations = {
   it: {
     "bundle-tryon-kicker": "Try-on bundle AI", "bundle-tryon-title": "Prova tutto il carrello", "bundle-tryon-description": "Una foto, un outfit completo con capi, scarpe e borse del tuo carrello.", "bundle-tryon-upload": "Carica la tua foto", "bundle-tryon-result-empty": "L'outfit completo comparira qui.", "bundle-tryon-generate": "Genera outfit completo", "bundle-tryon-progress": "Avanzamento try-on bundle AI", "bundle-tryon-empty": "Aggiungi almeno un articolo al carrello per creare il tuo outfit.", "bundle-tryon-loaded": "Foto caricata. Il bundle e pronto.", "bundle-tryon-preparing": "Preparazione di tutti gli articoli", "bundle-tryon-inputs-ready": "Foto cliente e bundle del carrello pronti", "bundle-tryon-ready": "Outfit completo pronto"
@@ -162,12 +154,6 @@ const bundleTryOnTranslations = {
   },
   es: {
     "bundle-tryon-kicker": "Prueba bundle con IA", "bundle-tryon-title": "Prueba todo tu carrito", "bundle-tryon-description": "Una foto, un conjunto completo con la ropa, zapatos y bolsos de tu carrito.", "bundle-tryon-upload": "Sube tu foto", "bundle-tryon-result-empty": "Tu conjunto completo aparecera aqui.", "bundle-tryon-generate": "Generar conjunto completo", "bundle-tryon-progress": "Progreso de la prueba bundle con IA", "bundle-tryon-empty": "Anade al menos un articulo al carrito para crear tu conjunto.", "bundle-tryon-loaded": "Foto subida. Tu bundle esta listo.", "bundle-tryon-preparing": "Preparando todos los articulos", "bundle-tryon-inputs-ready": "Foto del cliente y bundle del carrito listos", "bundle-tryon-ready": "Conjunto completo listo"
-  },
-  ro: {
-    "bundle-tryon-kicker": "Proba AI pentru cos", "bundle-tryon-title": "Probeaza tot cosul", "bundle-tryon-description": "O fotografie, o tinuta completa cu hainele, pantofii si gentile din cos.", "bundle-tryon-upload": "Incarca fotografia", "bundle-tryon-result-empty": "Tinuta completa va aparea aici.", "bundle-tryon-generate": "Genereaza tinuta completa", "bundle-tryon-progress": "Progres proba AI", "bundle-tryon-empty": "Adauga cel putin un produs in cos.", "bundle-tryon-loaded": "Fotografie incarcata. Cosul este gata.", "bundle-tryon-preparing": "Pregatim toate produsele", "bundle-tryon-inputs-ready": "Fotografia si produsele sunt gata", "bundle-tryon-ready": "Tinuta completa este gata"
-  },
-  sq: {
-    "bundle-tryon-kicker": "Prova AI e shportes", "bundle-tryon-title": "Provo te gjithe shporten", "bundle-tryon-description": "Nje foto, nje veshje e plote me rrobat, kepucet dhe cantat ne shporte.", "bundle-tryon-upload": "Ngarko foton", "bundle-tryon-result-empty": "Veshja e plote do te shfaqet ketu.", "bundle-tryon-generate": "Krijo veshjen e plote", "bundle-tryon-progress": "Progresi i proves AI", "bundle-tryon-empty": "Shto te pakten nje produkt ne shporte.", "bundle-tryon-loaded": "Fotoja u ngarkua. Shporta eshte gati.", "bundle-tryon-preparing": "Po pergatisim produktet", "bundle-tryon-inputs-ready": "Fotoja dhe produktet jane gati", "bundle-tryon-ready": "Veshja e plote eshte gati"
   }
 };
 
@@ -178,24 +164,44 @@ const catalogTranslations = {
   en: { "last-stock-nav": "Last available", "last-stock-warning": "Last one available", "catalog-choose-category": "Choose a category", "catalog-choose-brand": "Choose a brand", "catalog-all-brands": "All brands", "catalog-all-products": "All styles", "catalog-viewing": "Viewing", "catalog-search-title": "Search the catalog", "catalog-search-placeholder": "Style, category or brand", "catalog-search-empty": "No styles found.", "catalog-search-results": "Search results", "catalog-close": "Close", "catalog-last-title": "Last available", "catalog-last-description": "Products with one piece left, organized by category and brand.", "catalog-last-empty": "There are no last pieces to show.", "catalog-last-choose": "Choose department", "catalog-back": "Back to selection", "remove-cart-item": "Remove from cart", "product-back": "Back to catalog", "product-details": "Product details", "product-description": "Selected by Haller Boutique for quality, style and attention to detail.", "product-not-found": "Product not found.", "gallery-previous": "Previous photo", "gallery-next": "Next photo", "open-product": "Open product page" },
   fr: { "last-stock-nav": "Dernieres pieces", "last-stock-warning": "Derniere piece disponible", "catalog-choose-category": "Choisissez une categorie", "catalog-choose-brand": "Choisissez une marque", "catalog-all-brands": "Toutes les marques", "catalog-all-products": "Tous les modeles", "catalog-viewing": "Vous regardez", "catalog-search-title": "Rechercher dans le catalogue", "catalog-search-placeholder": "Modele, categorie ou marque", "catalog-search-empty": "Aucun modele trouve.", "catalog-search-results": "Resultats de recherche", "catalog-close": "Fermer", "catalog-last-title": "Dernieres pieces", "catalog-last-description": "Les articles avec une seule piece restante, classes par categorie et marque.", "catalog-last-empty": "Aucune derniere piece a afficher.", "catalog-last-choose": "Choisissez le rayon", "catalog-back": "Retour a la selection", "remove-cart-item": "Retirer du panier", "product-back": "Retour au catalogue", "product-details": "Details du produit", "product-description": "Selectionne par Haller Boutique pour sa qualite, son style et ses finitions.", "product-not-found": "Produit introuvable.", "gallery-previous": "Photo precedente", "gallery-next": "Photo suivante", "open-product": "Ouvrir la page produit" },
   de: { "last-stock-nav": "Letzte verfugbare", "last-stock-warning": "Letztes verfugbar", "catalog-choose-category": "Kategorie auswahlen", "catalog-choose-brand": "Marke auswahlen", "catalog-all-brands": "Alle Marken", "catalog-all-products": "Alle Modelle", "catalog-viewing": "Sie sehen", "catalog-search-title": "Katalog durchsuchen", "catalog-search-placeholder": "Modell, Kategorie oder Marke", "catalog-search-empty": "Keine Modelle gefunden.", "catalog-search-results": "Suchergebnisse", "catalog-close": "Schliessen", "catalog-last-title": "Letzte verfugbare", "catalog-last-description": "Artikel mit einem verbleibenden Stuck, nach Kategorie und Marke sortiert.", "catalog-last-empty": "Keine letzten Stucke vorhanden.", "catalog-last-choose": "Bereich auswahlen", "catalog-back": "Zuruck zur Auswahl", "remove-cart-item": "Aus dem Warenkorb entfernen", "product-back": "Zuruck zum Katalog", "product-details": "Produktdetails", "product-description": "Von Haller Boutique wegen Qualitat, Stil und Details ausgewahlt.", "product-not-found": "Produkt nicht gefunden.", "gallery-previous": "Vorheriges Foto", "gallery-next": "Nachstes Foto", "open-product": "Produktseite offnen" },
-  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-last-choose": "Elige la seccion", "catalog-back": "Volver a la seleccion", "remove-cart-item": "Eliminar del carrito", "product-back": "Volver al catalogo", "product-details": "Detalles del producto", "product-description": "Seleccionado por Haller Boutique por su calidad, estilo y acabados.", "product-not-found": "Producto no encontrado.", "gallery-previous": "Foto anterior", "gallery-next": "Foto siguiente", "open-product": "Abrir pagina del producto" },
-  ro: { "last-stock-nav": "Ultimele disponibile", "last-stock-warning": "Ultimul disponibil", "catalog-choose-category": "Alege o categorie", "catalog-choose-brand": "Alege o marca", "catalog-all-brands": "Toate marcile", "catalog-all-products": "Toate modelele", "catalog-viewing": "Vizualizezi", "catalog-search-title": "Cauta in catalog", "catalog-search-placeholder": "Model, categorie sau marca", "catalog-search-empty": "Nu am gasit produse.", "catalog-search-results": "Rezultatele cautarii", "catalog-close": "Inchide", "catalog-last-title": "Ultimele disponibile", "catalog-last-description": "Produse cu o singura bucata ramasa, organizate pe categorii si marci.", "catalog-last-empty": "Nu exista ultime produse de afisat.", "catalog-last-choose": "Alege departamentul", "catalog-back": "Inapoi la selectie", "remove-cart-item": "Elimina din cos", "product-back": "Inapoi la catalog", "product-details": "Detalii produs", "product-description": "Selectat de Haller Boutique pentru calitate, stil si atentie la detalii.", "product-not-found": "Produs negasit.", "gallery-previous": "Fotografia anterioara", "gallery-next": "Fotografia urmatoare", "open-product": "Deschide pagina produsului" },
-  sq: { "last-stock-nav": "Te fundit ne dispozicion", "last-stock-warning": "I fundit ne dispozicion", "catalog-choose-category": "Zgjidh nje kategori", "catalog-choose-brand": "Zgjidh nje marke", "catalog-all-brands": "Te gjitha markat", "catalog-all-products": "Te gjitha modelet", "catalog-viewing": "Po shikoni", "catalog-search-title": "Kerko ne katalog", "catalog-search-placeholder": "Model, kategori ose marke", "catalog-search-empty": "Nuk u gjet asnje produkt.", "catalog-search-results": "Rezultatet e kerkimit", "catalog-close": "Mbyll", "catalog-last-title": "Te fundit ne dispozicion", "catalog-last-description": "Produkte me vetem nje cope te mbetur, te organizuara sipas kategorise dhe markes.", "catalog-last-empty": "Nuk ka produkte te fundit per t'u shfaqur.", "catalog-last-choose": "Zgjidh sektorin", "catalog-back": "Kthehu te perzgjedhja", "remove-cart-item": "Hiq nga shporta", "product-back": "Kthehu ne katalog", "product-details": "Detajet e produktit", "product-description": "Perzgjedhur nga Haller Boutique per cilesi, stil dhe kujdes ndaj detajeve.", "product-not-found": "Produkti nuk u gjet.", "gallery-previous": "Fotoja e meparshme", "gallery-next": "Fotoja tjeter", "open-product": "Hap faqen e produktit" }
+  es: { "last-stock-nav": "Ultimos disponibles", "last-stock-warning": "Ultimo disponible", "catalog-choose-category": "Elige una categoria", "catalog-choose-brand": "Elige una marca", "catalog-all-brands": "Todas las marcas", "catalog-all-products": "Todos los modelos", "catalog-viewing": "Estas viendo", "catalog-search-title": "Buscar en el catalogo", "catalog-search-placeholder": "Modelo, categoria o marca", "catalog-search-empty": "No se han encontrado modelos.", "catalog-search-results": "Resultados de busqueda", "catalog-close": "Cerrar", "catalog-last-title": "Ultimos disponibles", "catalog-last-description": "Articulos con una sola unidad restante, organizados por categoria y marca.", "catalog-last-empty": "No hay ultimas unidades para mostrar.", "catalog-last-choose": "Elige la seccion", "catalog-back": "Volver a la seleccion", "remove-cart-item": "Eliminar del carrito", "product-back": "Volver al catalogo", "product-details": "Detalles del producto", "product-description": "Seleccionado por Haller Boutique por su calidad, estilo y acabados.", "product-not-found": "Producto no encontrado.", "gallery-previous": "Foto anterior", "gallery-next": "Foto siguiente", "open-product": "Abrir pagina del producto" }
 };
 
 Object.entries(catalogTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
 
-const purchaseNotificationTranslations = {
-  it: { "purchase-demo": "Demo live", "purchase-copy": "{name} da {city} ha scelto", "purchase-time": "Pochi istanti fa", "purchase-close": "Chiudi notifica acquisto" },
-  en: { "purchase-demo": "Live demo", "purchase-copy": "{name} from {city} chose", "purchase-time": "A few moments ago", "purchase-close": "Close purchase notification" },
-  fr: { "purchase-demo": "Demo en direct", "purchase-copy": "{name}, de {city}, a choisi", "purchase-time": "Il y a quelques instants", "purchase-close": "Fermer la notification d'achat" },
-  de: { "purchase-demo": "Live-Demo", "purchase-copy": "{name} aus {city} hat gewahlt", "purchase-time": "Vor wenigen Augenblicken", "purchase-close": "Kaufbenachrichtigung schliessen" },
-  es: { "purchase-demo": "Demo en directo", "purchase-copy": "{name}, de {city}, ha elegido", "purchase-time": "Hace unos instantes", "purchase-close": "Cerrar notificacion de compra" },
-  ro: { "purchase-demo": "Demo live", "purchase-copy": "{name} din {city} a ales", "purchase-time": "Acum cateva momente", "purchase-close": "Inchide notificarea" },
-  sq: { "purchase-demo": "Demo live", "purchase-copy": "{name} nga {city} zgjodhi", "purchase-time": "Pak caste me pare", "purchase-close": "Mbyll njoftimin" },
+const productZoomTranslations = {
+  it: { "zoom-open": "Ingrandisci immagine", "zoom-close": "Chiudi immagine", "zoom-in": "Aumenta zoom", "zoom-out": "Riduci zoom", "zoom-reset": "Ripristina zoom" },
+  en: { "zoom-open": "Enlarge image", "zoom-close": "Close image", "zoom-in": "Zoom in", "zoom-out": "Zoom out", "zoom-reset": "Reset zoom" },
+  fr: { "zoom-open": "Agrandir l'image", "zoom-close": "Fermer l'image", "zoom-in": "Agrandir", "zoom-out": "Reduire", "zoom-reset": "Reinitialiser le zoom" },
+  de: { "zoom-open": "Bild vergrossern", "zoom-close": "Bild schliessen", "zoom-in": "Vergrossern", "zoom-out": "Verkleinern", "zoom-reset": "Zoom zurucksetzen" },
+  es: { "zoom-open": "Ampliar imagen", "zoom-close": "Cerrar imagen", "zoom-in": "Acercar", "zoom-out": "Alejar", "zoom-reset": "Restablecer zoom" },
 };
 
-Object.entries(purchaseNotificationTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+Object.entries(productZoomTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
+translations.sq = {
+  "meta-description": "Haller Boutique: luks, cilesi dhe stil.", search: "Kerko", "go-checkout": "Shko te pagesa", "change-language": "Ndrysho gjuhen", "main-menu": "Menuja kryesore", home: "Kreu", "new-arrivals": "Te rejat", men: "Meshkuj", women: "Femra", "hero-title": "LUKS<br>CILESI<br>STIL", "hero-description": "Zbuloni risite me te fundit<br>nga markat me te mira.", "discover-now": "Zbulo tani", "payment-title": "Pagese ne dorezim dhe kripto", "payment-description": "Pagese ne dorezim ose kripto<br>ne menyre te sigurt", "support-title": "Asistence 24/7", "support-description": "Jemi gjithmone<br>ne dispozicion", "location-banner": "Lejo vendndodhjen per te pare afatet e dorezimit ne kohe reale.", selection: "Perzgjedhja", info: "Informacion", "whatsapp-support": "Asistence ne WhatsApp", shipping: "Dergesa", terms: "Kushtet e pergjithshme", "follow-social": "Na ndiqni ne rrjetet sociale", copyright: "Copyright 2017 Haller Boutique. Te gjitha te drejtat e rezervuara.", sizes: "Masat", price: "Cmimi", "add-cart": "Shto ne shporte", "buy-now": "Bli tani", "try-on": "Provoje", "image-placeholder": "Imazhi vjen se shpejti",
+  "sizes-available": "Masat e disponueshme", added: "U shtua",
+  "cookie-label": "Preferencat e cookies", "cookie-kicker": "Privatesia Haller Boutique", "cookie-title": "Cookies, sesioni dhe vendndodhja", "cookie-description": "Perdorim cookies thelbesore per funksionimin e faqes. Me pelqimin tuaj mund te mbledhim statistika, rishikime te sesionit dhe vendndodhjen e sakte te pajisjes per sigurine, porosite dhe analizen e vizitave. Fjalekalimet, pagesat dhe vlerat e formularit nuk regjistrohen kurre.", "cookie-required": "Te domosdoshme", "cookie-required-description": "Shporta, pagesa, hyrja dhe preferenca e pelqimit.", "cookie-analytics": "Statistikat e faqes", "cookie-analytics-description": "Vizitat, pajisja, shfletuesi, faqet dhe konvertimi.", "cookie-replay": "Rishikimi i sesionit", "cookie-replay-description": "Levizjet, klikimet dhe rrjedhja me fushat e maskuara.", "cookie-location": "Vendndodhja e sakte", "cookie-location-description": "Koordinatat GPS, saktesia dhe ora, vetem pasi ta lejoni ne shfletues.", "cookie-necessary-only": "Vetem te domosdoshmet", "cookie-metrics-only": "Vetem statistikat", "cookie-customize": "Personalizo", "cookie-save": "Ruaj preferencat", "cookie-accept-all": "Prano te gjitha",
+  "chat-label": "Asistentja virtuale Haller Boutique", "chat-open": "Hap asistente virtuale", "chat-close": "Mbyll asistente virtuale", "chat-avatar-alt": "Portreti i Aurora, asistente virtuale", "chat-online": "Online", "chat-status": "Asistentja online", "chat-intro": "Para se te fillojme, me lini te dhenat tuaja qe t'ju ndihmoj me mire.", "first-name": "Emri", "last-name": "Mbiemri", email: "Email", phone: "Telefoni", optional: "opsional", "chat-privacy": "Te dhenat perdoren vetem per t'ju ndihmuar ne kete bisede.", "chat-start": "Fillo biseden", "chat-sizes": "Masat", "chat-track-order": "Gjurmo porosine", "chat-prompt-sizes": "A mund te me ndihmosh te zgjedh masen e duhur?", "chat-prompt-order": "Dua te di ku ndodhet porosia ime. Kodi im eshte HB-", "chat-placeholder": "Shkruani ketu...", "chat-send": "Dergo mesazhin", "chat-greeting": "Pershendetje {name}, jam Aurora, asistentja virtuale e Haller Boutique. Si mund t'ju ndihmoj?", "chat-thinking": "Nje moment, po kontrolloj.", "chat-error": "Nuk mund te pergjigjem tani.",
+  "location-help-apple": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen per shfletuesin te cilësimet Apple dhe prekni per te provuar perseri.", "location-help-browser": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen te cilësimet e shfletuesit dhe prekni per te provuar perseri.", "location-https": "Hapeni faqen me HTTPS per te lejuar vendndodhjen.", "location-unsupported": "Ky shfletues nuk mbeshtet vendndodhjen. Hapeni faqen ne Safari ose Chrome.", "location-authorize": "Lejoni vendndodhjen ne njoftimin e shfletuesit.", "location-unavailable": "Vendndodhja nuk eshte e disponueshme. Provoni perseri pas pak.", "location-active": "Vendndodhja eshte aktive. Afatet e dorezimit ne kohe reale jane te disponueshme{accuracy}.", "location-denied": "Leja e vendndodhjes u refuzua. Hapni drynin e faqes dhe vendosni Vendndodhjen ne Lejo.", "location-gps": "Vendndodhja nuk eshte e disponueshme. Aktivizoni GPS-in dhe provoni perseri.", "location-error": "Gabim vendndodhjeje. Prekni per te provuar perseri.", "location-retry": "Vendndodhja nuk eshte e disponueshme. Prekni per te provuar perseri.",
+  "checkout-to-confirm": "Per t'u konfirmuar", "checkout-to-fill": "Per t'u plotesuar", copied: "U kopjua", "copy-this-text": "Kopjo kete tekst", "wallet-missing": "Mungon portofoli", cod: "Pagese ne dorezim", "crypto-note": "Dergo pagesen kripto dhe me pas hash-in TX me kodin e porosise.", "no-online-payment": "Ne kete faze nuk kerkohet pagese online.", "confirming-order": "Porosia po konfirmohet", "order-not-saved": "Porosia nuk u ruajt.", "order-confirmed": "Porosia u konfirmua", "order-confirmed-note": "Porosia {code} u konfirmua. Totali {total}.", "order-save-failed": "Nuk arritem ta ruajme porosine.", "discount-applied": "Kodi i zbritjes u vendos. Do ta verifikojme kur te konfirmohet porosia.", "discount-empty": "Vendosni nje kod zbritjeje para se ta aplikoni.",
+  "tryon-close": "Mbyll proven", "tryon-product": "Provo produktin", "tryon-product-name": "Provo {product}", "tryon-description": "Ngarkoni nje foto perballe per te krijuar pamjen paraprake.", "tryon-upload": "Ngarko foto", "tryon-result-empty": "Rezultati do te shfaqet ketu.", "tryon-consent": "Autorizoj ruajtjen private te fotos dhe pamjes paraprake per 30 dite, qe asistenca t'i rikuperoje.", "tryon-generate": "Gjenero proven me AI", "tryon-progress": "Ecuria e proves me AI", "tryon-upload-preview": "Ngarkoni foton tuaj per te pare pamjen paraprake.", "tryon-loaded-alt": "Foto e ngarkuar per prove", "tryon-loaded": "Fotoja u ngarkua. Zgjidhni Gjenero proven me AI.", "tryon-image-missing": "Imazhi i produktit nuk eshte i disponueshem.", "tryon-upload-first": "Ngarkoni fillimisht foton tuaj.", "tryon-preparing": "Po pergatitet veshja reale", "tryon-preparing-ai": "Po pergatitet pamja paraprake me AI...", "tryon-inputs-ready": "Fotoja e klientit dhe veshja e katalogut jane gati", "tryon-sending": "Fotoja po dergohet ne server...", "tryon-ready": "Pamja paraprake eshte gati", "tryon-ready-saved": "Pamja paraprake eshte gati dhe u arkivua per 30 dite.", "tryon-generation-failed": "Gjenerimi deshtoi", "tryon-result-failed": "Nuk arritem te gjenerojme pamjen paraprake.", "tryon-unavailable": "Prova nuk eshte e disponueshme.",
+  "bundle-tryon-kicker": "Prove bundle me AI", "bundle-tryon-title": "Provo te gjithe shporten", "bundle-tryon-description": "Nje foto, nje veshje e plote me rrobat, kepucet dhe cantat ne shportën tuaj.", "bundle-tryon-upload": "Ngarko foton tuaj", "bundle-tryon-result-empty": "Veshja juaj e plote do te shfaqet ketu.", "bundle-tryon-generate": "Gjenero veshjen e plote", "bundle-tryon-progress": "Ecuria e proves bundle me AI", "bundle-tryon-empty": "Shtoni te pakten nje artikull ne shporte per te krijuar veshjen.", "bundle-tryon-loaded": "Fotoja u ngarkua. Bundle eshte gati.", "bundle-tryon-preparing": "Po pergatiten te gjithe artikujt", "bundle-tryon-inputs-ready": "Fotoja e klientit dhe bundle i shportes jane gati", "bundle-tryon-ready": "Veshja e plote eshte gati",
+  "last-stock-nav": "Te fundit ne dispozicion", "last-stock-warning": "I fundit ne dispozicion", "catalog-choose-category": "Zgjidhni nje kategori", "catalog-choose-brand": "Zgjidhni nje marke", "catalog-all-brands": "Te gjitha markat", "catalog-all-products": "Te gjitha modelet", "catalog-viewing": "Po shikoni", "catalog-search-title": "Kerko ne katalog", "catalog-search-placeholder": "Modeli, kategoria ose marka", "catalog-search-empty": "Nuk u gjet asnje model.", "catalog-search-results": "Rezultatet e kerkimit", "catalog-close": "Mbyll", "catalog-last-title": "Te fundit ne dispozicion", "catalog-last-description": "Artikujt me vetem nje cope te mbetur, te organizuar sipas kategorise dhe markes.", "catalog-last-empty": "Nuk ka artikuj te fundit per t'u shfaqur.", "catalog-last-choose": "Zgjidhni repartin", "catalog-back": "Kthehu te perzgjedhja", "remove-cart-item": "Hiq nga shporta", "product-back": "Kthehu te katalogu", "product-details": "Detajet e produktit", "product-description": "Perzgjedhur nga Haller Boutique per cilesi, stil dhe kujdes ndaj detajeve.", "product-not-found": "Produkti nuk u gjet.", "gallery-previous": "Fotoja e meparshme", "gallery-next": "Fotoja tjeter", "open-product": "Hap faqen e produktit", "zoom-open": "Zmadho imazhin", "zoom-close": "Mbyll imazhin", "zoom-in": "Afro", "zoom-out": "Largo", "zoom-reset": "Rivendos zmadhimin"
+};
+
+translations.ro = {
+  "meta-description": "Haller Boutique: lux, calitate si stil.", search: "Cauta", "go-checkout": "Mergi la finalizare", "change-language": "Schimba limba", "main-menu": "Meniu principal", home: "Acasa", "new-arrivals": "Noutati", men: "Barbati", women: "Femei", "hero-title": "LUX<br>CALITATE<br>STIL", "hero-description": "Descopera cele mai noi produse<br>de la cele mai bune marci.", "discover-now": "Descopera acum", "payment-title": "Plata la livrare si crypto", "payment-description": "Plata la livrare sau crypto<br>in siguranta", "support-title": "Asistenta 24/7", "support-description": "Suntem mereu<br>disponibili", "location-banner": "Permite locatia pentru a vedea timpii de livrare in timp real.", selection: "Selectie", info: "Informatii", "whatsapp-support": "Asistenta WhatsApp", shipping: "Livrare", terms: "Termeni si conditii", "follow-social": "Urmareste-ne pe retelele sociale", copyright: "Copyright 2017 Haller Boutique. Toate drepturile rezervate.", sizes: "Marimi", price: "Pret", "add-cart": "Adauga in cos", "buy-now": "Cumpara acum", "try-on": "Probeaza", "image-placeholder": "Imagine disponibila in curand",
+  "sizes-available": "Marimi disponibile", added: "Adaugat",
+  "cookie-label": "Preferinte cookie", "cookie-kicker": "Confidentialitate Haller Boutique", "cookie-title": "Cookie-uri, sesiune si locatie", "cookie-description": "Folosim cookie-uri esentiale pentru functionarea site-ului. Cu acordul tau putem colecta statistici, reluari ale sesiunii si locatia exacta a dispozitivului pentru securitate, comenzi si analiza vizitelor. Parolele, platile si valorile formularelor nu sunt inregistrate niciodata.", "cookie-required": "Esentiale", "cookie-required-description": "Cos, finalizare, autentificare si preferinta de consimtamant.", "cookie-analytics": "Statistici site", "cookie-analytics-description": "Vizite, dispozitiv, browser, pagini si conversie.", "cookie-replay": "Reluarea sesiunii", "cookie-replay-description": "Miscari, clicuri si derulare cu campurile mascate.", "cookie-location": "Locatie exacta", "cookie-location-description": "Coordonate GPS, precizie si ora, numai dupa aprobarea din browser.", "cookie-necessary-only": "Doar esentiale", "cookie-metrics-only": "Doar statistici", "cookie-customize": "Personalizeaza", "cookie-save": "Salveaza preferintele", "cookie-accept-all": "Accepta tot",
+  "chat-label": "Asistenta virtuala Haller Boutique", "chat-open": "Deschide asistenta virtuala", "chat-close": "Inchide asistenta virtuala", "chat-avatar-alt": "Portretul Aurorei, asistenta virtuala", "chat-online": "Online", "chat-status": "Asistenta online", "chat-intro": "Inainte sa incepem, lasa-mi datele tale pentru a te ajuta mai bine.", "first-name": "Prenume", "last-name": "Nume", email: "E-mail", phone: "Telefon", optional: "optional", "chat-privacy": "Datele sunt folosite doar pentru a te ajuta in aceasta conversatie.", "chat-start": "Incepe conversatia", "chat-sizes": "Marimi", "chat-track-order": "Urmareste comanda", "chat-prompt-sizes": "Ma poti ajuta sa aleg marimea potrivita?", "chat-prompt-order": "As dori sa stiu unde este comanda mea. Codul meu este HB-", "chat-placeholder": "Scrie aici...", "chat-send": "Trimite mesajul", "chat-greeting": "Buna {name}, sunt Aurora, asistenta virtuala Haller Boutique. Cum te pot ajuta?", "chat-thinking": "Un moment, verific.", "chat-error": "Nu pot raspunde acum.",
+  "location-help-apple": "Daca nu apare solicitarea, activeaza Localizarea pentru browser in setarile Apple si atinge pentru a reincerca.", "location-help-browser": "Daca nu apare solicitarea, activeaza Locatia in setarile browserului si atinge pentru a reincerca.", "location-https": "Deschide site-ul prin HTTPS pentru a permite locatia.", "location-unsupported": "Acest browser nu accepta locatia. Deschide site-ul in Safari sau Chrome.", "location-authorize": "Permite locatia in solicitarea browserului.", "location-unavailable": "Locatia nu este disponibila. Incearca din nou in curand.", "location-active": "Locatia este activa. Timpii de livrare in timp real sunt disponibili{accuracy}.", "location-denied": "Permisiunea pentru locatie a fost refuzata. Deschide lacatul site-ului si seteaza Locatia pe Permite.", "location-gps": "Locatia nu este disponibila. Activeaza GPS-ul dispozitivului si incearca din nou.", "location-error": "Eroare de locatie. Atinge pentru a reincerca.", "location-retry": "Locatia nu este disponibila. Atinge pentru a reincerca.",
+  "checkout-to-confirm": "De confirmat", "checkout-to-fill": "De completat", copied: "Copiat", "copy-this-text": "Copiaza acest text", "wallet-missing": "Portofel lipsa", cod: "Plata la livrare", "crypto-note": "Trimite plata crypto, apoi hash-ul TX impreuna cu codul comenzii.", "no-online-payment": "Nu este necesara nicio plata online in aceasta etapa.", "confirming-order": "Se confirma comanda", "order-not-saved": "Comanda nu a fost salvata.", "order-confirmed": "Comanda confirmata", "order-confirmed-note": "Comanda {code} a fost confirmata. Total {total}.", "order-save-failed": "Nu am putut salva comanda.", "discount-applied": "Codul de reducere a fost introdus. Il vom verifica la confirmarea comenzii.", "discount-empty": "Introdu un cod de reducere inainte de aplicare.",
+  "tryon-close": "Inchide proba", "tryon-product": "Probeaza produsul", "tryon-product-name": "Probeaza {product}", "tryon-description": "Incarca o fotografie din fata pentru a genera previzualizarea.", "tryon-upload": "Incarca fotografia", "tryon-result-empty": "Rezultatul va aparea aici.", "tryon-consent": "Autorizez stocarea privata a fotografiei si previzualizarii timp de 30 de zile, pentru a putea fi recuperate de asistenta.", "tryon-generate": "Genereaza proba AI", "tryon-progress": "Progresul probei AI", "tryon-upload-preview": "Incarca fotografia pentru a vedea previzualizarea.", "tryon-loaded-alt": "Fotografie incarcata pentru proba", "tryon-loaded": "Fotografia a fost incarcata. Selecteaza Genereaza proba AI.", "tryon-image-missing": "Imaginea produsului nu este disponibila.", "tryon-upload-first": "Incarca mai intai fotografia ta.", "tryon-preparing": "Se pregateste articolul real", "tryon-preparing-ai": "Se pregateste previzualizarea AI...", "tryon-inputs-ready": "Fotografia clientului si articolul din catalog sunt gata", "tryon-sending": "Fotografia este trimisa la server...", "tryon-ready": "Previzualizarea este gata", "tryon-ready-saved": "Previzualizarea este gata si arhivata pentru 30 de zile.", "tryon-generation-failed": "Generarea a esuat", "tryon-result-failed": "Nu am putut genera previzualizarea.", "tryon-unavailable": "Proba nu este disponibila.",
+  "bundle-tryon-kicker": "Proba bundle AI", "bundle-tryon-title": "Probeaza tot cosul", "bundle-tryon-description": "O fotografie, o tinuta completa cu hainele, pantofii si gentile din cos.", "bundle-tryon-upload": "Incarca fotografia ta", "bundle-tryon-result-empty": "Tinuta completa va aparea aici.", "bundle-tryon-generate": "Genereaza tinuta completa", "bundle-tryon-progress": "Progresul probei bundle AI", "bundle-tryon-empty": "Adauga cel putin un articol in cos pentru a crea tinuta.", "bundle-tryon-loaded": "Fotografia a fost incarcata. Bundle-ul este gata.", "bundle-tryon-preparing": "Se pregatesc toate articolele", "bundle-tryon-inputs-ready": "Fotografia clientului si bundle-ul din cos sunt gata", "bundle-tryon-ready": "Tinuta completa este gata",
+  "last-stock-nav": "Ultimele disponibile", "last-stock-warning": "Ultimul disponibil", "catalog-choose-category": "Alege o categorie", "catalog-choose-brand": "Alege o marca", "catalog-all-brands": "Toate marcile", "catalog-all-products": "Toate modelele", "catalog-viewing": "Vizualizezi", "catalog-search-title": "Cauta in catalog", "catalog-search-placeholder": "Model, categorie sau marca", "catalog-search-empty": "Nu a fost gasit niciun model.", "catalog-search-results": "Rezultatele cautarii", "catalog-close": "Inchide", "catalog-last-title": "Ultimele disponibile", "catalog-last-description": "Articolele cu o singura bucata ramasa, organizate dupa categorie si marca.", "catalog-last-empty": "Nu exista ultime articole de afisat.", "catalog-last-choose": "Alege departamentul", "catalog-back": "Inapoi la selectie", "remove-cart-item": "Elimina din cos", "product-back": "Inapoi la catalog", "product-details": "Detalii produs", "product-description": "Selectat de Haller Boutique pentru calitate, stil si atentie la detalii.", "product-not-found": "Produsul nu a fost gasit.", "gallery-previous": "Fotografia anterioara", "gallery-next": "Fotografia urmatoare", "open-product": "Deschide pagina produsului", "zoom-open": "Mareste imaginea", "zoom-close": "Inchide imaginea", "zoom-in": "Mareste", "zoom-out": "Micsoreaza", "zoom-reset": "Reseteaza zoomul"
+};
 
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
@@ -1198,84 +1204,28 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "bunny-responsive-1";
-const productImageOptimization = {
-  cdnBase: String(window.HALLER_CDN_BASE || document.querySelector("meta[name='asset-cdn-base']")?.content || "").replace(/\/+$/, ""),
-  format: "auto",
-  presets: {
-    card: { width: 720, widths: [360, 540, 720, 900], sizes: "(max-width: 640px) 92vw, (max-width: 1100px) 45vw, 320px", quality: 86 },
-    detail: { width: 1800, widths: [720, 1080, 1440, 1800, 2400], sizes: "(max-width: 900px) 96vw, 58vw", quality: 90 },
-    preview: { width: 360, widths: [240, 360, 540], sizes: "(max-width: 700px) 44vw, 180px", quality: 84 },
-    thumb: { width: 180, widths: [120, 180, 240], sizes: "96px", quality: 82 },
-  },
-};
+const productImageVersion = "product-webp-quality-4";
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
-    "assets/products/louis-vuitton-skate-beige-white-1.png",
-    "assets/products/louis-vuitton-skate-beige-white-2.png",
-    "assets/products/louis-vuitton-skate-beige-white-3.png",
+    "assets/products/louis-vuitton-skate-beige-white-1.webp",
+    "assets/products/louis-vuitton-skate-beige-white-2.webp",
+    "assets/products/louis-vuitton-skate-beige-white-3.webp",
   ],
   "Nike Air Force Louis Vuitton Red": [
-    "assets/products/nike-air-force-louis-vuitton-red-1.png",
-    "assets/products/nike-air-force-louis-vuitton-red-2.png",
-    "assets/products/nike-air-force-louis-vuitton-red-3.png",
-    "assets/products/nike-air-force-louis-vuitton-red-4.png",
-    "assets/products/nike-air-force-louis-vuitton-red-5.png",
-    "assets/products/nike-air-force-louis-vuitton-red-6.png",
+    "assets/products/nike-air-force-louis-vuitton-red-1.webp",
+    "assets/products/nike-air-force-louis-vuitton-red-2.webp",
+    "assets/products/nike-air-force-louis-vuitton-red-3.webp",
+    "assets/products/nike-air-force-louis-vuitton-red-4.webp",
+    "assets/products/nike-air-force-louis-vuitton-red-5.webp",
+    "assets/products/nike-air-force-louis-vuitton-red-6.webp",
   ],
-  "Polo Gucci": ["assets/products/polo-gucci-1.png"],
+  "Polo Gucci": ["assets/products/polo-gucci-1.webp"],
 };
 
 function withProductImageVersion(src) {
   const value = String(src || "");
   if (!value || value.startsWith("data:")) return value;
   return `${value}${value.includes("?") ? "&" : "?"}v=${productImageVersion}`;
-}
-
-function withAssetCdn(src) {
-  const value = String(src || "");
-  if (!productImageOptimization.cdnBase || !value || value.startsWith("data:") || /^https?:\/\//i.test(value)) return value;
-  return `${productImageOptimization.cdnBase}/${value.replace(/^\/+/, "")}`;
-}
-
-function canOptimizeImage(src) {
-  const value = String(src || "").split("?")[0].toLowerCase();
-  return /\.(png|jpe?g|webp)$/.test(value);
-}
-
-function appendImageParams(src, params = {}) {
-  const value = String(src || "");
-  if (!value || value.startsWith("data:")) return value;
-  const entries = Object.entries(params).filter(([, entryValue]) => entryValue !== undefined && entryValue !== "");
-  if (!entries.length) return value;
-  const query = entries.map(([key, entryValue]) => `${encodeURIComponent(key)}=${encodeURIComponent(entryValue)}`).join("&");
-  return `${value}${value.includes("?") ? "&" : "?"}${query}`;
-}
-
-function optimizedProductImage(src, presetName = "card", overrides = {}) {
-  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
-  const base = withProductImageVersion(withAssetCdn(src));
-  if (!canOptimizeImage(src)) return base;
-  return appendImageParams(base, {
-    width: overrides.width || preset.width,
-    quality: overrides.quality || preset.quality,
-    format: overrides.format || productImageOptimization.format,
-  });
-}
-
-function optimizedProductSrcset(src, presetName = "card") {
-  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
-  if (!canOptimizeImage(src)) return "";
-  return preset.widths.map((width) => `${optimizedProductImage(src, presetName, { width })} ${width}w`).join(", ");
-}
-
-function responsiveImageAttributes(src, presetName = "card") {
-  const preset = productImageOptimization.presets[presetName] || productImageOptimization.presets.card;
-  const srcset = optimizedProductSrcset(src, presetName);
-  return `
-      src="${escapeHtml(optimizedProductImage(src, presetName))}"
-      ${srcset ? `srcset="${escapeHtml(srcset)}" sizes="${escapeHtml(preset.sizes)}"` : ""}
-  `;
 }
 
 function normalizeProductPrice(value) {
@@ -1329,63 +1279,49 @@ const catalogMenuColumns = {
   ],
 };
 
-const catalogMenuLabels = {
-  uomo: {
-    "T-Shirts": "T-Shirt",
-    "Giacche leggere": "Giacca leggera",
-    "Completo": "Completi casual",
-    "Borse Uomo": "Borse",
+const catalogCategoryTranslations = {
+  it: {
+    "T-Shirts": "T-Shirt", Polo: "Polo", "Jeans corti": "Jeans corti", "Jeans lunghi": "Jeans lunghi",
+    Pantaloncini: "Pantaloncini", "Giacche leggere": "Giacca leggera", Tuta: "Tute", Completo: "Completi casual",
+    Scarpe: "Scarpe", "Borse Uomo": "Borse", "Borse Donna": "Borse", "Nuovi arrivi": "Nuovi arrivi",
+  },
+  en: {
+    "T-Shirts": "T-Shirts", Polo: "Polo shirts", "Jeans corti": "Denim shorts", "Jeans lunghi": "Jeans",
+    Pantaloncini: "Shorts", "Giacche leggere": "Light jackets", Tuta: "Tracksuits", Completo: "Casual sets",
+    Scarpe: "Shoes", "Borse Uomo": "Bags", "Borse Donna": "Bags", "Nuovi arrivi": "New arrivals",
+  },
+  fr: {
+    "T-Shirts": "T-shirts", Polo: "Polos", "Jeans corti": "Shorts en jean", "Jeans lunghi": "Jeans",
+    Pantaloncini: "Shorts", "Giacche leggere": "Vestes legeres", Tuta: "Survetements", Completo: "Ensembles casual",
+    Scarpe: "Chaussures", "Borse Uomo": "Sacs", "Borse Donna": "Sacs", "Nuovi arrivi": "Nouveautes",
+  },
+  de: {
+    "T-Shirts": "T-Shirts", Polo: "Poloshirts", "Jeans corti": "Jeansshorts", "Jeans lunghi": "Jeans",
+    Pantaloncini: "Shorts", "Giacche leggere": "Leichte Jacken", Tuta: "Trainingsanzuge", Completo: "Freizeitsets",
+    Scarpe: "Schuhe", "Borse Uomo": "Taschen", "Borse Donna": "Taschen", "Nuovi arrivi": "Neuheiten",
+  },
+  es: {
+    "T-Shirts": "Camisetas", Polo: "Polos", "Jeans corti": "Shorts vaqueros", "Jeans lunghi": "Vaqueros",
+    Pantaloncini: "Pantalones cortos", "Giacche leggere": "Chaquetas ligeras", Tuta: "Chandales", Completo: "Conjuntos casuales",
+    Scarpe: "Zapatos", "Borse Uomo": "Bolsos", "Borse Donna": "Bolsos", "Nuovi arrivi": "Novedades",
+  },
+  sq: {
+    "T-Shirts": "Bluza", Polo: "Bluza polo", "Jeans corti": "Pantallona xhins te shkurtra", "Jeans lunghi": "Xhinse",
+    Pantaloncini: "Pantallona te shkurtra", "Giacche leggere": "Xhaketa te lehta", Tuta: "Komplete sportive", Completo: "Komplete casual",
+    Scarpe: "Kepuce", "Borse Uomo": "Canta", "Borse Donna": "Canta", "Nuovi arrivi": "Te rejat",
+  },
+  ro: {
+    "T-Shirts": "Tricouri", Polo: "Tricouri polo", "Jeans corti": "Pantaloni scurti din denim", "Jeans lunghi": "Blugi",
+    Pantaloncini: "Pantaloni scurti", "Giacche leggere": "Jachete usoare", Tuta: "Treninguri", Completo: "Seturi casual",
+    Scarpe: "Pantofi", "Borse Uomo": "Genti", "Borse Donna": "Genti", "Nuovi arrivi": "Noutati",
   },
 };
 
-const catalogCategoryTranslationKeys = {
-  "T-Shirts": "t-shirts",
-  "Polo": "polo",
-  "Jeans corti": "short-jeans",
-  "Jeans lunghi": "long-jeans",
-  "Pantaloncini": "shorts",
-  "Giacche leggere": "light-jackets",
-  "Tuta": "tracksuits",
-  "Completo": "casual-sets",
-  "Scarpe": "shoes",
-  "Borse Uomo": "bags",
-  "Borse Donna": "bags",
-};
-
-const catalogCategoryTranslations = {
-  it: { "t-shirts": "T-Shirt", polo: "Polo", "short-jeans": "Jeans corti", "long-jeans": "Jeans lunghi", shorts: "Pantaloncini", "light-jackets": "Giacca leggera", tracksuits: "Tuta", "casual-sets": "Completi casual", shoes: "Scarpe", bags: "Borse" },
-  en: { "t-shirts": "T-Shirts", polo: "Polo shirts", "short-jeans": "Short jeans", "long-jeans": "Long jeans", shorts: "Shorts", "light-jackets": "Lightweight jackets", tracksuits: "Tracksuits", "casual-sets": "Casual sets", shoes: "Shoes", bags: "Bags" },
-  fr: { "t-shirts": "T-shirts", polo: "Polos", "short-jeans": "Jeans courts", "long-jeans": "Jeans longs", shorts: "Shorts", "light-jackets": "Vestes legeres", tracksuits: "Survetements", "casual-sets": "Ensembles casual", shoes: "Chaussures", bags: "Sacs" },
-  de: { "t-shirts": "T-Shirts", polo: "Poloshirts", "short-jeans": "Kurze Jeans", "long-jeans": "Lange Jeans", shorts: "Shorts", "light-jackets": "Leichte Jacken", tracksuits: "Trainingsanzuge", "casual-sets": "Casual-Sets", shoes: "Schuhe", bags: "Taschen" },
-  es: { "t-shirts": "Camisetas", polo: "Polos", "short-jeans": "Vaqueros cortos", "long-jeans": "Vaqueros largos", shorts: "Pantalones cortos", "light-jackets": "Chaquetas ligeras", tracksuits: "Chandales", "casual-sets": "Conjuntos casuales", shoes: "Zapatos", bags: "Bolsos" },
-  ro: { "t-shirts": "Tricouri", polo: "Tricouri polo", "short-jeans": "Blugi scurti", "long-jeans": "Blugi lungi", shorts: "Pantaloni scurti", "light-jackets": "Jachete usoare", tracksuits: "Treninguri", "casual-sets": "Seturi casual", shoes: "Pantofi", bags: "Genti" },
-  sq: { "t-shirts": "Bluza", polo: "Polo", "short-jeans": "Xhinse te shkurtra", "long-jeans": "Xhinse te gjata", shorts: "Pantallona te shkurtra", "light-jackets": "Xhaketa te lehta", tracksuits: "Kostume sportive", "casual-sets": "Komplete casual", shoes: "Kepuce", bags: "Canta" },
-};
-
-const catalogCollectionTranslations = {
-  it: { uomo: "Catalogo Uomo", donna: "Catalogo Donna" },
-  en: { uomo: "Men's catalog", donna: "Women's catalog" },
-  fr: { uomo: "Catalogue Homme", donna: "Catalogue Femme" },
-  de: { uomo: "Herrenkatalog", donna: "Damenkatalog" },
-  es: { uomo: "Catalogo Hombre", donna: "Catalogo Mujer" },
-  ro: { uomo: "Catalog Barbati", donna: "Catalog Femei" },
-  sq: { uomo: "Katalogu Meshkuj", donna: "Katalogu Femra" },
-};
-
-function catalogCategoryLabel(category, gender = "") {
-  const key = catalogCategoryTranslationKeys[category];
-  return catalogCategoryTranslations[siteLanguage]?.[key]
-    || catalogCategoryTranslations.it[key]
-    || catalogMenuLabels[gender]?.[category]
-    || category;
-}
-
-function catalogCollectionLabel(product) {
-  const gender = getProductGender(product);
-  return catalogCollectionTranslations[siteLanguage]?.[gender]
-    || catalogCollectionTranslations.it[gender]
-    || product.collection
-    || translate("selection");
+function translateCatalogCategory(category) {
+  const value = String(category || "").trim();
+  return catalogCategoryTranslations[siteLanguage]?.[value]
+    || catalogCategoryTranslations.it[value]
+    || value;
 }
 
 function normalizeCatalogCategory(value) {
@@ -1411,6 +1347,9 @@ function applyProductOverride(product) {
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
       : Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    imageRenditions: override.imageRenditions && typeof override.imageRenditions === "object"
+      ? override.imageRenditions
+      : product.imageRenditions || {},
     imageVariant: override.imageVariant || product.imageVariant || "original",
   };
 }
@@ -1433,13 +1372,14 @@ function normalizeCustomProduct(product) {
     isLastAvailable: Boolean(product.isLastAvailable),
     images: Array.isArray(product.images) ? product.images : [],
     originalImages: Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    imageRenditions: product.imageRenditions && typeof product.imageRenditions === "object" ? product.imageRenditions : {},
     imageVariant: product.imageVariant || "original",
   };
 }
 
 async function loadProductOverrides() {
   try {
-    const response = await fetch("/api/products", { cache: "no-store" });
+    const response = await fetch("/api/products");
     if (!response.ok) return;
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
@@ -1461,13 +1401,41 @@ function getProductGallery(product) {
     : productImageGalleries[product.baseName] || productImageGalleries[product.name] || [];
 }
 
+function getProductImageRenditions(product, image) {
+  const entries = product?.imageRenditions?.[image];
+  if (!Array.isArray(entries)) return [];
+  return entries
+    .filter((entry) => entry?.url && Number.isInteger(Number(entry.width)) && Number(entry.width) > 0)
+    .sort((left, right) => Number(left.width) - Number(right.width));
+}
+
+function productImageSrcset(product, image) {
+  return getProductImageRenditions(product, image)
+    .map((entry) => `${withProductImageVersion(entry.url)} ${Number(entry.width)}w`)
+    .join(", ");
+}
+
+function productImageDimensions(product, image) {
+  const entries = getProductImageRenditions(product, image);
+  return [...entries].reverse().find((entry) => Number(entry.height) > 0) || null;
+}
+
+function productZoomImageSource(product, image, index) {
+  if (product?.imageVariant === "cropped") return withProductImageVersion(image);
+  const original = Array.isArray(product?.originalImages) ? product.originalImages[index] : "";
+  if (original) return withProductImageVersion(original);
+  if (/^assets\/products\/.+\.webp(?:\?.*)?$/i.test(image)) {
+    return withProductImageVersion(image.replace(/\.webp(?=\?|$)/i, ".png"));
+  }
+  return withProductImageVersion(image);
+}
+
 function productPageUrl(product) {
   return `product.html?id=${encodeURIComponent(product.id)}`;
 }
 
 function createProductMediaMarkup(product, detail = false) {
   const gallery = getProductGallery(product);
-  const imagePreset = detail ? "detail" : "card";
 
   if (gallery.length === 0) {
     return `
@@ -1477,23 +1445,38 @@ function createProductMediaMarkup(product, detail = false) {
     `;
   }
 
-  const slides = gallery.map((image, index) => `
-    <img
-      class="product-image product-gallery-slide${index === 0 ? " is-active" : ""}"
-      ${responsiveImageAttributes(image, imagePreset)}
-      alt="${escapeHtml(product.name)}${gallery.length > 1 ? ` - ${index + 1}` : ""}"
-      loading="${detail && index === 0 ? "eager" : "lazy"}"
-      decoding="async"
-      fetchpriority="${detail && index === 0 ? "high" : "auto"}"
-      data-gallery-slide
-      ${gallery.length > 1 ? "data-gallery-click" : ""}
-    >
-  `).join("");
+  const sizes = detail
+    ? "(max-width: 760px) calc(100vw - 32px), 52vw"
+    : "(max-width: 720px) calc(50vw - 20px), (max-width: 1100px) 31vw, 300px";
+  const initialIndex = 0;
+  const slides = gallery.map((image, index) => {
+    const source = withProductImageVersion(image);
+    const zoomSource = productZoomImageSource(product, image, index);
+    const srcset = productImageSrcset(product, image);
+    const dimensions = productImageDimensions(product, image);
+    const eager = detail && index === initialIndex;
+    return `
+      <img
+        class="product-image product-gallery-slide${index === initialIndex ? " is-active" : ""}"
+        ${eager ? `src="${escapeHtml(source)}"` : `data-src="${escapeHtml(source)}" data-product-image-deferred`}
+        ${srcset ? `${eager ? "srcset" : "data-srcset"}="${escapeHtml(srcset)}" sizes="${sizes}"` : ""}
+        ${dimensions ? `width="${Number(dimensions.width)}" height="${Number(dimensions.height)}"` : ""}
+        alt="${escapeHtml(product.name)}${gallery.length > 1 ? ` - ${index + 1}` : ""}"
+        loading="${eager ? "eager" : "lazy"}"
+        fetchpriority="${eager ? "high" : "low"}"
+        decoding="async"
+        data-gallery-slide
+        data-original-src="${escapeHtml(zoomSource)}"
+        data-fallback-src="${escapeHtml(source)}"
+        ${gallery.length > 1 ? "data-gallery-click" : ""}
+      >
+    `;
+  }).join("");
 
   return `
     ${slides}
     ${gallery.length > 1 ? `
-      <div class="product-gallery-dots" aria-label="${escapeHtml(product.name)}">${gallery.map((_, index) => `<button type="button" class="${index === 0 ? "is-active" : ""}" data-gallery-dot data-gallery-index="${index}" aria-label="${escapeHtml(product.name)} ${index + 1}" aria-pressed="${index === 0 ? "true" : "false"}"></button>`).join("")}</div>
+      <div class="product-gallery-dots" aria-label="${escapeHtml(product.name)}">${gallery.map((_, index) => `<button type="button" class="${index === initialIndex ? "is-active" : ""}" data-gallery-dot data-gallery-index="${index}" aria-label="${escapeHtml(product.name)} ${index + 1}" aria-pressed="${index === initialIndex ? "true" : "false"}"></button>`).join("")}</div>
     ` : ""}
   `;
 }
@@ -1512,13 +1495,46 @@ function createTryOnMarkup(product) {
   return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
+function createProductImageZoomMarkup() {
+  return `
+    <dialog class="product-image-zoom" data-product-zoom-dialog aria-label="${translate("zoom-open")}">
+      <div class="product-image-zoom-shell">
+        <button class="product-image-zoom-close" type="button" data-product-zoom-close aria-label="${translate("zoom-close")}" title="${translate("zoom-close")}"><i data-lucide="x"></i></button>
+        <div class="product-image-zoom-stage" data-product-zoom-stage>
+          <img data-product-zoom-image alt="" draggable="false">
+        </div>
+        <div class="product-image-zoom-controls">
+          <button type="button" data-product-zoom-out aria-label="${translate("zoom-out")}" title="${translate("zoom-out")}"><i data-lucide="zoom-out"></i></button>
+          <button type="button" data-product-zoom-reset aria-label="${translate("zoom-reset")}" title="${translate("zoom-reset")}"><i data-lucide="scan"></i></button>
+          <button type="button" data-product-zoom-in aria-label="${translate("zoom-in")}" title="${translate("zoom-in")}"><i data-lucide="zoom-in"></i></button>
+        </div>
+      </div>
+    </dialog>
+  `;
+}
+
+function ensureProductImageZoomDialog() {
+  let dialog = document.querySelector("[data-product-zoom-dialog]");
+  if (!dialog) {
+    document.body.insertAdjacentHTML("beforeend", createProductImageZoomMarkup());
+    dialog = document.querySelector("[data-product-zoom-dialog]");
+  }
+  if (dialog && !dialog.dataset.zoomBound) {
+    dialog.dataset.zoomBound = "true";
+    dialog.addEventListener("close", closeProductImageZoom);
+  }
+  if (window.lucide) window.lucide.createIcons();
+  return dialog;
+}
+
 function createProductCard(product) {
   return `
     <article class="product-card" data-product-card="${escapeHtml(product.id)}" data-product-url="${productPageUrl(product)}">
       <div class="product-media">
         ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
         ${createProductMediaMarkup(product)}
-        <a class="product-media-open" href="${productPageUrl(product)}" aria-label="${translate("open-product")}: ${escapeHtml(product.name)}"></a>
+        <button class="product-media-open" type="button" aria-label="${translate("gallery-next")}: ${escapeHtml(product.name)}"></button>
+        <button class="product-card-zoom-open" type="button" data-product-zoom-open aria-label="${translate("zoom-open")}: ${escapeHtml(product.name)}" title="${translate("zoom-open")}"><i data-lucide="zoom-in"></i></button>
       </div>
       <div class="product-body">
         <h4><a class="product-name-link" href="${productPageUrl(product)}">${escapeHtml(product.name)}</a></h4>
@@ -1563,7 +1579,14 @@ function getHomeFeaturedProducts() {
   const defaultFeatured = homeFeaturedProductNames
     .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
     .filter(Boolean);
-  return [...customProducts, ...defaultFeatured]
+  const seen = new Set();
+  return [...customProducts, ...defaultFeatured, ...allProducts]
+    .filter((product) => getProductGallery(product).length > 0)
+    .filter((product) => {
+      if (seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    })
     .slice(0, 10);
 }
 
@@ -1596,9 +1619,10 @@ function renderProductDetail() {
       <section class="product-detail-gallery" aria-label="${escapeHtml(product.name)}">
         ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
         ${createProductMediaMarkup(product, true)}
+        <button class="product-detail-zoom-open" type="button" data-product-zoom-open aria-label="${translate("zoom-open")}" title="${translate("zoom-open")}"><i data-lucide="zoom-in"></i></button>
       </section>
       <section class="product-detail-info">
-        <p class="product-detail-kicker">${escapeHtml(catalogCollectionLabel(product))} / ${escapeHtml(catalogCategoryLabel(product.category, getProductGender(product)))}</p>
+        <p class="product-detail-kicker">${escapeHtml(product.collection)} / ${escapeHtml(product.category)}</p>
         <h1>${escapeHtml(product.name)}</h1>
         <div class="product-prices product-detail-prices" aria-label="${translate("price")}">
           ${product.original ? `<span class="price-original">${escapeHtml(product.original)}</span>` : ""}
@@ -1617,7 +1641,11 @@ function renderProductDetail() {
         </div>
       </section>
     </article>
+    ${createProductImageZoomMarkup()}
   `;
+  ensureProductImageZoomDialog();
+  warmProductGallery(root.querySelector(".product-detail-gallery"));
+  observeProductImages(root);
   if (window.lucide) window.lucide.createIcons();
 }
 
@@ -1656,14 +1684,19 @@ function getProductGender(product) {
 const catalogBrandNames = ["Alexander McQueen", "Polo Ralph Lauren", "Louis Vuitton", "Stone Island", "Emporio Armani", "Palm Angels", "Balenciaga", "Givenchy", "Moschino", "Dsquared", "Off-White", "Hermes", "Fendi", "Chanel", "Gucci", "Moncler", "Nike", "Nocta", "EA7", "Air Jordan"];
 
 function getProductBrand(product) {
+  const explicitBrand = String(product.brand || "").trim();
+  if (explicitBrand) return explicitBrand;
   const name = String(product.name || "");
   return catalogBrandNames.find((brand) => name.toLowerCase().includes(brand.toLowerCase())) || name.split(/\s+/).slice(-1)[0] || "Haller Boutique";
 }
 
 function productPreviewMarkup(product, className = "catalog-preview-media") {
   const image = product && productPrimaryImage(product);
+  const source = image && withProductImageVersion(image);
+  const srcset = image && productImageSrcset(product, image);
+  const dimensions = image && productImageDimensions(product, image);
   return image
-    ? `<span class="${className}"><img ${responsiveImageAttributes(image, "preview")} alt="" loading="lazy" decoding="async"></span>`
+    ? `<span class="${className}"><img data-src="${escapeHtml(source)}" data-fallback-src="${escapeHtml(source)}" ${srcset ? `data-srcset="${escapeHtml(srcset)}" sizes="96px"` : ""} ${dimensions ? `width="${Number(dimensions.width)}" height="${Number(dimensions.height)}"` : ""} data-product-image-deferred alt="" loading="lazy" fetchpriority="low" decoding="async"></span>`
     : `<span class="${className} catalog-preview-empty"><i data-lucide="image"></i></span>`;
 }
 
@@ -1704,28 +1737,17 @@ function renderCatalogNavigation() {
     const panel = document.querySelector(`[data-catalog-nav-panel="${gender}"]`);
     if (!panel) return;
     const categories = getCategoriesForGender(gender);
+    const configuredOrder = catalogMenuColumns[gender]?.flat() || [];
+    const orderedCategories = [
+      ...configuredOrder.filter((category) => categories.includes(category)),
+      ...categories.filter((category) => !configuredOrder.includes(category)),
+    ];
     const renderCategoryButton = (category) => {
-      const products = getCategoryProducts(gender, category);
-      const product = products.find((entry) => productPrimaryImage(entry)) || products[0];
-      const label = catalogCategoryLabel(category, gender);
-      return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}">${productPreviewMarkup(product, "catalog-nav-preview")}<span>${escapeHtml(label)}</span></button>`;
+      const label = translateCatalogCategory(category);
+      return `<button type="button" data-catalog-filter data-catalog-gender="${gender}" data-catalog-category="${escapeHtml(category)}"><span>${escapeHtml(label)}</span></button>`;
     };
-    const configuredColumns = catalogMenuColumns[gender];
-    let categoryMarkup;
-    if (configuredColumns) {
-      const columns = configuredColumns.map((column) => column.filter((category) => categories.includes(category)));
-      const configuredCategories = new Set(configuredColumns.flat());
-      categories.filter((category) => !configuredCategories.has(category)).forEach((category) => {
-        const shortestColumn = columns.reduce((shortest, column) => column.length < shortest.length ? column : shortest, columns[0]);
-        shortestColumn.push(category);
-      });
-      categoryMarkup = columns.map((column) => `<div class="catalog-nav-category-column">${column.map(renderCategoryButton).join("")}</div>`).join("");
-    } else {
-      categoryMarkup = categories.map(renderCategoryButton).join("");
-    }
     panel.innerHTML = `
-      <p>${translate("catalog-choose-category")}</p>
-      <div class="catalog-nav-category-grid${configuredColumns ? " has-fixed-columns" : ""}">${categoryMarkup}</div>
+      <div class="catalog-nav-category-grid">${orderedCategories.map(renderCategoryButton).join("")}</div>
     `;
   });
 }
@@ -1747,6 +1769,7 @@ function renderCatalog() {
 
   if (!catalogState.gender && catalogState.productIds.length === 0) {
     catalogRoot.innerHTML = `<section class="catalog-featured"><div class="product-grid product-grid-featured">${getHomeFeaturedProducts().map(createProductCard).join("")}</div></section>`;
+    observeProductImages(catalogRoot);
     refreshScrollReveals(catalogRoot);
     if (window.lucide) window.lucide.createIcons();
     return;
@@ -1767,12 +1790,13 @@ function renderCatalog() {
 
   catalogRoot.innerHTML = `
     <section class="catalog-browse">
-      <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || (catalogState.category ? catalogCategoryLabel(catalogState.category, catalogState.gender) : translate("catalog-all-products")))}</h3></header>
+      <header class="catalog-browse-heading"><p>${escapeHtml(title)}</p><h3>${escapeHtml(catalogState.brand || (catalogState.category ? translateCatalogCategory(catalogState.category) : translate("catalog-all-products")))}</h3></header>
       ${brandTiles ? `<section class="catalog-picker"><h4>${translate("catalog-choose-brand")}</h4><div class="catalog-browse-tile-grid">${brandTiles}<button class="catalog-browse-tile catalog-browse-all" type="button" data-catalog-filter data-catalog-gender="${catalogState.gender}" data-catalog-category="${escapeHtml(catalogState.category)}"><span>${translate("catalog-all-brands")}</span></button></div></section>` : ""}
       <div class="catalog-results-heading" data-catalog-results><span>${translate("catalog-all-products")}</span>${catalogState.gender ? `<button type="button" data-catalog-reset>${translate("catalog-back")}</button>` : ""}</div>
       <div class="${productGridClass}">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
     </section>
   `;
+  observeProductImages(catalogRoot);
   refreshScrollReveals(catalogRoot);
   if (window.lucide) window.lucide.createIcons();
 }
@@ -1801,9 +1825,10 @@ function renderLastStockCatalog() {
   const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category);
     const brands = getBrands(categoryProducts);
-    return `<section class="last-stock-category"><h3>${escapeHtml(catalogCategoryLabel(category, lastStockGender))}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
+    return `<section class="last-stock-category"><h3>${escapeHtml(translateCatalogCategory(category))}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
   }).join("")}</section>` : `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
   root.innerHTML = chooser + section;
+  observeProductImages(root);
   refreshScrollReveals(root);
   if (window.lucide) window.lucide.createIcons();
 }
@@ -1846,15 +1871,107 @@ function renderCatalogSearchResults(query = "") {
     ? getAllProducts().filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();
   root.innerHTML = products.length
-    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(catalogCategoryLabel(product.category, getProductGender(product)))} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
+    ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(translateCatalogCategory(product.category))} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
     : `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`;
+  observeProductImages(root);
   if (window.lucide) window.lucide.createIcons();
+}
+
+function loadDeferredProductImage(image, priority = "low") {
+  if (!(image instanceof HTMLImageElement) || !image.dataset.src) return;
+  bindProductImageFallback(image);
+  if (image.matches("[data-gallery-slide].is-active")) {
+    image.addEventListener("load", () => {
+      const gallery = image.closest(".product-media, .product-detail-gallery");
+      if (gallery) warmProductGallery(gallery);
+    }, { once: true });
+  }
+  if (image.dataset.srcset) {
+    image.srcset = image.dataset.srcset;
+    delete image.dataset.srcset;
+  }
+  image.fetchPriority = priority;
+  image.src = image.dataset.src;
+  delete image.dataset.src;
+  image.removeAttribute("data-product-image-deferred");
+}
+
+function bindProductImageFallback(image) {
+  if (!(image instanceof HTMLImageElement) || image.dataset.fallbackBound === "true") return;
+  image.dataset.fallbackBound = "true";
+  const media = image.closest(".product-media, .product-detail-gallery");
+  const clearMissingState = () => {
+    image.classList.remove("is-unavailable");
+    if (!image.matches("[data-gallery-slide].is-active, :not([data-gallery-slide])")) return;
+    media?.querySelector("[data-image-error-placeholder]")?.remove();
+  };
+  const showMissingState = () => {
+    image.classList.add("is-unavailable");
+    if (!media || media.querySelector("[data-image-error-placeholder]")) return;
+    const placeholder = document.createElement("div");
+    placeholder.className = "image-placeholder";
+    placeholder.dataset.imageErrorPlaceholder = "true";
+    const label = document.createElement("span");
+    label.textContent = translate("image-placeholder");
+    placeholder.append(label);
+    media.append(placeholder);
+  };
+  const handleError = () => {
+    const fallback = image.dataset.fallbackSrc;
+    const hasResponsiveSource = Boolean(image.getAttribute("srcset") || image.dataset.srcset);
+    if (fallback && hasResponsiveSource && image.dataset.fallbackAttempted !== "true") {
+      image.dataset.fallbackAttempted = "true";
+      image.removeAttribute("srcset");
+      delete image.dataset.srcset;
+      image.src = fallback;
+      return;
+    }
+    showMissingState();
+  };
+  image.addEventListener("load", clearMissingState);
+  image.addEventListener("error", handleError);
+  if (image.complete && image.currentSrc && image.naturalWidth === 0) handleError();
+}
+
+function observeProductImages(root = document) {
+  root.querySelectorAll("img[data-fallback-src]").forEach(bindProductImageFallback);
+  const selector = "img[data-product-image-deferred]:not([data-gallery-slide]), img[data-product-image-deferred][data-gallery-slide].is-active";
+  const images = [...root.querySelectorAll(selector)];
+  if (!images.length) return;
+  if (!("IntersectionObserver" in window)) {
+    images.forEach((image) => loadDeferredProductImage(image));
+    return;
+  }
+  if (!productImageObserver) {
+    productImageObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        const bounds = entry.target.getBoundingClientRect();
+        const isVisibleNow = bounds.bottom > 0 && bounds.top < window.innerHeight;
+        const priority = !prioritizedProductImage && isVisibleNow ? "high" : "low";
+        if (priority === "high") prioritizedProductImage = true;
+        loadDeferredProductImage(entry.target, priority);
+        productImageObserver.unobserve(entry.target);
+      });
+    }, { rootMargin: "500px 0px", threshold: 0.01 });
+  }
+  images.forEach((image) => productImageObserver.observe(image));
+}
+
+function warmProductGallery(gallery) {
+  if (!(gallery instanceof Element)) return;
+  const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
+  if (slides.length < 2) return;
+  const currentIndex = Math.max(0, slides.findIndex((slide) => slide.classList.contains("is-active")));
+  const nextIndex = (currentIndex + 1) % slides.length;
+  loadDeferredProductImage(slides[nextIndex]);
 }
 
 function setProductGalleryIndex(gallery, nextIndex) {
   const slides = [...gallery.querySelectorAll("[data-gallery-slide]")];
   if (slides.length < 2) return;
   if (!Number.isInteger(nextIndex) || nextIndex < 0 || nextIndex >= slides.length) return;
+  loadDeferredProductImage(slides[nextIndex], "high");
   slides.forEach((slide, index) => slide.classList.toggle("is-active", index === nextIndex));
   gallery.querySelectorAll("[data-gallery-dot]").forEach((dot, index) => {
     dot.classList.toggle("is-active", index === nextIndex);
@@ -1875,6 +1992,210 @@ function stepProductGallery(gallery, direction) {
   setProductGalleryIndex(gallery, (currentIndex + direction + slides.length) % slides.length);
 }
 
+function usesTouchProductImageZoom() {
+  return window.matchMedia("(max-width: 767px), (hover: none) and (pointer: coarse)").matches;
+}
+
+function productImageZoomTouchCenter(touches) {
+  const first = touches[0];
+  const second = touches[1] || first;
+  return {
+    x: (first.clientX + second.clientX) / 2,
+    y: (first.clientY + second.clientY) / 2,
+  };
+}
+
+function productImageZoomTouchDistance(touches) {
+  if (touches.length < 2) return 0;
+  return Math.hypot(
+    touches[0].clientX - touches[1].clientX,
+    touches[0].clientY - touches[1].clientY
+  );
+}
+
+function renderProductImageZoom({ center = false } = {}) {
+  const dialog = document.querySelector("[data-product-zoom-dialog]");
+  const stage = dialog?.querySelector("[data-product-zoom-stage]");
+  const image = dialog?.querySelector("[data-product-zoom-image]");
+  if (!dialog?.open || !stage || !image?.naturalWidth || !image.naturalHeight) return;
+  const stageStyle = usesTouchProductImageZoom() ? window.getComputedStyle(stage) : null;
+  const horizontalInset = stageStyle
+    ? Number.parseFloat(stageStyle.paddingLeft) + Number.parseFloat(stageStyle.paddingRight) + 16
+    : 32;
+  const verticalInset = stageStyle
+    ? Number.parseFloat(stageStyle.paddingTop) + Number.parseFloat(stageStyle.paddingBottom) + 16
+    : 32;
+  const fit = Math.min(
+    Math.max(1, stage.clientWidth - horizontalInset) / image.naturalWidth,
+    Math.max(1, stage.clientHeight - verticalInset) / image.naturalHeight,
+    1
+  );
+  const maxZoom = Math.max(1, 1 / fit);
+  productImageZoomScale = Math.max(1, Math.min(maxZoom, productImageZoomScale));
+  const renderedScale = Math.min(1, fit * productImageZoomScale);
+  image.style.width = `${Math.round(image.naturalWidth * renderedScale)}px`;
+  image.style.height = `${Math.round(image.naturalHeight * renderedScale)}px`;
+  image.dataset.zoomReady = "true";
+  if (center) {
+    window.requestAnimationFrame(() => {
+      stage.scrollLeft = Math.max(0, (stage.scrollWidth - stage.clientWidth) / 2);
+      stage.scrollTop = Math.max(0, (stage.scrollHeight - stage.clientHeight) / 2);
+    });
+  }
+}
+
+function openProductImageZoom(control) {
+  const gallery = control.closest(".product-detail-gallery, .product-media");
+  const activeImage = gallery?.querySelector("[data-gallery-slide].is-active");
+  const dialog = ensureProductImageZoomDialog();
+  const stage = dialog?.querySelector("[data-product-zoom-stage]");
+  const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
+  const source = activeImage?.dataset.originalSrc;
+  const previewSource = activeImage?.currentSrc || activeImage?.src || source;
+  if (!source || !previewSource || !dialog || !stage || !zoomImage) return;
+  const loadToken = ++productImageZoomLoadToken;
+  productImageZoomScale = 1;
+  productImageZoomGesture = null;
+  stage.scrollLeft = 0;
+  stage.scrollTop = 0;
+  zoomImage.alt = activeImage.alt || "";
+  zoomImage.removeAttribute("data-zoom-ready");
+  zoomImage.style.removeProperty("width");
+  zoomImage.style.removeProperty("height");
+  zoomImage.onload = () => renderProductImageZoom({ center: true });
+  if (!dialog.open) dialog.showModal();
+  document.body.classList.add("is-product-zoom-open");
+  zoomImage.src = previewSource;
+  if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center: true });
+  if (source !== previewSource) {
+    const highResolutionImage = new Image();
+    productImageZoomHighResolutionImage = highResolutionImage;
+    highResolutionImage.decoding = "async";
+    highResolutionImage.onload = () => {
+      if (loadToken !== productImageZoomLoadToken || !dialog.open) return;
+      zoomImage.src = source;
+      productImageZoomHighResolutionImage = null;
+      if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center: true });
+    };
+    highResolutionImage.onerror = () => {
+      if (productImageZoomHighResolutionImage === highResolutionImage) productImageZoomHighResolutionImage = null;
+    };
+    highResolutionImage.src = source;
+  }
+}
+
+function adjustProductImageZoom(multiplier) {
+  productImageZoomScale = multiplier === 0 ? 1 : productImageZoomScale * multiplier;
+  renderProductImageZoom({ center: true });
+}
+
+function closeProductImageZoom() {
+  const dialog = document.querySelector("[data-product-zoom-dialog]");
+  const image = dialog?.querySelector("[data-product-zoom-image]");
+  document.body.classList.remove("is-product-zoom-open");
+  productImageZoomLoadToken += 1;
+  if (productImageZoomHighResolutionImage) {
+    productImageZoomHighResolutionImage.onload = null;
+    productImageZoomHighResolutionImage.onerror = null;
+    productImageZoomHighResolutionImage.src = "";
+    productImageZoomHighResolutionImage = null;
+  }
+  productImageZoomScale = 1;
+  productImageZoomGesture = null;
+  if (image) {
+    image.onload = null;
+    image.removeAttribute("src");
+    image.removeAttribute("data-zoom-ready");
+    image.style.removeProperty("width");
+    image.style.removeProperty("height");
+  }
+}
+
+function startProductImageZoomTouch(event) {
+  if (!(event.target instanceof Element)) return;
+  const stage = event.target.closest("[data-product-zoom-stage]");
+  const image = stage?.querySelector("[data-product-zoom-image]");
+  if (!stage || !image?.naturalWidth || !stage.closest("[data-product-zoom-dialog]")?.open) return;
+
+  if (event.touches.length >= 2) {
+    event.preventDefault();
+    const center = productImageZoomTouchCenter(event.touches);
+    const imageBounds = image.getBoundingClientRect();
+    productImageZoomGesture = {
+      type: "pinch",
+      stage,
+      image,
+      distance: Math.max(1, productImageZoomTouchDistance(event.touches)),
+      scale: productImageZoomScale,
+      imageX: imageBounds.width ? (center.x - imageBounds.left) / imageBounds.width : 0.5,
+      imageY: imageBounds.height ? (center.y - imageBounds.top) / imageBounds.height : 0.5,
+    };
+    return;
+  }
+
+  const touch = event.touches[0];
+  if (!touch) return;
+  productImageZoomGesture = {
+    type: "pan",
+    stage,
+    x: touch.clientX,
+    y: touch.clientY,
+    scrollLeft: stage.scrollLeft,
+    scrollTop: stage.scrollTop,
+  };
+}
+
+function moveProductImageZoomTouch(event) {
+  const gesture = productImageZoomGesture;
+  if (!gesture) return;
+
+  if (event.touches.length >= 2 && gesture.type === "pinch") {
+    event.preventDefault();
+    const center = productImageZoomTouchCenter(event.touches);
+    productImageZoomScale = gesture.scale
+      * productImageZoomTouchDistance(event.touches)
+      / gesture.distance;
+    renderProductImageZoom();
+
+    if (productImageZoomScale <= 1) {
+      renderProductImageZoom({ center: true });
+      return;
+    }
+
+    const imageBounds = gesture.image.getBoundingClientRect();
+    gesture.stage.scrollLeft += imageBounds.left + gesture.imageX * imageBounds.width - center.x;
+    gesture.stage.scrollTop += imageBounds.top + gesture.imageY * imageBounds.height - center.y;
+    return;
+  }
+
+  if (event.touches.length === 1 && gesture.type === "pan" && productImageZoomScale > 1) {
+    event.preventDefault();
+    const touch = event.touches[0];
+    gesture.stage.scrollLeft = gesture.scrollLeft + gesture.x - touch.clientX;
+    gesture.stage.scrollTop = gesture.scrollTop + gesture.y - touch.clientY;
+  }
+}
+
+function finishProductImageZoomTouch(event) {
+  const gesture = productImageZoomGesture;
+  if (!gesture) return;
+  if (event.touches.length === 1 && productImageZoomScale > 1) {
+    const touch = event.touches[0];
+    productImageZoomGesture = {
+      type: "pan",
+      stage: gesture.stage,
+      x: touch.clientX,
+      y: touch.clientY,
+      scrollLeft: gesture.stage.scrollLeft,
+      scrollTop: gesture.stage.scrollTop,
+    };
+    return;
+  }
+  productImageZoomGesture = null;
+}
+
+window.addEventListener("resize", () => renderProductImageZoom());
+
 function productGalleryFromSwipeTarget(target) {
   if (!(target instanceof Element) || target.closest("[data-gallery-dot]")) return null;
   const surface = target.closest("[data-gallery-click], .product-media-open");
@@ -1890,9 +2211,10 @@ function clearProductGallerySwipe() {
 }
 
 function startProductGallerySwipe(event) {
-  if (event.pointerType !== "touch" || event.isPrimary === false) return;
+  if (event.isPrimary === false || (event.pointerType === "mouse" && event.button !== 0)) return;
   const gallery = productGalleryFromSwipeTarget(event.target);
   if (!gallery) return;
+  warmProductGallery(gallery);
   clearProductGallerySwipe();
   productGallerySwipe = {
     gallery,
@@ -1989,7 +2311,12 @@ function createClickRipple(event) {
   if (!siteMotionEnabled) return;
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
   const target = event.target.closest("button, a");
-  if (!target || target.closest(".language-menu")) return;
+  if (
+    !target
+    || target.closest(".language-menu")
+    || target.matches(".product-media-open")
+    || target.closest("[data-product-zoom-open], [data-product-zoom-dialog]")
+  ) return;
 
   const bounds = target.getBoundingClientRect();
   if (bounds.width === 0 || bounds.height === 0) return;
@@ -2592,7 +2919,7 @@ function renderBundleTryOn() {
       <article class="bundle-tryon-product">
         <span class="bundle-tryon-number">${index + 1}</span>
         ${item.image
-          ? `<img ${responsiveImageAttributes(item.image, "thumb")} alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">`
+          ? `<img src="${escapeHtml(withProductImageVersion(item.image))}" alt="${escapeHtml(item.name)}" loading="lazy" decoding="async">`
           : `<span class="bundle-tryon-product-placeholder"><i data-lucide="image-off"></i></span>`}
         <strong>${escapeHtml(item.name)}</strong>
       </article>
@@ -2795,7 +3122,7 @@ function renderCheckoutProductSummary() {
     const image = getCheckoutItemImage(item);
     const size = String(item.size || "").trim();
     const imageMarkup = image
-      ? `<img ${responsiveImageAttributes(image, "thumb")} alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
+      ? `<img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
       : `<span class="checkout-summary-product-placeholder"><i data-lucide="image"></i></span>`;
     return `
       <article class="checkout-summary-product">
@@ -3179,6 +3506,10 @@ document.addEventListener("pointerdown", startProductGallerySwipe);
 document.addEventListener("pointermove", moveProductGallerySwipe, { passive: false });
 document.addEventListener("pointerup", finishProductGallerySwipe);
 document.addEventListener("pointercancel", clearProductGallerySwipe);
+document.addEventListener("touchstart", startProductImageZoomTouch, { passive: false });
+document.addEventListener("touchmove", moveProductImageZoomTouch, { passive: false });
+document.addEventListener("touchend", finishProductImageZoomTouch);
+document.addEventListener("touchcancel", finishProductImageZoomTouch);
 
 document.addEventListener("click", (event) => {
   const searchButton = event.target.closest(".search-button");
@@ -3195,7 +3526,33 @@ document.addEventListener("click", (event) => {
   const lastStockButton = event.target.closest("[data-last-stock-gender]");
   const galleryDot = event.target.closest("[data-gallery-dot]");
   const gallerySurfaceClick = event.target.closest("[data-gallery-click], .product-media-open");
+  const zoomOpen = event.target.closest("[data-product-zoom-open]");
+  const zoomDialog = event.target.closest("[data-product-zoom-dialog]");
+  const zoomClose = event.target.closest("[data-product-zoom-close]");
+  const zoomIn = event.target.closest("[data-product-zoom-in]");
+  const zoomOut = event.target.closest("[data-product-zoom-out]");
+  const zoomReset = event.target.closest("[data-product-zoom-reset]");
   const productCard = event.target.closest("[data-product-url]");
+
+  if (zoomOpen) {
+    const gallery = zoomOpen.closest(".product-media, .product-detail-gallery");
+    if ((galleryClickSuppression.get(gallery) || 0) > Date.now()) {
+      event.preventDefault();
+      return;
+    }
+    openProductImageZoom(zoomOpen);
+    return;
+  }
+
+  if (zoomClose || (zoomDialog && event.target === zoomDialog)) {
+    zoomDialog?.close();
+    return;
+  }
+
+  if (zoomIn || zoomOut || zoomReset) {
+    adjustProductImageZoom(zoomReset ? 0 : zoomIn ? 1.5 : 1 / 1.5);
+    return;
+  }
 
   if (galleryDot) {
     event.preventDefault();
@@ -3321,88 +3678,6 @@ if (discountButton && discountInput && discountMessage) {
 setupCheckoutPayments();
 setupBundleTryOn();
 
-const demoPurchaseProfiles = {
-  it: [{ name: "Giulia", city: "Milano" }, { name: "Marco", city: "Roma" }, { name: "Sofia", city: "Torino" }, { name: "Luca", city: "Bologna" }],
-  en: [{ name: "Emily", city: "London" }, { name: "James", city: "Manchester" }, { name: "Olivia", city: "Bristol" }],
-  fr: [{ name: "Camille", city: "Paris" }, { name: "Louis", city: "Lyon" }, { name: "Lea", city: "Nice" }],
-  de: [{ name: "Mia", city: "Berlin" }, { name: "Jonas", city: "Munchen" }, { name: "Emma", city: "Hamburg" }],
-  es: [{ name: "Lucia", city: "Madrid" }, { name: "Hugo", city: "Barcelona" }, { name: "Marta", city: "Valencia" }],
-  ro: [{ name: "Andreea", city: "Bucuresti" }, { name: "Mihai", city: "Cluj" }, { name: "Elena", city: "Timisoara" }],
-  sq: [{ name: "Elira", city: "Tirane" }, { name: "Ardit", city: "Durres" }, { name: "Era", city: "Vlore" }],
-};
-
-function setupPurchaseNotifications() {
-  if (isReplayView || document.querySelector("[data-purchase-notification]")) return;
-
-  document.body.insertAdjacentHTML(
-    "beforeend",
-    `<aside class="purchase-notification" data-purchase-notification aria-live="polite" aria-atomic="true" hidden></aside>`
-  );
-
-  const root = document.querySelector("[data-purchase-notification]");
-  let notificationIndex = 0;
-  let hideTimer = 0;
-  let nextTimer = 0;
-
-  const hideNotification = () => {
-    window.clearTimeout(hideTimer);
-    root.classList.remove("is-visible");
-    window.setTimeout(() => {
-      if (!root.classList.contains("is-visible")) root.hidden = true;
-    }, 320);
-  };
-
-  const showNotification = () => {
-    const products = getAllProducts().filter((product) => productPrimaryImage(product));
-    if (products.length === 0) return;
-    const profiles = demoPurchaseProfiles[siteLanguage] || demoPurchaseProfiles.it;
-    const product = products[notificationIndex % products.length];
-    const profile = profiles[notificationIndex % profiles.length];
-    const purchaseCopy = translate("purchase-copy")
-      .replace("{name}", profile.name)
-      .replace("{city}", profile.city);
-    const image = productPrimaryImage(product);
-    notificationIndex += 1;
-
-    root.innerHTML = `
-      <a class="purchase-notification-media" href="${escapeHtml(productPageUrl(product))}" aria-label="${escapeHtml(product.name)}">
-        <img ${responsiveImageAttributes(image, "thumb")} alt="${escapeHtml(product.name)}" loading="eager" decoding="async">
-      </a>
-      <div class="purchase-notification-copy">
-        <span class="purchase-notification-label"><i data-lucide="radio" aria-hidden="true"></i>${escapeHtml(translate("purchase-demo"))}</span>
-        <p>${escapeHtml(purchaseCopy)}</p>
-        <a href="${escapeHtml(productPageUrl(product))}">${escapeHtml(product.name)}</a>
-        <small>${escapeHtml(translate("purchase-time"))}</small>
-      </div>
-      <button type="button" data-purchase-notification-close aria-label="${escapeHtml(translate("purchase-close"))}"><i data-lucide="x" aria-hidden="true"></i></button>
-    `;
-    root.hidden = false;
-    window.requestAnimationFrame(() => root.classList.add("is-visible"));
-    root.querySelector("[data-purchase-notification-close]")?.addEventListener("click", hideNotification);
-    if (window.lucide) window.lucide.createIcons();
-    hideTimer = window.setTimeout(hideNotification, 8000);
-  };
-
-  const scheduleNext = () => {
-    nextTimer = window.setTimeout(() => {
-      showNotification();
-      scheduleNext();
-    }, 180000);
-  };
-
-  window.setTimeout(() => {
-    showNotification();
-    scheduleNext();
-  }, 3000);
-
-  window.addEventListener("pagehide", () => {
-    window.clearTimeout(hideTimer);
-    window.clearTimeout(nextTimer);
-  }, { once: true });
-}
-
-setupPurchaseNotifications();
-
 const chatProfileKey = "hallerBoutiqueChatProfile";
 let chatHistory = [];
 
@@ -3437,13 +3712,13 @@ function setupSiteChat() {
     `
       <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique" data-i18n-aria-label="chat-label">
         <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale" data-i18n-aria-label="chat-open">
-          <img src="assets/chat-assistant-avatar.png?v=bunny-responsive-1&width=160&quality=84&format=auto" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+          <img src="assets/chat-assistant-avatar.webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
           <span class="site-chat-online-copy"><strong>Aurora</strong><small data-i18n="chat-online">Online</small></span>
           <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="assets/chat-assistant-avatar.png?v=bunny-responsive-1&width=160&quality=84&format=auto" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+            <img src="assets/chat-assistant-avatar.webp" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
             <div><strong>Aurora</strong><span data-i18n="chat-status">Assistente online</span></div>
             <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale" data-i18n-aria-label="chat-close"><i data-lucide="x"></i></button>
           </header>

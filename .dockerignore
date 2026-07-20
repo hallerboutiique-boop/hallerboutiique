@@ -1,8 +1,5 @@
-.git
-.github
-.DS_Store
 node_modules
-dist
-work
-outputs
+.git
+fly.toml
+npm-debug.log
 data
