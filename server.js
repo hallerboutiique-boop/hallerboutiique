@@ -1561,7 +1561,7 @@ async function analyzeProductImageWithAi(dataUrl) {
     "Se la marca e il suo sito ufficiale non sono verificabili, non usare fonti di terze parti: crea un titolo e una descrizione generici basati solo su ciò che è visibile nell'immagine e lascia sources vuoto.",
     "Non inventare marchi o modelli non riconoscibili: se non sei sicuro, usa un nome generico premium.",
     "Scegli collection tra Catalogo Uomo, Catalogo Donna o Selezione Haller Boutique.",
-    "Scegli category in italiano, ad esempio Sneakers Uomo, Sneakers Donna, Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo, Accessori.",
+    "Scegli category in italiano. Per tutte le scarpe usa esattamente Scarpe, senza aggiungere Uomo o Donna; per gli altri prodotti usa ad esempio Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo o Accessori.",
     "Per sizes restituisci solo le taglie ufficialmente previste per il modello quando sono verificabili sul sito della marca; altrimenti restituisci un array vuoto.",
     "Per original, finalPrice e discount restituisci sempre stringhe vuote: i prezzi vengono inseriti manualmente dall'admin.",
   ].join(" ");
