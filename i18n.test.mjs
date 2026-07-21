@@ -178,12 +178,13 @@ test("try-on supports clothing, shoes and bags", async () => {
   assert.match(server, /Do not omit, replace, redesign, duplicate or invent any item/);
 });
 
-test("bundle try-on sends untouched customer and product image files separately", async () => {
+test("bundle try-on keeps the customer original and normalizes separate product images", async () => {
   const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadOriginalBundleProductImage\)\)/);
   assert.doesNotMatch(script, /bundle-try-on-reference\.png/);
   assert.match(server, /appendImageFormData\(form, "image\[\]", userImage\)/);
   assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image\[\]", image\)\)/);
+  assert.match(server, /normalizeTryOnProductImage\(productImage, index\)/);
   assert.match(server, /Input image 1 is the customer's original, unmodified photo/);
   assert.match(server, /Use each original product photo as the authoritative visual reference/);
   assert.match(server, /bundleItems\.length > 0 \? "1024x1536" : "1024x1024"/);
