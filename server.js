@@ -4,6 +4,7 @@ import http from "node:http";
 import { isIP } from "node:net";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createWhatsAppOrderNotifier } from "./whatsapp.js";
 import {
   DeleteObjectsCommand,
   GetObjectCommand,
@@ -37,6 +38,14 @@ const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
+const whatsappOrderNotifier = createWhatsAppOrderNotifier({
+  accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
+  phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+  recipient: process.env.WHATSAPP_ORDER_RECIPIENT || "393512757160",
+  apiVersion: process.env.WHATSAPP_GRAPH_API_VERSION || "v25.0",
+  templateName: process.env.WHATSAPP_ORDER_TEMPLATE,
+  templateLanguage: process.env.WHATSAPP_ORDER_TEMPLATE_LANGUAGE || "it",
+});
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
@@ -61,6 +70,8 @@ let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
 let productZoomImageOptimizationJob = null;
 let productMutationQueue = Promise.resolve();
+let orderMutationQueue = Promise.resolve();
+let whatsappNotificationQueueRunning = false;
 let productImageOptimizationStatus = {
   state: "idle",
   total: 0,
@@ -84,6 +95,12 @@ const geoCache = new Map();
 function enqueueProductMutation(mutation) {
   const result = productMutationQueue.then(mutation, mutation);
   productMutationQueue = result.catch(() => {});
+  return result;
+}
+
+function enqueueOrderMutation(mutation) {
+  const result = orderMutationQueue.then(mutation, mutation);
+  orderMutationQueue = result.catch(() => {});
   return result;
 }
 
@@ -2794,6 +2811,100 @@ async function reduceProductInventory(products) {
   if (changed) await writeProductOverrides(overrides);
 }
 
+const whatsappRetryDelaysMs = [
+  60 * 1000,
+  5 * 60 * 1000,
+  15 * 60 * 1000,
+  60 * 60 * 1000,
+  6 * 60 * 60 * 1000,
+];
+
+function whatsappRetryAt(attempts) {
+  const delayIndex = Math.min(Math.max(0, attempts - 1), whatsappRetryDelaysMs.length - 1);
+  return new Date(Date.now() + whatsappRetryDelaysMs[delayIndex]).toISOString();
+}
+
+async function claimWhatsAppOrderNotification() {
+  if (!whatsappOrderNotifier.configured) return null;
+
+  return enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    const now = new Date();
+    const order = orders.find((item) => {
+      const notification = item.whatsappNotification;
+      if (!notification || notification.status === "sent") return false;
+      if (notification.status === "sending") {
+        return !notification.leaseUntil || new Date(notification.leaseUntil).getTime() <= now.getTime();
+      }
+      return !notification.nextAttemptAt || new Date(notification.nextAttemptAt).getTime() <= now.getTime();
+    });
+    if (!order) return null;
+
+    const attempts = Number(order.whatsappNotification?.attempts || 0) + 1;
+    order.whatsappNotification = {
+      ...order.whatsappNotification,
+      status: "sending",
+      recipient: whatsappOrderNotifier.recipient,
+      attempts,
+      lastAttemptAt: now.toISOString(),
+      leaseUntil: new Date(now.getTime() + 2 * 60 * 1000).toISOString(),
+    };
+    await writeOrders(orders);
+    return structuredClone(order);
+  });
+}
+
+async function finishWhatsAppOrderNotification(orderId, result, error) {
+  await enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    const order = orders.find((item) => item.id === orderId);
+    if (!order?.whatsappNotification || order.whatsappNotification.status === "sent") return;
+
+    const attempts = Number(order.whatsappNotification.attempts || 1);
+    if (error) {
+      order.whatsappNotification = {
+        ...order.whatsappNotification,
+        status: "failed",
+        nextAttemptAt: whatsappRetryAt(attempts),
+        lastError: cleanTrackingString(error.message || error, 300),
+      };
+    } else {
+      order.whatsappNotification = {
+        ...order.whatsappNotification,
+        status: "sent",
+        sentAt: new Date().toISOString(),
+        messageId: cleanTrackingString(result?.messageId, 180),
+      };
+      delete order.whatsappNotification.nextAttemptAt;
+      delete order.whatsappNotification.lastError;
+    }
+    delete order.whatsappNotification.leaseUntil;
+    await writeOrders(orders);
+  });
+}
+
+async function processWhatsAppOrderNotifications() {
+  if (!whatsappOrderNotifier.configured || whatsappNotificationQueueRunning) return;
+  whatsappNotificationQueueRunning = true;
+
+  try {
+    for (let processed = 0; processed < 10; processed += 1) {
+      const order = await claimWhatsAppOrderNotification();
+      if (!order) break;
+
+      try {
+        const result = await whatsappOrderNotifier.send(order);
+        await finishWhatsAppOrderNotification(order.id, result);
+      } catch (error) {
+        console.error(`[whatsapp] Order notification failed for ${order.orderCode}: ${error.message}`);
+        await finishWhatsAppOrderNotification(order.id, null, error);
+      }
+    }
+  } finally {
+    whatsappNotificationQueueRunning = false;
+  }
+}
+
 async function handleCreateOrder(req, res) {
   const body = await parseBody(req);
   const now = new Date().toISOString();
@@ -2835,11 +2946,19 @@ async function handleCreateOrder(req, res) {
     preciseLocation,
     userAgent: ua,
     deviceInfo: clientInfo,
+    whatsappNotification: {
+      status: "pending",
+      recipient: whatsappOrderNotifier.recipient,
+      attempts: 0,
+      nextAttemptAt: now,
+    },
   };
 
-  const orders = await readOrders();
-  orders.push(order);
-  await writeOrders(orders.slice(-2000));
+  await enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    orders.push(order);
+    await writeOrders(orders.slice(-2000));
+  });
   await reduceProductInventory(products);
 
   await mutateAnalytics(async (analytics) => {
@@ -2862,6 +2981,11 @@ async function handleCreateOrder(req, res) {
   });
 
   json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total } });
+  setTimeout(() => {
+    processWhatsAppOrderNotifications().catch((error) => {
+      console.error(`[whatsapp] Notification queue failed: ${error.message}`);
+    });
+  }, 0);
 }
 
 function buildMetrics(users, analytics, orders) {
@@ -3268,6 +3392,23 @@ async function serveStatic(req, res, url) {
 
 await fs.mkdir(dataDir, { recursive: true });
 await ensureStorage();
+
+const whatsappNotificationInterval = setInterval(() => {
+  processWhatsAppOrderNotifications().catch((error) => {
+    console.error(`[whatsapp] Notification queue failed: ${error.message}`);
+  });
+}, 60 * 1000);
+whatsappNotificationInterval.unref();
+
+if (whatsappOrderNotifier.configured) {
+  setTimeout(() => {
+    processWhatsAppOrderNotifications().catch((error) => {
+      console.error(`[whatsapp] Notification queue failed: ${error.message}`);
+    });
+  }, 0);
+} else {
+  console.warn("[whatsapp] Order notifications pending: configure WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID.");
+}
 
 http
   .createServer(async (req, res) => {
