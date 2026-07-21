@@ -1,4 +1,4 @@
-name: One-time responsive image repair
+name: One-time infrastructure cleanup
 
 on:
   push:
@@ -6,71 +6,90 @@ on:
       - .github/workflows/one-time-responsive-repair.yml
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  repair:
+  cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Regenerate COMPLETO CASUAL responsive images
+      - name: Remove only temporary Fly resources and this workflow
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          GH_API_TOKEN: ${{ github.token }}
+          GH_REPOSITORY: ${{ github.repository }}
         run: |
           python3 - <<'PY'
           import json
           import os
-          import shlex
-          import sys
+          import time
+          import urllib.error
           import urllib.request
 
-          token = os.environ["FLY_API_TOKEN"]
-          javascript = r"""
-          (async () => {
-            const base = "http://127.0.0.1:8080/api/internal/product-image-optimization";
-            const started = await fetch(base + "?force=1&product=two-piece-set-gucci", { method: "POST" });
-            if (!started.ok) throw new Error("start " + started.status + ": " + await started.text());
-            console.log(await started.text());
-            for (let attempt = 0; attempt < 120; attempt += 1) {
-              await new Promise((resolve) => setTimeout(resolve, 3000));
-              const response = await fetch(base);
-              if (!response.ok) throw new Error("poll " + response.status + ": " + await response.text());
-              const status = await response.json();
-              console.log(JSON.stringify(status));
-              if (status.state !== "running") {
-                if (status.state !== "completed" || status.failed !== 0) process.exit(2);
-                if (status.total !== 5 || status.optimized !== 5) process.exit(3);
-                return;
-              }
-            }
-            throw new Error("responsive repair timed out");
-          })().catch((error) => {
-            console.error(error);
-            process.exit(1);
-          });
-          """
-          command = ["/bin/sh", "-lc", "node -e " + shlex.quote(javascript)]
-          payload = json.dumps({"command": command, "timeout": 600}).encode()
-          request = urllib.request.Request(
-              "https://api.machines.dev/v1/apps/hallerboutiique/machines/18590d2a679978/exec",
-              data=payload,
-              headers={
-                  "Authorization": "Bearer " + token,
-                  "Content-Type": "application/json",
-              },
-              method="POST",
-          )
-          try:
-              with urllib.request.urlopen(request, timeout=650) as response:
+          app = "hallerboutiique"
+          temporary_machine = "7849425c300638"
+          primary_machine = "18590d2a679978"
+          temporary_volume = "vol_rnz9kx25e1jmqj0r"
+          primary_volume = "vol_4y8edo8jg8q0o29r"
+          fly_base = f"https://api.machines.dev/v1/apps/{app}"
+          fly_headers = {
+              "Authorization": "Bearer " + os.environ["FLY_API_TOKEN"],
+              "Content-Type": "application/json",
+          }
+
+          def request_json(url, method="GET", headers=None, data=None):
+              payload = None if data is None else json.dumps(data).encode()
+              request = urllib.request.Request(url, data=payload, headers=headers or {}, method=method)
+              with urllib.request.urlopen(request, timeout=90) as response:
                   raw = response.read().decode("utf-8", "replace")
-          except Exception as error:
-              print(error, file=sys.stderr)
-              raise
-          print(raw)
-          try:
-              result = json.loads(raw)
-          except json.JSONDecodeError:
-              result = None
-          if isinstance(result, dict) and result.get("exit_code", 0) != 0:
-              raise SystemExit(result.get("exit_code", 1))
+                  return response.status, json.loads(raw) if raw else None
+
+          if temporary_machine == primary_machine or temporary_volume == primary_volume:
+              raise SystemExit("Refusing to target primary infrastructure")
+
+          _, machine = request_json(f"{fly_base}/machines/{temporary_machine}", headers=fly_headers)
+          if machine.get("id") != temporary_machine or machine.get("state") != "stopped":
+              raise SystemExit(f"Unexpected temporary machine state: {machine.get('id')} {machine.get('state')}")
+
+          _, volume = request_json(f"{fly_base}/volumes/{temporary_volume}", headers=fly_headers)
+          if volume.get("id") != temporary_volume:
+              raise SystemExit("Unexpected temporary volume")
+          attached = volume.get("attached_machine_id") or volume.get("attached_alloc_id")
+          if attached not in (None, "", temporary_machine):
+              raise SystemExit(f"Temporary volume is attached to unexpected machine: {attached}")
+
+          request_json(f"{fly_base}/machines/{temporary_machine}?force=true", method="DELETE", headers=fly_headers)
+          print("Temporary Fly machine removed.")
+
+          for attempt in range(20):
+              try:
+                  request_json(f"{fly_base}/volumes/{temporary_volume}", method="DELETE", headers=fly_headers)
+                  print("Temporary Fly volume removed.")
+                  break
+              except urllib.error.HTTPError as error:
+                  if error.code not in (409, 422) or attempt == 19:
+                      raise
+                  time.sleep(2)
+
+          repository = os.environ["GH_REPOSITORY"]
+          workflow_path = ".github/workflows/one-time-responsive-repair.yml"
+          github_base = f"https://api.github.com/repos/{repository}/contents/{workflow_path}"
+          github_headers = {
+              "Authorization": "Bearer " + os.environ["GH_API_TOKEN"],
+              "Accept": "application/vnd.github+json",
+              "X-GitHub-Api-Version": "2022-11-28",
+              "Content-Type": "application/json",
+          }
+          _, current_file = request_json(github_base + "?ref=main", headers=github_headers)
+          request_json(
+              github_base,
+              method="DELETE",
+              headers=github_headers,
+              data={
+                  "message": "Remove completed one-time maintenance workflow",
+                  "sha": current_file["sha"],
+                  "branch": "main",
+              },
+          )
+          print("Temporary GitHub workflow removed through the API.")
           PY
