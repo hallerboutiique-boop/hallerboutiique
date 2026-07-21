@@ -14,6 +14,18 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
+import QRCode from "qrcode";
+import {
+  ORDER_STATUS,
+  buildOrdersDashboard,
+  buildShippingLabel,
+  normalizePushSubscription,
+  publicMobileOrder,
+  renderShippingLabelHtml,
+  sendExpoPushNotifications,
+  shippingLabelQrPayload,
+  transitionOrder,
+} from "./mobile-admin.js";
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
 
 sharp.cache(false);
@@ -25,6 +37,7 @@ const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
 const usersFile = path.join(dataDir, "users.json");
 const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
+const pushSubscriptionsFile = path.join(dataDir, "push-subscriptions.json");
 const productsFile = path.join(dataDir, "products.json");
 const uploadsDir = path.join(dataDir, "uploads");
 const tryOnDir = path.join(dataDir, "try-on");
@@ -61,6 +74,9 @@ let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
 let productZoomImageOptimizationJob = null;
 let productMutationQueue = Promise.resolve();
+let orderMutationQueue = Promise.resolve();
+let pushSubscriptionMutationQueue = Promise.resolve();
+let mobilePushQueueRunning = false;
 let productImageOptimizationStatus = {
   state: "idle",
   total: 0,
@@ -84,6 +100,18 @@ const geoCache = new Map();
 function enqueueProductMutation(mutation) {
   const result = productMutationQueue.then(mutation, mutation);
   productMutationQueue = result.catch(() => {});
+  return result;
+}
+
+function enqueueOrderMutation(mutation) {
+  const result = orderMutationQueue.then(mutation, mutation);
+  orderMutationQueue = result.catch(() => undefined);
+  return result;
+}
+
+function enqueuePushSubscriptionMutation(mutation) {
+  const result = pushSubscriptionMutationQueue.then(mutation, mutation);
+  pushSubscriptionMutationQueue = result.catch(() => undefined);
   return result;
 }
 
@@ -141,6 +169,7 @@ async function ensureStorage() {
   await ensureJsonFile(usersFile, []);
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
+  await ensureJsonFile(pushSubscriptionsFile, []);
   await ensureJsonFile(productsFile, { items: {}, custom: [] });
   await ensureJsonFile(tryOnArchiveFile, []);
   await fs.mkdir(uploadsDir, { recursive: true });
@@ -191,6 +220,15 @@ async function readOrders() {
 
 async function writeOrders(orders) {
   return writeJson(ordersFile, orders);
+}
+
+async function readPushSubscriptions() {
+  const subscriptions = await readJson(pushSubscriptionsFile, []);
+  return Array.isArray(subscriptions) ? subscriptions : [];
+}
+
+async function writePushSubscriptions(subscriptions) {
+  return writeJson(pushSubscriptionsFile, Array.isArray(subscriptions) ? subscriptions.slice(-50) : []);
 }
 
 async function readProductOverrides() {
@@ -1718,15 +1756,19 @@ function signPayload(payload) {
 }
 
 function verifyToken(token) {
-  if (!token || !token.includes(".")) return null;
-  const [body, sig] = token.split(".");
-  const expected = createHmac("sha256", sessionSecret).update(body).digest("base64url");
-  const left = Buffer.from(sig);
-  const right = Buffer.from(expected);
-  if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
-  const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
-  if (payload.exp && payload.exp < Date.now()) return null;
-  return payload;
+  try {
+    if (!token || !token.includes(".")) return null;
+    const [body, sig] = token.split(".");
+    const expected = createHmac("sha256", sessionSecret).update(body).digest("base64url");
+    const left = Buffer.from(sig);
+    const right = Buffer.from(expected);
+    if (left.length !== right.length || !timingSafeEqual(left, right)) return null;
+    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8"));
+    if (payload.exp && payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 function cookie(name, value, maxAge) {
@@ -1754,6 +1796,15 @@ function adminCookie() {
   return cookie("hb_admin", signPayload({ role: "admin", exp: Date.now() + twelveHours }), twelveHours / 1000);
 }
 
+function mobileAdminToken() {
+  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+  const expiresAt = Date.now() + thirtyDays;
+  return {
+    token: signPayload({ role: "admin", audience: "mobile", exp: expiresAt }),
+    expiresAt: new Date(expiresAt).toISOString(),
+  };
+}
+
 function anonCookie(visitorId) {
   const sixMonths = 180 * 24 * 60 * 60;
   return cookie("hb_anon", visitorId, sixMonths);
@@ -1770,6 +1821,22 @@ function getUserId(req) {
 
 function isAdmin(req) {
   return verifyToken(parseCookies(req).hb_admin)?.role === "admin";
+}
+
+function bearerToken(req) {
+  const match = String(req.headers.authorization || "").match(/^Bearer\s+(.+)$/i);
+  return match ? match[1].trim() : "";
+}
+
+function isMobileAdmin(req) {
+  const payload = verifyToken(bearerToken(req));
+  return payload?.role === "admin" && payload?.audience === "mobile";
+}
+
+function adminPasswordMatches(candidate) {
+  const provided = Buffer.from(String(candidate || ""));
+  const expected = Buffer.from(String(adminPassword || ""));
+  return provided.length === expected.length && timingSafeEqual(provided, expected);
 }
 
 function publicUser(user) {
@@ -2006,7 +2073,7 @@ async function handleMe(req, res) {
 async function handleAdminLogin(req, res) {
   const body = await parseBody(req);
   if (!adminPassword) return json(res, 503, { ok: false, message: "Password admin non configurata." });
-  if (String(body.password || "") !== adminPassword) return json(res, 401, { ok: false, message: "Password admin non corretta." });
+  if (!adminPasswordMatches(body.password)) return json(res, 401, { ok: false, message: "Password admin non corretta." });
   json(res, 200, { ok: true }, { "Set-Cookie": adminCookie() });
 }
 
@@ -2019,6 +2086,146 @@ async function handleAdminUsers(req, res) {
       .map(publicUser)
       .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt))),
   });
+}
+
+async function handleMobileAdminLogin(req, res) {
+  const body = await parseBody(req);
+  if (!adminPassword) return json(res, 503, { ok: false, message: "Password admin non configurata." });
+  if (!adminPasswordMatches(body.password)) {
+    return json(res, 401, { ok: false, message: "Password admin non corretta." });
+  }
+  const session = mobileAdminToken();
+  json(res, 200, { ok: true, ...session });
+}
+
+function mobileOrderStatusFilter(value) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (normalized === "new" || normalized === "nuovo") return ORDER_STATUS.NEW;
+  if (normalized === "confirmed" || normalized === "confermato") return ORDER_STATUS.CONFIRMED;
+  if (normalized === "rejected" || normalized === "rifiutato") return ORDER_STATUS.REJECTED;
+  return "";
+}
+
+async function handleMobileAdminOrders(req, res, url) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  const orders = await readOrders();
+  const status = mobileOrderStatusFilter(url.searchParams.get("status"));
+  const limit = Math.max(1, Math.min(500, Number.parseInt(url.searchParams.get("limit") || "200", 10) || 200));
+  const rows = orders
+    .filter((order) => !status || (order.status || ORDER_STATUS.NEW) === status)
+    .sort((left, right) => String(right.createdAt).localeCompare(String(left.createdAt)))
+    .slice(0, limit)
+    .map(publicMobileOrder);
+  json(res, 200, { ok: true, orders: rows });
+}
+
+async function handleMobileAdminOrder(req, res, orderId) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  const cleanOrderId = cleanTrackingString(orderId, 100);
+  if (!/^ord_[a-zA-Z0-9_-]+$/.test(cleanOrderId)) return badRequest(res, "Ordine non valido.");
+
+  if (req.method === "GET") {
+    const orders = await readOrders();
+    const order = orders.find((entry) => entry.id === cleanOrderId);
+    if (!order) return json(res, 404, { ok: false, message: "Ordine non trovato." });
+    return json(res, 200, { ok: true, order: publicMobileOrder(order) });
+  }
+
+  if (req.method !== "PATCH") return json(res, 405, { ok: false, message: "Metodo non consentito." });
+  const body = await parseBody(req);
+  const targetStatus = mobileOrderStatusFilter(body.status);
+  if (![ORDER_STATUS.CONFIRMED, ORDER_STATUS.REJECTED].includes(targetStatus)) {
+    return badRequest(res, "Scegli Confermato o Rifiutato.");
+  }
+
+  try {
+    const updatedOrder = await enqueueOrderMutation(async () => {
+      const orders = await readOrders();
+      const index = orders.findIndex((entry) => entry.id === cleanOrderId);
+      if (index === -1) return null;
+      const result = transitionOrder(orders[index], targetStatus);
+      if (result.changed && result.inventoryDelta > 0) {
+        await enqueueProductMutation(() => restoreProductInventory(result.order.products));
+      }
+      orders[index] = result.order;
+      await writeOrders(orders);
+      return result.order;
+    });
+    if (!updatedOrder) return json(res, 404, { ok: false, message: "Ordine non trovato." });
+    return json(res, 200, { ok: true, order: publicMobileOrder(updatedOrder) });
+  } catch (error) {
+    if (error?.code === "INVALID_TRANSITION") return json(res, 409, { ok: false, message: error.message });
+    if (error?.code === "INVALID_STATUS") return badRequest(res, error.message);
+    throw error;
+  }
+}
+
+async function handleMobileShippingLabel(req, res, orderId) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  if (req.method !== "GET") return json(res, 405, { ok: false, message: "Metodo non consentito." });
+  const cleanOrderId = cleanTrackingString(orderId, 100);
+  if (!/^ord_[a-zA-Z0-9_-]+$/.test(cleanOrderId)) return badRequest(res, "Ordine non valido.");
+
+  const orders = await readOrders();
+  const order = orders.find((entry) => entry.id === cleanOrderId);
+  if (!order) return json(res, 404, { ok: false, message: "Ordine non trovato." });
+
+  try {
+    const label = buildShippingLabel(order);
+    const qrCodeDataUrl = await QRCode.toDataURL(shippingLabelQrPayload(label), {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 512,
+      color: { dark: "#000000", light: "#FFFFFF" },
+    });
+    const html = renderShippingLabelHtml(label, qrCodeDataUrl);
+    return json(res, 200, {
+      ok: true,
+      label: {
+        orderId: label.orderId,
+        orderCode: label.orderCode,
+        generatedAt: label.generatedAt,
+        html,
+      },
+    });
+  } catch (error) {
+    if (error?.code === "ORDER_NOT_CONFIRMED") return json(res, 409, { ok: false, message: error.message });
+    throw error;
+  }
+}
+
+async function handleMobileAdminDashboard(req, res) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  const orders = await readOrders();
+  json(res, 200, { ok: true, dashboard: buildOrdersDashboard(orders) });
+}
+
+async function handleMobilePushToken(req, res) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  const body = await parseBody(req);
+
+  if (req.method === "DELETE") {
+    const token = String(body.token || "").trim();
+    await enqueuePushSubscriptionMutation(async () => {
+      const subscriptions = await readPushSubscriptions();
+      await writePushSubscriptions(subscriptions.filter((entry) => entry.token !== token));
+    });
+    return json(res, 200, { ok: true });
+  }
+
+  if (req.method !== "POST") return json(res, 405, { ok: false, message: "Metodo non consentito." });
+  const subscription = normalizePushSubscription(body);
+  if (!subscription) return badRequest(res, "Token notifiche non valido.");
+  await enqueuePushSubscriptionMutation(async () => {
+    const subscriptions = await readPushSubscriptions();
+    const next = subscriptions.filter((entry) => entry.token !== subscription.token);
+    next.push(subscription);
+    await writePushSubscriptions(next);
+  });
+  setTimeout(() => processMobilePushNotifications().catch((error) => {
+    console.error(`[push] Queue after device registration failed: ${error.message}`);
+  }), 0);
+  json(res, 200, { ok: true });
 }
 
 async function handleProducts(req, res) {
@@ -2794,6 +3001,128 @@ async function reduceProductInventory(products) {
   if (changed) await writeProductOverrides(overrides);
 }
 
+async function restoreProductInventory(products) {
+  const overrides = await readProductOverrides();
+  let changed = false;
+
+  for (const ordered of Array.isArray(products) ? products : []) {
+    if (!ordered.id) continue;
+    const customIndex = overrides.custom.findIndex((product) => product.id === ordered.id);
+    const product = customIndex === -1 ? overrides.items[ordered.id] : overrides.custom[customIndex];
+    if (!product || !Number.isInteger(product.inventory) || product.inventory < 0) continue;
+    product.inventory += Math.max(1, Number.parseInt(ordered.quantity || 1, 10) || 1);
+    changed = true;
+  }
+
+  if (changed) await writeProductOverrides(overrides);
+}
+
+const mobilePushRetryDelaysMs = [
+  60 * 1000,
+  5 * 60 * 1000,
+  15 * 60 * 1000,
+  60 * 60 * 1000,
+  6 * 60 * 60 * 1000,
+];
+
+function mobilePushRetryAt(attempts) {
+  const index = Math.min(Math.max(0, attempts - 1), mobilePushRetryDelaysMs.length - 1);
+  return new Date(Date.now() + mobilePushRetryDelaysMs[index]).toISOString();
+}
+
+async function claimMobilePushNotification() {
+  return enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    const now = new Date();
+    const order = orders.find((entry) => {
+      const notification = entry.mobilePushNotification;
+      if (!notification || notification.status === "sent") return false;
+      if (notification.status === "sending") {
+        return !notification.leaseUntil || new Date(notification.leaseUntil).getTime() <= now.getTime();
+      }
+      return !notification.nextAttemptAt || new Date(notification.nextAttemptAt).getTime() <= now.getTime();
+    });
+    if (!order) return null;
+
+    const attempts = Number(order.mobilePushNotification?.attempts || 0) + 1;
+    order.mobilePushNotification = {
+      ...order.mobilePushNotification,
+      status: "sending",
+      attempts,
+      lastAttemptAt: now.toISOString(),
+      leaseUntil: new Date(now.getTime() + 2 * 60 * 1000).toISOString(),
+    };
+    await writeOrders(orders);
+    return structuredClone(order);
+  });
+}
+
+async function finishMobilePushNotification(orderId, result, error) {
+  await enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    const order = orders.find((entry) => entry.id === orderId);
+    if (!order?.mobilePushNotification || order.mobilePushNotification.status === "sent") return;
+    const attempts = Number(order.mobilePushNotification.attempts || 1);
+    if (error || !result?.sent) {
+      order.mobilePushNotification = {
+        ...order.mobilePushNotification,
+        status: "failed",
+        nextAttemptAt: mobilePushRetryAt(attempts),
+        lastError: cleanTrackingString(error?.message || "Notifica non consegnata.", 300),
+      };
+    } else {
+      order.mobilePushNotification = {
+        ...order.mobilePushNotification,
+        status: "sent",
+        sentAt: new Date().toISOString(),
+        deliveredDevices: Number(result.sent || 0),
+      };
+      delete order.mobilePushNotification.nextAttemptAt;
+      delete order.mobilePushNotification.lastError;
+    }
+    delete order.mobilePushNotification.leaseUntil;
+    await writeOrders(orders);
+  });
+}
+
+async function removeInvalidPushTokens(tokens) {
+  if (!Array.isArray(tokens) || !tokens.length) return;
+  const invalid = new Set(tokens);
+  await enqueuePushSubscriptionMutation(async () => {
+    const subscriptions = await readPushSubscriptions();
+    await writePushSubscriptions(subscriptions.filter((entry) => !invalid.has(entry.token)));
+  });
+}
+
+async function processMobilePushNotifications() {
+  if (mobilePushQueueRunning) return;
+  const initialSubscriptions = await readPushSubscriptions();
+  if (!initialSubscriptions.length) return;
+  mobilePushQueueRunning = true;
+
+  try {
+    for (let processed = 0; processed < 10; processed += 1) {
+      const order = await claimMobilePushNotification();
+      if (!order) break;
+      try {
+        const subscriptions = await readPushSubscriptions();
+        if (!subscriptions.length) {
+          await finishMobilePushNotification(order.id, null, new Error("Nessun dispositivo registrato."));
+          break;
+        }
+        const result = await sendExpoPushNotifications({ subscriptions, order });
+        await removeInvalidPushTokens(result.invalidTokens);
+        await finishMobilePushNotification(order.id, result);
+      } catch (error) {
+        console.error(`[push] Order notification failed for ${order.orderCode}: ${error.message}`);
+        await finishMobilePushNotification(order.id, null, error);
+      }
+    }
+  } finally {
+    mobilePushQueueRunning = false;
+  }
+}
+
 async function handleCreateOrder(req, res) {
   const body = await parseBody(req);
   const now = new Date().toISOString();
@@ -2812,6 +3141,8 @@ async function handleCreateOrder(req, res) {
     orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
     createdAt: now,
     status: "Nuovo",
+    statusUpdatedAt: now,
+    statusHistory: [{ status: ORDER_STATUS.NEW, at: now }],
     sessionId,
     visitorId: cleanTrackingString(body.visitorId, 80),
     customer: {
@@ -2835,11 +3166,18 @@ async function handleCreateOrder(req, res) {
     preciseLocation,
     userAgent: ua,
     deviceInfo: clientInfo,
+    mobilePushNotification: {
+      status: "pending",
+      attempts: 0,
+      nextAttemptAt: now,
+    },
   };
 
-  const orders = await readOrders();
-  orders.push(order);
-  await writeOrders(orders.slice(-2000));
+  await enqueueOrderMutation(async () => {
+    const orders = await readOrders();
+    orders.push(order);
+    await writeOrders(orders.slice(-2000));
+  });
   await reduceProductInventory(products);
 
   await mutateAnalytics(async (analytics) => {
@@ -2862,6 +3200,9 @@ async function handleCreateOrder(req, res) {
   });
 
   json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total } });
+  setTimeout(() => processMobilePushNotifications().catch((error) => {
+    console.error(`[push] Notification queue failed: ${error.message}`);
+  }), 0);
 }
 
 function buildMetrics(users, analytics, orders) {
@@ -3180,6 +3521,16 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/auth/me") return handleMe(req, res);
   if (req.method === "GET" && url.pathname === "/api/auth/providers") return json(res, 200, { ok: true, providers: providerStatus() });
   if (req.method === "GET" && url.pathname === "/api/products") return handleProducts(req, res);
+  if (req.method === "POST" && url.pathname === "/api/mobile/admin/login") return handleMobileAdminLogin(req, res);
+  if (req.method === "GET" && url.pathname === "/api/mobile/admin/orders") return handleMobileAdminOrders(req, res, url);
+  if (req.method === "GET" && url.pathname === "/api/mobile/admin/dashboard") return handleMobileAdminDashboard(req, res);
+  if (url.pathname === "/api/mobile/admin/push-token") return handleMobilePushToken(req, res);
+  const mobileShippingLabelMatch = url.pathname.match(/^\/api\/mobile\/admin\/orders\/([^/]+)\/shipping-label$/);
+  if (mobileShippingLabelMatch) {
+    return handleMobileShippingLabel(req, res, decodeURIComponent(mobileShippingLabelMatch[1]));
+  }
+  const mobileOrderMatch = url.pathname.match(/^\/api\/mobile\/admin\/orders\/([^/]+)$/);
+  if (mobileOrderMatch) return handleMobileAdminOrder(req, res, decodeURIComponent(mobileOrderMatch[1]));
   if (req.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/admin/logout") {
     return json(res, 200, { ok: true }, { "Set-Cookie": clearCookie("hb_admin") });
@@ -3269,6 +3620,13 @@ async function serveStatic(req, res, url) {
 await fs.mkdir(dataDir, { recursive: true });
 await ensureStorage();
 
+const mobilePushQueueTimer = setInterval(() => {
+  processMobilePushNotifications().catch((error) => {
+    console.error(`[push] Scheduled notification retry failed: ${error.message}`);
+  });
+}, 60 * 1000);
+mobilePushQueueTimer.unref?.();
+
 http
   .createServer(async (req, res) => {
     try {
@@ -3299,6 +3657,9 @@ http
   })
   .listen(port, "0.0.0.0", () => {
     console.log(`Haller Boutique listening on ${port}`);
+    setTimeout(() => processMobilePushNotifications().catch((error) => {
+      console.error(`[push] Startup notification retry failed: ${error.message}`);
+    }), 0);
     if (productImageStorage) {
       setTimeout(() => {
         verifyProductImageStorage()

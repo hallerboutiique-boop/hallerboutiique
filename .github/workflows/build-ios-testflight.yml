@@ -1,0 +1,146 @@
+name: Build iOS and upload to TestFlight
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-ios-testflight.yml"
+      - "mobile/**"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-submit-ios:
+    name: iOS TestFlight
+    if: ${{ vars.IOS_SIGNING_READY == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+          run_install: false
+
+      - name: Validate Apple credentials
+        run: |
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_BASE64"
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"
+          test -n "$IOS_PROVISIONING_PROFILE_BASE64"
+          test -n "$APP_STORE_CONNECT_API_KEY_BASE64"
+          test -n "$APP_STORE_CONNECT_KEY_ID"
+          test -n "$APP_STORE_CONNECT_ISSUER_ID"
+          test -n "$APPLE_TEAM_ID"
+
+      - name: Restore signing credentials
+        run: |
+          mkdir -p "$RUNNER_TEMP/apple" "$HOME/Library/MobileDevice/Provisioning Profiles" "$HOME/.appstoreconnect/private_keys"
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 -D > "$RUNNER_TEMP/apple/distribution.p12"
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 -D > "$RUNNER_TEMP/apple/profile.mobileprovision"
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 -D > "$HOME/.appstoreconnect/private_keys/AuthKey_${APP_STORE_CONNECT_KEY_ID}.p8"
+
+          KEYCHAIN_PATH="$RUNNER_TEMP/haller-signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security import "$RUNNER_TEMP/apple/distribution.p12" -P "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychain -d user -s "$KEYCHAIN_PATH"
+
+          security cms -D -i "$RUNNER_TEMP/apple/profile.mobileprovision" > "$RUNNER_TEMP/apple/profile.plist"
+          PROFILE_UUID="$(/usr/libexec/PlistBuddy -c 'Print UUID' "$RUNNER_TEMP/apple/profile.plist")"
+          PROFILE_NAME="$(/usr/libexec/PlistBuddy -c 'Print Name' "$RUNNER_TEMP/apple/profile.plist")"
+          cp "$RUNNER_TEMP/apple/profile.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/${PROFILE_UUID}.mobileprovision"
+          echo "IOS_PROFILE_NAME=$PROFILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: pnpm install --ignore-workspace --frozen-lockfile
+
+      - name: Generate native iOS project
+        working-directory: mobile
+        run: ./node_modules/.bin/expo prebuild --platform ios --clean --no-install
+
+      - name: Install iOS pods
+        working-directory: mobile
+        run: pod install --project-directory=ios
+
+      - name: Archive signed iOS app
+        working-directory: mobile
+        run: |
+          WORKSPACE="$(find ios -maxdepth 1 -name '*.xcworkspace' -print -quit)"
+          SCHEME="$(xcodebuild -workspace "$WORKSPACE" -list -json | jq -r '.workspace.schemes[0]')"
+          xcodebuild archive \
+            -workspace "$WORKSPACE" \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/Haller-Ordini.xcarchive" \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY='Apple Distribution' \
+            PROVISIONING_PROFILE_SPECIFIER="$IOS_PROFILE_NAME"
+
+      - name: Export signed IPA
+        working-directory: mobile
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store-connect</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+            <key>teamID</key>
+            <string>${APPLE_TEAM_ID}</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>com.hallerboutique.orders</key>
+              <string>${IOS_PROFILE_NAME}</string>
+            </dict>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Haller-Ordini.xcarchive" \
+            -exportPath "$RUNNER_TEMP/Haller-Ordini-export" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"
+          cp "$RUNNER_TEMP/Haller-Ordini-export/"*.ipa Haller-Ordini-iOS.ipa
+
+      - name: Upload IPA to TestFlight
+        working-directory: mobile
+        run: |
+          xcrun altool --validate-app -f Haller-Ordini-iOS.ipa -t ios --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+          xcrun altool --upload-app -f Haller-Ordini-iOS.ipa -t ios --apiKey "$APP_STORE_CONNECT_KEY_ID" --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haller-Ordini-iOS
+          path: mobile/Haller-Ordini-iOS.ipa
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "742070775423",
+    "project_id": "haller-ordini-623b0a0b",
+    "storage_bucket": "haller-ordini-623b0a0b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:742070775423:android:ad19c76cf4b5ec7436d94a",
+        "android_client_info": {
+          "package_name": "com.hallerboutique.orders"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDyy3NCWJaO8CoaRUGxU6WvbZG1txGkd4Y"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

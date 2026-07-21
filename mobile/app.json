@@ -1,0 +1,58 @@
+{
+  "expo": {
+    "name": "Haller Ordini",
+    "slug": "haller-ordini",
+    "version": "1.2.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "hallerordini",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#090909",
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#C9952E",
+          "defaultChannel": "orders",
+          "enableBackgroundRemoteNotifications": true
+        }
+      ]
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hallerboutique.orders",
+      "buildNumber": "3",
+      "infoPlist": {
+        "NSUserNotificationsUsageDescription": "Haller Ordini invia notifiche quando arriva un nuovo ordine.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "com.hallerboutique.orders",
+      "versionCode": 3,
+      "googleServicesFile": "./google-services.json",
+      "adaptiveIcon": {
+        "backgroundColor": "#090909",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "apiBaseUrl": "https://www.hallerboutiique.com",
+      "eas": {
+        "projectId": "623b0a0b-1dc9-4f20-b126-e52cad9191f4"
+      }
+    },
+    "owner": "hallerboutiique"
+  }
+}
