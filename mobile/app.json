@@ -29,6 +29,7 @@
     },
     "android": {
       "package": "com.hallerboutique.orders",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#090909",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -36,13 +37,19 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": ["POST_NOTIFICATIONS"]
+      "permissions": [
+        "POST_NOTIFICATIONS"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "extra": {
-      "apiBaseUrl": "https://www.hallerboutiique.com"
-    }
+      "apiBaseUrl": "https://www.hallerboutiique.com",
+      "eas": {
+        "projectId": "623b0a0b-1dc9-4f20-b126-e52cad9191f4"
+      }
+    },
+    "owner": "hallerboutiique"
   }
 }
