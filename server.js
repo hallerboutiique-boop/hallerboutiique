@@ -14,7 +14,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
-import { createLessZoomedProductImage } from "./product-image-zoom.mjs";
+import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -464,11 +464,11 @@ async function readProductImageSource(image) {
   return data;
 }
 
-async function createAndStoreProductZoomImage(productId, publishedImage, originalImage) {
-  const output = await createLessZoomedProductImage(publishedImage, originalImage);
+async function createAndStoreProductZoomImage(productId, publishedImage) {
+  const output = await createMatchingProductZoomImage(publishedImage);
   const fingerprint = createHash("sha256")
-    .update(originalImage)
     .update(publishedImage)
+    .update("matching-published-crop-v1")
     .digest("hex")
     .slice(0, 16);
   const extension = output.type === "image/jpeg" ? "jpg" : "webp";
@@ -635,11 +635,8 @@ async function optimizeExistingProductZoomImages({ force = false, productId = ""
       if (!force && previous !== task.image && await productImageExists(previous)) {
         productZoomImageOptimizationStatus.skipped += 1;
       } else {
-        const [publishedImage, originalImage] = await Promise.all([
-          readProductImageSource(task.image),
-          readProductImageSource(task.original),
-        ]);
-        const generated = await createAndStoreProductZoomImage(task.id, publishedImage, originalImage);
+        const publishedImage = await readProductImageSource(task.image);
+        const generated = await createAndStoreProductZoomImage(task.id, publishedImage);
         task.product.zoomImages[task.index] = generated.url;
         await persistProductImageOptimization(data);
         productZoomImageOptimizationStatus.optimized += 1;
@@ -2335,11 +2332,7 @@ async function handleAdminProductImages(req, res) {
     const variant = imageVariants[entry.inputIndex] || legacyImageVariant;
     const originalUpload = originalUploadByIndex.get(entry.inputIndex);
     if (variant !== "cropped" || !originalUpload) return entry.url;
-    const generated = await createAndStoreProductZoomImage(
-      productId,
-      imageParts[entry.inputIndex].data,
-      originalUpload.data
-    );
+    const generated = await createAndStoreProductZoomImage(productId, imageParts[entry.inputIndex].data);
     return generated.url;
   });
   const mergeUploadedImages = (current, incoming) => {
@@ -2447,7 +2440,7 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   }
   let zoomImageUrl = imageUrl;
   if (imageVariant === "cropped" && sourceImage !== image) {
-    const generated = await createAndStoreProductZoomImage("ai-product", image.data, sourceImage.data);
+    const generated = await createAndStoreProductZoomImage("ai-product", image.data);
     zoomImageUrl = generated.url;
   }
   const sourceMime = sourceImage.contentType || (sourceExt === ".png" ? "image/png" : sourceExt === ".webp" ? "image/webp" : "image/jpeg");
