@@ -77,11 +77,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: mobile
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --ignore-workspace --frozen-lockfile
 
       - name: Generate native iOS project
         working-directory: mobile
-        run: pnpm exec expo prebuild --platform ios --clean --no-install
+        run: ./node_modules/.bin/expo prebuild --platform ios --clean --no-install
 
       - name: Install iOS pods
         working-directory: mobile

@@ -45,11 +45,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: mobile
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --ignore-workspace --frozen-lockfile
 
       - name: Generate Android project
         working-directory: mobile
-        run: pnpm exec expo prebuild --platform android --clean --no-install
+        run: ./node_modules/.bin/expo prebuild --platform android --clean --no-install
 
       - name: Build release APK
         working-directory: mobile/android
