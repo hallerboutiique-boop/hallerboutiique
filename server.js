@@ -6,6 +6,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   DeleteObjectsCommand,
+  GetObjectCommand,
   HeadObjectCommand,
   ListObjectsV2Command,
   PutBucketCorsCommand,
@@ -251,6 +252,14 @@ function productObjectKey(value) {
   } catch {
     return "";
   }
+}
+
+function productZoomDeliveryPath(value) {
+  const key = productObjectKey(value);
+  if (!key.startsWith("products/")) return value;
+  const name = key.slice("products/".length);
+  if (!name || name !== path.basename(name)) return value;
+  return `/product-images/${encodeURIComponent(name)}`;
 }
 
 function referencedProductObjectKeys(data) {
@@ -2019,7 +2028,11 @@ async function handleProducts(req, res) {
   const data = await readProductOverrides();
   const toPublicProduct = (product) => {
     const { inventory, ...publicProduct } = product || {};
-    return { ...publicProduct, isLastAvailable: inventory === 1 };
+    return {
+      ...publicProduct,
+      zoomImages: cleanProductImages(publicProduct.zoomImages).map(productZoomDeliveryPath),
+      isLastAvailable: inventory === 1,
+    };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
   json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) }, {
@@ -3206,6 +3219,37 @@ function safeStaticPath(urlPathname) {
   return filePath;
 }
 
+async function serveProductImage(req, res, url) {
+  if (!productImageStorage || !["GET", "HEAD"].includes(req.method || "")) return notFound(res);
+  const rawName = decodeURIComponent(url.pathname.slice("/product-images/".length));
+  const name = path.basename(rawName);
+  if (!name || name !== rawName || !publicAssetExtensions.has(path.extname(name).toLowerCase())) return notFound(res);
+  try {
+    const object = await productImageStorage.send(new GetObjectCommand({
+      Bucket: productImageBucketName,
+      Key: `products/${name}`,
+    }));
+    const headers = {
+      "Content-Type": object.ContentType || contentTypes[path.extname(name).toLowerCase()] || "application/octet-stream",
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "X-Content-Type-Options": "nosniff",
+      "Permissions-Policy": "geolocation=(self)",
+    };
+    if (Number.isFinite(Number(object.ContentLength))) headers["Content-Length"] = Number(object.ContentLength);
+    if (object.ETag) headers.ETag = object.ETag;
+    if (object.LastModified) headers["Last-Modified"] = object.LastModified.toUTCString();
+    res.writeHead(200, headers);
+    if (req.method === "HEAD" || !object.Body) return res.end();
+    object.Body.on("error", () => res.destroy());
+    return object.Body.pipe(res);
+  } catch (error) {
+    if (error?.name === "NoSuchKey" || error?.name === "NotFound" || error?.$metadata?.httpStatusCode === 404) {
+      return notFound(res);
+    }
+    throw error;
+  }
+}
+
 async function serveStatic(req, res, url) {
   const filePath = safeStaticPath(url.pathname);
   if (!filePath) return notFound(res);
@@ -3249,6 +3293,7 @@ http
       const oauthEnd = url.pathname.match(/^\/auth\/(google|microsoft)\/callback$/);
       if (oauthEnd) return oauthCallback(req, res, oauthEnd[1], url);
       if (url.pathname.startsWith("/api/")) return await handleApi(req, res, url);
+      if (url.pathname.startsWith("/product-images/")) return await serveProductImage(req, res, url);
       return await serveStatic(req, res, url);
     } catch (error) {
       console.error(error);
