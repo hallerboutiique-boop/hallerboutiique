@@ -307,6 +307,10 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.match(server, /createAndStoreProductZoomImage/);
   assert.match(server, /product\.zoomImages\[task\.index\] = generated\.url/);
   assert.match(server, /"\/api\/internal\/product-zoom-image-optimization"/);
+  assert.match(server, /function productZoomDeliveryPath\(value\)/);
+  assert.match(server, /new GetObjectCommand/);
+  assert.match(server, /"\/product-images\/"/);
+  assert.match(server, /"Cache-Control": "public, max-age=31536000, immutable"/);
   assert.match(script, /data-product-image-deferred/);
   assert.match(script, /function observeProductImages\(root = document\)/);
   assert.match(index, /assets\/hero-man-v2\.webp/);
