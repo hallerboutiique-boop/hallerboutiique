@@ -1449,9 +1449,8 @@ function createProductMediaMarkup(product, detail = false) {
     `;
   }
 
-  const sizes = detail
-    ? "(max-width: 760px) calc(100vw - 32px), 52vw"
-    : "(max-width: 720px) calc(50vw - 20px), (max-width: 1100px) 31vw, 300px";
+  const highQualityPreviewSizes = "(max-width: 760px) calc(100vw - 32px), 52vw";
+  const galleryPreviewSizes = "(max-width: 720px) calc(50vw - 20px), (max-width: 1100px) 31vw, 300px";
   const initialIndex = 0;
   const slides = gallery.map((image, index) => {
     const source = withProductImageVersion(image);
@@ -1459,6 +1458,7 @@ function createProductMediaMarkup(product, detail = false) {
     const srcset = productImageSrcset(product, image);
     const dimensions = productImageDimensions(product, image);
     const eager = detail && index === initialIndex;
+    const sizes = detail || index === initialIndex ? highQualityPreviewSizes : galleryPreviewSizes;
     return `
       <img
         class="product-image product-gallery-slide${index === initialIndex ? " is-active" : ""}"
