@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=all-previews-hq-1/);
+  assert.match(checkout, /script\.js\?v=tryon-face-lock-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -178,6 +178,20 @@ test("try-on supports clothing, shoes and bags", async () => {
   assert.match(server, /Do not omit, replace, redesign, duplicate or invent any item/);
 });
 
+test("single try-on keeps the original customer photo separate and locks facial identity", async () => {
+  const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  assert.doesNotMatch(script, /function createTryOnReference/);
+  assert.match(script, /const originalProductImage = await loadOriginalBundleProductImage/);
+  assert.match(script, /formData\.append\("userImage", file/);
+  assert.match(script, /formData\.append\("productImage", originalProductImage\.blob, originalProductImage\.filename\)/);
+  assert.match(script, /formData\.append\("mode", "single"\)/);
+  assert.match(server, /process\.env\.OPENAI_TRYON_MODEL \|\| "gpt-image-2"/);
+  assert.match(server, /form\.append\("quality", "high"\)/);
+  assert.match(server, /PERSON LOCK — highest priority/);
+  assert.match(server, /Do not modify, redraw, regenerate, retouch, beautify/);
+  assert.match(server, /replace only the clothing, footwear or accessory pixels/);
+});
+
 test("bundle try-on keeps the customer original and normalizes separate product images", async () => {
   const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadOriginalBundleProductImage\)\)/);
@@ -185,11 +199,11 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(server, /appendImageFormData\(form, "image\[\]", userImage\)/);
   assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image\[\]", image\)\)/);
   assert.match(server, /normalizeTryOnProductImage\(productImage, index\)/);
-  assert.match(server, /Input image 1 is the customer's original, unmodified photo/);
+  assert.match(server, /input image 1 is the immutable identity and scene reference/);
   assert.match(server, /Use each original product photo as the authoritative visual reference/);
-  assert.match(server, /bundleItems\.length > 0 \? "1024x1536" : "1024x1024"/);
+  assert.match(server, /bundleItems\.length > 0 \|\| hasSeparateProductImages \? "1024x1536" : "1024x1024"/);
   assert.match(server, /Catalog photos may also show boxes, packaging/);
-  assert.match(server, /visible from head to toe, both feet unobstructed/);
+  assert.match(server, /visible from head to toe with both feet unobstructed/);
   assert.match(server, /const bundleIncludesBag = bundleItems\.some/);
   assert.match(server, /The cart contains no bag product/);
   assert.match(server, /If a product name or category conflicts with its photo, follow the photo/);

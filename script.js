@@ -2704,80 +2704,6 @@ function previewTryOnUserImage(event) {
   setTryOnMessage("");
 }
 
-function loadTryOnReferenceImage(src) {
-  return new Promise((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => resolve(image);
-    image.onerror = () => reject(new Error(translate("tryon-image-missing")));
-    image.src = src;
-  });
-}
-
-function drawTryOnReferenceImage(context, image, x, y, width, height, background) {
-  context.fillStyle = background;
-  context.fillRect(x, y, width, height);
-  const ratio = Math.min(width / image.naturalWidth, height / image.naturalHeight);
-  const drawWidth = image.naturalWidth * ratio;
-  const drawHeight = image.naturalHeight * ratio;
-  context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
-}
-
-function drawTryOnReferenceText(context, text, x, y, width, maxLines = 4) {
-  const words = String(text || "").split(/\s+/).filter(Boolean);
-  const lines = [];
-  let line = "";
-  words.forEach((word) => {
-    const next = line ? `${line} ${word}` : word;
-    if (context.measureText(next).width <= width || !line) {
-      line = next;
-    } else {
-      lines.push(line);
-      line = word;
-    }
-  });
-  if (line) lines.push(line);
-  lines.slice(0, maxLines).forEach((value, index) => context.fillText(value, x, y + index * 34));
-}
-
-async function createTryOnReference(userFile, productImage, productName) {
-  const customerUrl = URL.createObjectURL(userFile);
-  try {
-    const customer = await loadTryOnReferenceImage(customerUrl);
-    const product = productImage
-      ? await loadTryOnReferenceImage(withProductImageVersion(productImage)).catch(() => null)
-      : null;
-    const canvas = document.createElement("canvas");
-    canvas.width = 1536;
-    canvas.height = 1086;
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error(translate("tryon-unavailable"));
-
-    context.fillStyle = "#111111";
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    drawTryOnReferenceImage(context, customer, 0, 62, 1000, 1024, "#151515");
-    if (product) {
-      drawTryOnReferenceImage(context, product, 1000, 62, 536, 1024, "#ffffff");
-    } else {
-      context.fillStyle = "#f4f4f4";
-      context.fillRect(1000, 62, 536, 1024);
-      context.fillStyle = "#111111";
-      context.font = "700 30px Montserrat, Arial, sans-serif";
-      drawTryOnReferenceText(context, productName, 1040, 480, 456, 5);
-    }
-    context.fillStyle = "#ffffff";
-    context.font = "600 25px Montserrat, Arial, sans-serif";
-    context.fillText("PERSONA", 24, 40);
-    context.fillText("CAPO REALE DEL CATALOGO", 1040, 40);
-
-    const blob = await new Promise((resolve, reject) => {
-      canvas.toBlob((result) => (result ? resolve(result) : reject(new Error(translate("tryon-unavailable")))), "image/png");
-    });
-    return blob;
-  } finally {
-    URL.revokeObjectURL(customerUrl);
-  }
-}
-
 async function generateTryOn() {
   const modal = ensureTryOnModal();
   const input = modal.querySelector("[data-tryon-user-image]");
@@ -2796,9 +2722,15 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const referenceImage = await createTryOnReference(file, productPrimaryTryOnImage(tryOnProduct), tryOnProduct.name);
+    const originalProductImage = await loadOriginalBundleProductImage({
+      name: tryOnProduct.name,
+      image: productPrimaryImage(tryOnProduct),
+      tryOnImage: productPrimaryTryOnImage(tryOnProduct),
+    }, 0);
     const formData = new FormData();
-    formData.append("userImage", referenceImage, "try-on-reference.png");
+    formData.append("userImage", file, file.name || "try-on-customer.jpg");
+    formData.append("productImage", originalProductImage.blob, originalProductImage.filename);
+    formData.append("mode", "single");
     if (saveConsent?.checked) {
       formData.append("saveTryOn", "yes");
       formData.append("customerImage", file, file.name || "try-on-source.jpg");
