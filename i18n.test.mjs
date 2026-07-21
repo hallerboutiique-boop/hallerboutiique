@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=zoom-hires-crop-2/);
+  assert.match(checkout, /script\.js\?v=catalog-donna-cleanup-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -86,6 +86,15 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(styles, /\.catalog-search-result\s*\{[\s\S]*?overflow:\s*hidden/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
   assert.match(script, /isLastAvailable/);
+  assert.match(script, /"scarpe donna": "Scarpe"/);
+  assert.match(script, /function getCatalogGenderProducts\(gender\)/);
+  assert.match(script, /gender === "donna"[\s\S]*?!product\.isLastAvailable/);
+  const catalogStart = script.indexOf("function renderCatalog()");
+  const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
+  assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
+  const lastStockStart = script.indexOf("function renderLastStockCatalog()");
+  const lastStockEnd = script.indexOf("function ensureCatalogSearch", lastStockStart);
+  assert.match(script.slice(lastStockStart, lastStockEnd), /getGenderProducts\(lastStockGender\)\.filter\(\(product\) => product\.isLastAvailable\)/);
   assert.match(admin, /name="sizes"/);
   assert.match(admin, /name="inventory"/);
   assert.match(server, /function cleanProductInventory/);

@@ -1263,6 +1263,8 @@ const catalogCategoryAliases = {
   "sneakers": "Scarpe",
   "sneakers uomo": "Scarpe",
   "sneakers donna": "Scarpe",
+  "scarpa donna": "Scarpe",
+  "scarpe donna": "Scarpe",
 };
 
 const catalogCategoryOrder = {
@@ -1706,13 +1708,20 @@ function getGenderProducts(gender) {
   return getAllProducts().filter((product) => getProductGender(product) === gender);
 }
 
+function getCatalogGenderProducts(gender) {
+  const products = getGenderProducts(gender);
+  return gender === "donna"
+    ? products.filter((product) => !product.isLastAvailable)
+    : products;
+}
+
 function getCategoryProducts(gender, category) {
-  return getGenderProducts(gender).filter((product) => product.category === category);
+  return getCatalogGenderProducts(gender).filter((product) => product.category === category);
 }
 
 function getCategoriesForGender(gender) {
   const order = catalogCategoryOrder[gender] || [];
-  return [...new Set(getGenderProducts(gender).map((product) => product.category).filter(Boolean))]
+  return [...new Set(getCatalogGenderProducts(gender).map((product) => product.category).filter(Boolean))]
     .sort((left, right) => {
       const leftIndex = order.indexOf(left);
       const rightIndex = order.indexOf(right);
@@ -1779,7 +1788,7 @@ function renderCatalog() {
 
   const baseProducts = catalogState.productIds.length
     ? getAllProducts().filter((product) => catalogState.productIds.includes(product.id))
-    : getGenderProducts(catalogState.gender);
+    : getCatalogGenderProducts(catalogState.gender);
   const categoryProducts = catalogState.category ? baseProducts.filter((product) => product.category === catalogState.category) : baseProducts;
   const products = catalogState.brand ? categoryProducts.filter((product) => getProductBrand(product) === catalogState.brand) : categoryProducts;
   const title = catalogState.productIds.length
