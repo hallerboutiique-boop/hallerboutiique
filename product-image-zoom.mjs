@@ -12,32 +12,11 @@ function orientedDimensions(metadata) {
     : { width, height };
 }
 
-export async function createLessZoomedProductImage(publishedImage, originalImage) {
-  const [publishedMetadata, originalMetadata] = await Promise.all([
-    sharp(publishedImage, { failOn: "none" }).metadata(),
-    sharp(originalImage, { failOn: "none" }).metadata(),
-  ]);
+export async function createMatchingProductZoomImage(publishedImage) {
+  const publishedMetadata = await sharp(publishedImage, { failOn: "none" }).metadata();
   const published = orientedDimensions(publishedMetadata);
-  const original = orientedDimensions(originalMetadata);
-  const targetAspectRatio = published.width / published.height;
-  const originalAspectRatio = original.width / original.height;
-
-  let width = original.width;
-  let height = original.height;
-  if (originalAspectRatio > targetAspectRatio) {
-    width = Math.max(1, Math.min(original.width, Math.round(original.height * targetAspectRatio)));
-  } else if (originalAspectRatio < targetAspectRatio) {
-    height = Math.max(1, Math.min(original.height, Math.round(original.width / targetAspectRatio)));
-  }
-
-  const left = Math.max(0, Math.floor((original.width - width) / 2));
-  const top = Math.max(0, Math.floor((original.height - height) / 2));
-  let pipeline = sharp(originalImage, { failOn: "none" }).rotate();
-  if (width !== original.width || height !== original.height) {
-    pipeline = pipeline.extract({ left, top, width, height });
-  }
-
-  const output = await pipeline
+  const output = await sharp(publishedImage, { failOn: "none" })
+    .rotate()
     .flatten({ background: "#ffffff" })
     .sharpen(0.35)
     .jpeg({
@@ -49,8 +28,8 @@ export async function createLessZoomedProductImage(publishedImage, originalImage
 
   return {
     data: output.data,
-    width: output.info.width,
-    height: output.info.height,
+    width: published.width,
+    height: published.height,
     type: "image/jpeg",
   };
 }

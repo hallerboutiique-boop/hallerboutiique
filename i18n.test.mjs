@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=catalog-donna-cleanup-1/);
+  assert.match(checkout, /script\.js\?v=zoom-preserve-crop-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -314,6 +314,8 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.doesNotMatch(zoomOpenImplementation, /zoomImage\.src = previewSource/);
   assert.match(server, /async function optimizeExistingProductZoomImages/);
   assert.match(server, /createAndStoreProductZoomImage/);
+  assert.match(server, /createMatchingProductZoomImage/);
+  assert.match(server, /matching-published-crop-v1/);
   assert.match(server, /product\.zoomImages\[task\.index\] = generated\.url/);
   assert.match(server, /"\/api\/internal\/product-zoom-image-optimization"/);
   assert.match(server, /function productZoomDeliveryPath\(value\)/);
