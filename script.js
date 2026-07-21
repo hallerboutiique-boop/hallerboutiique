@@ -1585,6 +1585,7 @@ function getHomeFeaturedProducts() {
     .filter(Boolean);
   const seen = new Set();
   return [...customProducts, ...defaultFeatured, ...allProducts]
+    .filter((product) => !product.isLastAvailable)
     .filter((product) => getProductGallery(product).length > 0)
     .filter((product) => {
       if (seen.has(product.id)) return false;
