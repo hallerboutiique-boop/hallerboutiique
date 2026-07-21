@@ -16,5 +16,5 @@ test("zoom crop keeps the storefront ratio while using the maximum original area
   assert.equal(result.height, 343);
   assert.ok(result.width > 140);
   assert.ok(result.height > 160);
-  assert.equal(result.type, "image/webp");
+  assert.equal(result.type, "image/jpeg");
 });

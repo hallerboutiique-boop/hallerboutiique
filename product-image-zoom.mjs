@@ -38,12 +38,12 @@ export async function createLessZoomedProductImage(publishedImage, originalImage
   }
 
   const output = await pipeline
+    .flatten({ background: "#ffffff" })
     .sharpen(0.35)
-    .webp({
-      quality: 98,
-      alphaQuality: 100,
-      smartSubsample: true,
-      effort: 4,
+    .jpeg({
+      quality: 95,
+      chromaSubsampling: "4:4:4",
+      mozjpeg: false,
     })
     .toBuffer({ resolveWithObject: true });
 
@@ -51,6 +51,6 @@ export async function createLessZoomedProductImage(publishedImage, originalImage
     data: output.data,
     width: output.info.width,
     height: output.info.height,
-    type: "image/webp",
+    type: "image/jpeg",
   };
 }
