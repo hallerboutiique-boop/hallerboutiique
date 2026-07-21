@@ -26,3 +26,19 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Storico analytics conservato fino a 365 giorni con modello dispositivo, IP completo in area admin e localizzazione IP per citta/paese quando disponibile
 - Coordinate GPS e accuratezza in metri visibili in admin quando l'utente autorizza la posizione precisa
 - Storico visite admin diviso in categorie: sessione, dispositivo, rete, posizione e comportamento
+- Notifica WhatsApp persistente per ogni nuovo ordine, con ritentativi automatici verso il numero amministrativo
+
+## Notifiche ordini WhatsApp
+
+Il server accoda ogni nuovo ordine e invia il riepilogo tramite WhatsApp Business Cloud API. Le notifiche non consegnate vengono ritentate automaticamente e lo stato resta salvato insieme all'ordine.
+
+Configurazione richiesta tramite segreti Fly:
+
+- `WHATSAPP_ACCESS_TOKEN`: token permanente Meta con permesso di invio messaggi
+- `WHATSAPP_PHONE_NUMBER_ID`: ID del numero mittente WhatsApp Business Cloud API
+- `WHATSAPP_ORDER_RECIPIENT`: destinatario in formato internazionale; il valore predefinito e `393512757160`
+- `WHATSAPP_GRAPH_API_VERSION`: facoltativo; valore predefinito `v25.0`
+- `WHATSAPP_ORDER_TEMPLATE`: nome del template Meta approvato; necessario in produzione quando non e aperta una finestra conversazionale
+- `WHATSAPP_ORDER_TEMPLATE_LANGUAGE`: facoltativo; valore predefinito `it`
+
+Se viene usato `WHATSAPP_ORDER_TEMPLATE`, il template deve avere una sola variabile nel corpo. La variabile riceve il riepilogo completo dell'ordine. Senza template viene inviato un messaggio di testo, soggetto alla finestra conversazionale prevista da WhatsApp.
