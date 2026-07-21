@@ -619,7 +619,7 @@ async function optimizeExistingProductZoomImages({ force = false, productId = ""
     current: "",
   };
 
-  for (const task of tasks) {
+  await mapWithConcurrency(tasks, 3, async (task) => {
     productZoomImageOptimizationStatus.current = `${task.id}: ${task.image}`;
     const previous = task.product.zoomImages[task.index] || task.image;
     try {
@@ -642,7 +642,7 @@ async function optimizeExistingProductZoomImages({ force = false, productId = ""
     } finally {
       productZoomImageOptimizationStatus.processed += 1;
     }
-  }
+  });
 
   await persistProductImageOptimization(data);
   productZoomImageOptimizationStatus = {
