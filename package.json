@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test i18n.test.mjs",
+    "test": "node --test i18n.test.mjs product-image-zoom.test.mjs",
     "bunny:purge": "node scripts/purge-bunny-cache.mjs"
   },
   "engines": {

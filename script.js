@@ -1345,6 +1345,9 @@ function applyProductOverride(product) {
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
       : Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    zoomImages: Array.isArray(override.zoomImages)
+      ? override.zoomImages
+      : Array.isArray(product.zoomImages) ? product.zoomImages : product.images || [],
     imageRenditions: override.imageRenditions && typeof override.imageRenditions === "object"
       ? override.imageRenditions
       : product.imageRenditions || {},
@@ -1370,6 +1373,7 @@ function normalizeCustomProduct(product) {
     isLastAvailable: Boolean(product.isLastAvailable),
     images: Array.isArray(product.images) ? product.images : [],
     originalImages: Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
+    zoomImages: Array.isArray(product.zoomImages) ? product.zoomImages : product.images || [],
     imageRenditions: product.imageRenditions && typeof product.imageRenditions === "object" ? product.imageRenditions : {},
     imageVariant: product.imageVariant || "original",
   };
@@ -1419,6 +1423,8 @@ function productImageDimensions(product, image) {
 }
 
 function productZoomImageSource(product, image, index) {
+  const dedicatedZoomSource = Array.isArray(product?.zoomImages) ? product.zoomImages[index] : "";
+  if (dedicatedZoomSource) return withProductImageVersion(dedicatedZoomSource);
   const publishedSource = Array.isArray(product?.images) ? product.images[index] || image : image;
   if (/^assets\/products\/.+\.webp(?:\?.*)?$/i.test(publishedSource)) {
     return withProductImageVersion(publishedSource.replace(/\.webp(?=\?|$)/i, ".png"));
