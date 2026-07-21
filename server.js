@@ -462,7 +462,8 @@ async function createAndStoreProductZoomImage(productId, publishedImage, origina
     .update(publishedImage)
     .digest("hex")
     .slice(0, 16);
-  const name = `${slugifyProduct(productId)}-zoom-${fingerprint}-${output.width}x${output.height}.webp`;
+  const extension = output.type === "image/jpeg" ? "jpg" : "webp";
+  const name = `${slugifyProduct(productId)}-zoom-${fingerprint}-${output.width}x${output.height}.${extension}`;
   const url = await storeProductImage(name, output.data, output.type);
   return { url, width: output.width, height: output.height };
 }
