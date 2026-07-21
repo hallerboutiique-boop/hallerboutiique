@@ -1450,7 +1450,6 @@ function createProductMediaMarkup(product, detail = false) {
   }
 
   const highQualityPreviewSizes = "(max-width: 760px) calc(100vw - 32px), 52vw";
-  const galleryPreviewSizes = "(max-width: 720px) calc(50vw - 20px), (max-width: 1100px) 31vw, 300px";
   const initialIndex = 0;
   const slides = gallery.map((image, index) => {
     const source = withProductImageVersion(image);
@@ -1458,12 +1457,11 @@ function createProductMediaMarkup(product, detail = false) {
     const srcset = productImageSrcset(product, image);
     const dimensions = productImageDimensions(product, image);
     const eager = detail && index === initialIndex;
-    const sizes = detail || index === initialIndex ? highQualityPreviewSizes : galleryPreviewSizes;
     return `
       <img
         class="product-image product-gallery-slide${index === initialIndex ? " is-active" : ""}"
         ${eager ? `src="${escapeHtml(source)}"` : `data-src="${escapeHtml(source)}" data-product-image-deferred`}
-        ${srcset ? `${eager ? "srcset" : "data-srcset"}="${escapeHtml(srcset)}" sizes="${sizes}"` : ""}
+        ${srcset ? `${eager ? "srcset" : "data-srcset"}="${escapeHtml(srcset)}" sizes="${highQualityPreviewSizes}"` : ""}
         ${dimensions ? `width="${Number(dimensions.width)}" height="${Number(dimensions.height)}"` : ""}
         alt="${escapeHtml(product.name)}${gallery.length > 1 ? ` - ${index + 1}` : ""}"
         loading="${eager ? "eager" : "lazy"}"
