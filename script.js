@@ -17,8 +17,6 @@ let productImageObserver = null;
 let prioritizedProductImage = false;
 let productImageZoomScale = 1;
 let productImageZoomGesture = null;
-let productImageZoomLoadToken = 0;
-let productImageZoomHighResolutionImage = null;
 const galleryClickSuppression = new WeakMap();
 
 const translations = {
@@ -1421,13 +1419,11 @@ function productImageDimensions(product, image) {
 }
 
 function productZoomImageSource(product, image, index) {
-  if (product?.imageVariant === "cropped") return withProductImageVersion(image);
-  const original = Array.isArray(product?.originalImages) ? product.originalImages[index] : "";
-  if (original) return withProductImageVersion(original);
-  if (/^assets\/products\/.+\.webp(?:\?.*)?$/i.test(image)) {
-    return withProductImageVersion(image.replace(/\.webp(?=\?|$)/i, ".png"));
+  const publishedSource = Array.isArray(product?.images) ? product.images[index] || image : image;
+  if (/^assets\/products\/.+\.webp(?:\?.*)?$/i.test(publishedSource)) {
+    return withProductImageVersion(publishedSource.replace(/\.webp(?=\?|$)/i, ".png"));
   }
-  return withProductImageVersion(image);
+  return withProductImageVersion(publishedSource);
 }
 
 function productPageUrl(product) {
@@ -2051,37 +2047,28 @@ function openProductImageZoom(control) {
   const stage = dialog?.querySelector("[data-product-zoom-stage]");
   const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
   const source = activeImage?.dataset.originalSrc;
-  const previewSource = activeImage?.currentSrc || activeImage?.src || source;
-  if (!source || !previewSource || !dialog || !stage || !zoomImage) return;
-  const loadToken = ++productImageZoomLoadToken;
+  const fallbackSource = activeImage?.currentSrc || activeImage?.src || "";
+  if (!source || !dialog || !stage || !zoomImage) return;
   productImageZoomScale = 1;
   productImageZoomGesture = null;
   stage.scrollLeft = 0;
   stage.scrollTop = 0;
   zoomImage.alt = activeImage.alt || "";
   zoomImage.removeAttribute("data-zoom-ready");
+  zoomImage.removeAttribute("data-fallback-applied");
+  zoomImage.removeAttribute("srcset");
   zoomImage.style.removeProperty("width");
   zoomImage.style.removeProperty("height");
   zoomImage.onload = () => renderProductImageZoom({ center: true });
+  zoomImage.onerror = () => {
+    if (!fallbackSource || fallbackSource === source || zoomImage.dataset.fallbackApplied) return;
+    zoomImage.dataset.fallbackApplied = "true";
+    zoomImage.src = fallbackSource;
+  };
   if (!dialog.open) dialog.showModal();
   document.body.classList.add("is-product-zoom-open");
-  zoomImage.src = previewSource;
+  zoomImage.src = source;
   if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center: true });
-  if (source !== previewSource) {
-    const highResolutionImage = new Image();
-    productImageZoomHighResolutionImage = highResolutionImage;
-    highResolutionImage.decoding = "async";
-    highResolutionImage.onload = () => {
-      if (loadToken !== productImageZoomLoadToken || !dialog.open) return;
-      zoomImage.src = source;
-      productImageZoomHighResolutionImage = null;
-      if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center: true });
-    };
-    highResolutionImage.onerror = () => {
-      if (productImageZoomHighResolutionImage === highResolutionImage) productImageZoomHighResolutionImage = null;
-    };
-    highResolutionImage.src = source;
-  }
 }
 
 function adjustProductImageZoom(multiplier) {
@@ -2093,19 +2080,14 @@ function closeProductImageZoom() {
   const dialog = document.querySelector("[data-product-zoom-dialog]");
   const image = dialog?.querySelector("[data-product-zoom-image]");
   document.body.classList.remove("is-product-zoom-open");
-  productImageZoomLoadToken += 1;
-  if (productImageZoomHighResolutionImage) {
-    productImageZoomHighResolutionImage.onload = null;
-    productImageZoomHighResolutionImage.onerror = null;
-    productImageZoomHighResolutionImage.src = "";
-    productImageZoomHighResolutionImage = null;
-  }
   productImageZoomScale = 1;
   productImageZoomGesture = null;
   if (image) {
     image.onload = null;
+    image.onerror = null;
     image.removeAttribute("src");
     image.removeAttribute("data-zoom-ready");
+    image.removeAttribute("data-fallback-applied");
     image.style.removeProperty("width");
     image.style.removeProperty("height");
   }

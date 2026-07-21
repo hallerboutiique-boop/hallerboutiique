@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=product-image-quality-4/);
+  assert.match(checkout, /script\.js\?v=zoom-original-crop-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -289,6 +289,17 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.match(script, /function productImageSrcset\(product, image\)/);
   assert.match(script, /function productZoomImageSource\(product, image, index\)/);
   assert.match(script, /data-original-src=/);
+  const zoomSourceStart = script.indexOf("function productZoomImageSource(product, image, index)");
+  const zoomSourceEnd = script.indexOf("function productPageUrl", zoomSourceStart);
+  const zoomSourceImplementation = script.slice(zoomSourceStart, zoomSourceEnd);
+  assert.match(zoomSourceImplementation, /const publishedSource = Array\.isArray\(product\?\.images\)/);
+  assert.doesNotMatch(zoomSourceImplementation, /originalImages/);
+  const zoomOpenStart = script.indexOf("function openProductImageZoom(control)");
+  const zoomOpenEnd = script.indexOf("function adjustProductImageZoom", zoomOpenStart);
+  const zoomOpenImplementation = script.slice(zoomOpenStart, zoomOpenEnd);
+  assert.match(zoomOpenImplementation, /zoomImage\.removeAttribute\("srcset"\)/);
+  assert.match(zoomOpenImplementation, /zoomImage\.src = source/);
+  assert.doesNotMatch(zoomOpenImplementation, /zoomImage\.src = previewSource/);
   assert.match(script, /data-product-image-deferred/);
   assert.match(script, /function observeProductImages\(root = document\)/);
   assert.match(index, /assets\/hero-man-v2\.webp/);
