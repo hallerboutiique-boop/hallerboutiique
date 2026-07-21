@@ -26,3 +26,49 @@ Sito statico per Haller Boutique, costruito sul riferimento grafico fornito.
 - Storico analytics conservato fino a 365 giorni con modello dispositivo, IP completo in area admin e localizzazione IP per citta/paese quando disponibile
 - Coordinate GPS e accuratezza in metri visibili in admin quando l'utente autorizza la posizione precisa
 - Storico visite admin diviso in categorie: sessione, dispositivo, rete, posizione e comportamento
+- App amministrativa iOS e Android con notifiche push, gestione stato ordini e riepilogo incassi
+
+## App Haller Ordini
+
+L'app Expo/React Native si trova in `mobile/` e usa il backend del sito come unica fonte dati.
+
+Funzioni incluse:
+
+- notifica push persistente per ogni nuovo ordine, visibile anche con l'app in background o chiusa;
+- accesso con la password `ADMIN_PASSWORD` del sito e token mobile firmato valido 30 giorni;
+- elenco filtrabile di ordini nuovi, confermati e rifiutati;
+- dettaglio cliente, indirizzo, prodotti, taglie, pagamento, sconto e transazione;
+- conferma o rifiuto dell'ordine; il rifiuto ripristina l'inventario;
+- incassi basati soltanto sugli ordini confermati, con totale giornaliero, ordine medio e andamento mensile;
+- token push salvati sul volume persistente in `push-subscriptions.json` e ritentativi automatici delle notifiche non consegnate.
+
+### Avvio locale dell'app
+
+```bash
+cd mobile
+pnpm install --ignore-workspace
+pnpm start
+```
+
+Le notifiche push remote richiedono una development build o una build EAS; su Android non funzionano dentro Expo Go. Prima della prima build:
+
+```bash
+cd mobile
+eas login
+eas init
+eas build --profile development --platform all
+```
+
+`eas init` collega il progetto e aggiunge il `projectId` usato per generare gli Expo Push Token. Per Android occorre configurare FCM V1; per iOS EAS può creare la chiave APNs durante la procedura guidata.
+
+L'URL predefinito del backend è `https://www.hallerboutiique.com`. Per un ambiente diverso si può impostare `EXPO_PUBLIC_API_BASE_URL` partendo da `mobile/.env.example`.
+
+### API mobile
+
+- `POST /api/mobile/admin/login`
+- `GET /api/mobile/admin/orders`
+- `GET|PATCH /api/mobile/admin/orders/:id`
+- `GET /api/mobile/admin/dashboard`
+- `POST|DELETE /api/mobile/admin/push-token`
+
+Tutte le route tranne il login richiedono `Authorization: Bearer <token>`.
