@@ -88,6 +88,21 @@ function formatDate(value: string, includeTime = true) {
   }).format(date);
 }
 
+function normalizeWhatsAppPhone(value: string) {
+  const source = String(value || "").trim();
+  let digits = source.replace(/\D/g, "");
+  const hasInternationalPrefix = source.startsWith("+") || digits.startsWith("00");
+  if (digits.startsWith("00")) digits = digits.slice(2);
+  if (!hasInternationalPrefix && !digits.startsWith("39")) digits = `39${digits}`;
+  return /^\d{8,15}$/.test(digits) ? digits : "";
+}
+
+function whatsAppOrderMessage(order: MobileOrder) {
+  const firstName = order.customer.name.trim().split(/\s+/)[0];
+  const greeting = firstName ? `Buongiorno ${firstName}` : "Buongiorno";
+  return `${greeting}, ti contattiamo da Haller Boutique in merito al tuo ordine ${order.orderCode || order.id}.`;
+}
+
 function monthLabel(value: string) {
   const date = new Date(`${value}-01T12:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
@@ -356,6 +371,7 @@ function OrderDetailModal({
   onClose,
   onPrintLabel,
   onStatus,
+  onWhatsApp,
 }: {
   order: MobileOrder | null;
   visible: boolean;
@@ -363,6 +379,7 @@ function OrderDetailModal({
   onClose: () => void;
   onPrintLabel: () => Promise<void>;
   onStatus: (status: OrderStatus) => Promise<void>;
+  onWhatsApp: () => Promise<void>;
 }) {
   const requestStatus = (status: OrderStatus) => {
     const confirming = status === "Confermato";
@@ -420,6 +437,17 @@ function OrderDetailModal({
                   label="Indirizzo"
                   value={[order.customer.address, order.customer.postalCode, order.customer.city].filter(Boolean).join(", ")}
                 />
+                {order.customer.phone ? (
+                  <Pressable
+                    accessibilityLabel="Scrivi al cliente su WhatsApp Business"
+                    onPress={() => void onWhatsApp()}
+                    style={({ pressed }) => [styles.whatsAppButton, pressed && styles.pressed]}
+                  >
+                    <Ionicons name="logo-whatsapp" size={20} color="#081C10" />
+                    <Text style={styles.whatsAppButtonText}>Scrivi su WhatsApp Business</Text>
+                    <Ionicons name="arrow-forward" size={18} color="#081C10" />
+                  </Pressable>
+                ) : null}
               </View>
 
               <View style={styles.detailSection}>
@@ -634,6 +662,21 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }: {
     }
   };
 
+  const openCustomerWhatsApp = async () => {
+    if (!selectedOrder) return;
+    const phone = normalizeWhatsAppPhone(selectedOrder.customer.phone);
+    if (!phone) {
+      Alert.alert("Numero non valido", "Controlla il numero di telefono inserito dal cliente.");
+      return;
+    }
+    const message = encodeURIComponent(whatsAppOrderMessage(selectedOrder));
+    try {
+      await Linking.openURL(`https://wa.me/${phone}?text=${message}`);
+    } catch {
+      setError("Impossibile aprire WhatsApp Business su questo dispositivo.");
+    }
+  };
+
   const changeStatus = async (status: OrderStatus) => {
     if (!selectedOrder) return;
     setActionLoading(true);
@@ -743,6 +786,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }: {
         onClose={() => { setDetailVisible(false); setSelectedOrder(null); }}
         onPrintLabel={printShippingLabel}
         onStatus={changeStatus}
+        onWhatsApp={openCustomerWhatsApp}
       />
     </SafeAreaView>
   );
@@ -913,6 +957,8 @@ const styles = StyleSheet.create({
   detailLineLabel: { color: palette.muted, fontSize: 10, textTransform: "uppercase", letterSpacing: 0.6 },
   detailLineValue: { color: palette.text, fontSize: 13, lineHeight: 18, marginTop: 3 },
   detailLineLink: { color: palette.goldLight },
+  whatsAppButton: { minHeight: 50, borderRadius: 14, backgroundColor: "#55D978", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 9, marginTop: 12, paddingHorizontal: 14 },
+  whatsAppButtonText: { color: "#081C10", fontSize: 13, fontWeight: "900", flex: 1, textAlign: "center" },
   productRow: { flexDirection: "row", alignItems: "center", borderTopWidth: 1, borderTopColor: "#242424", paddingVertical: 13 },
   productIndex: { width: 35, height: 35, borderRadius: 12, backgroundColor: "#2C2417", alignItems: "center", justifyContent: "center" },
   productIndexText: { color: palette.goldLight, fontSize: 12, fontWeight: "800" },
