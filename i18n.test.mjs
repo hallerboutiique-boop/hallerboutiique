@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=zoom-preserve-crop-1/);
+  assert.match(checkout, /script\.js\?v=primary-preview-hq-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -299,6 +299,11 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.match(script, /function productImageSrcset\(product, image\)/);
   assert.match(script, /function productZoomImageSource\(product, image, index\)/);
   assert.match(script, /data-original-src=/);
+  const mediaMarkupStart = script.indexOf("function createProductMediaMarkup(product, detail = false)");
+  const mediaMarkupEnd = script.indexOf("function productPrimaryImage", mediaMarkupStart);
+  const mediaMarkupSource = script.slice(mediaMarkupStart, mediaMarkupEnd);
+  assert.match(mediaMarkupSource, /const highQualityPreviewSizes = "\(max-width: 760px\) calc\(100vw - 32px\), 52vw"/);
+  assert.match(mediaMarkupSource, /const sizes = detail \|\| index === initialIndex \? highQualityPreviewSizes : galleryPreviewSizes/);
   const zoomSourceStart = script.indexOf("function productZoomImageSource(product, image, index)");
   const zoomSourceEnd = script.indexOf("function productPageUrl", zoomSourceStart);
   const zoomSourceImplementation = script.slice(zoomSourceStart, zoomSourceEnd);
