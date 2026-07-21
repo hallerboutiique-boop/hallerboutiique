@@ -52,4 +52,11 @@ export type MobileSession = {
   expiresAt: string;
 };
 
+export type ShippingLabel = {
+  orderId: string;
+  orderCode: string;
+  generatedAt: string;
+  html: string;
+};
+
 export type OrdersFilter = "all" | "new" | "confirmed" | "rejected";

@@ -14,12 +14,16 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
+import QRCode from "qrcode";
 import {
   ORDER_STATUS,
   buildOrdersDashboard,
+  buildShippingLabel,
   normalizePushSubscription,
   publicMobileOrder,
+  renderShippingLabelHtml,
   sendExpoPushNotifications,
+  shippingLabelQrPayload,
   transitionOrder,
 } from "./mobile-admin.js";
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
@@ -2156,6 +2160,40 @@ async function handleMobileAdminOrder(req, res, orderId) {
   }
 }
 
+async function handleMobileShippingLabel(req, res, orderId) {
+  if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
+  if (req.method !== "GET") return json(res, 405, { ok: false, message: "Metodo non consentito." });
+  const cleanOrderId = cleanTrackingString(orderId, 100);
+  if (!/^ord_[a-zA-Z0-9_-]+$/.test(cleanOrderId)) return badRequest(res, "Ordine non valido.");
+
+  const orders = await readOrders();
+  const order = orders.find((entry) => entry.id === cleanOrderId);
+  if (!order) return json(res, 404, { ok: false, message: "Ordine non trovato." });
+
+  try {
+    const label = buildShippingLabel(order);
+    const qrCodeDataUrl = await QRCode.toDataURL(shippingLabelQrPayload(label), {
+      errorCorrectionLevel: "M",
+      margin: 1,
+      width: 512,
+      color: { dark: "#000000", light: "#FFFFFF" },
+    });
+    const html = renderShippingLabelHtml(label, qrCodeDataUrl);
+    return json(res, 200, {
+      ok: true,
+      label: {
+        orderId: label.orderId,
+        orderCode: label.orderCode,
+        generatedAt: label.generatedAt,
+        html,
+      },
+    });
+  } catch (error) {
+    if (error?.code === "ORDER_NOT_CONFIRMED") return json(res, 409, { ok: false, message: error.message });
+    throw error;
+  }
+}
+
 async function handleMobileAdminDashboard(req, res) {
   if (!isMobileAdmin(req)) return json(res, 401, { ok: false, message: "Sessione scaduta. Accedi di nuovo." });
   const orders = await readOrders();
@@ -3487,6 +3525,10 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/mobile/admin/orders") return handleMobileAdminOrders(req, res, url);
   if (req.method === "GET" && url.pathname === "/api/mobile/admin/dashboard") return handleMobileAdminDashboard(req, res);
   if (url.pathname === "/api/mobile/admin/push-token") return handleMobilePushToken(req, res);
+  const mobileShippingLabelMatch = url.pathname.match(/^\/api\/mobile\/admin\/orders\/([^/]+)\/shipping-label$/);
+  if (mobileShippingLabelMatch) {
+    return handleMobileShippingLabel(req, res, decodeURIComponent(mobileShippingLabelMatch[1]));
+  }
   const mobileOrderMatch = url.pathname.match(/^\/api\/mobile\/admin\/orders\/([^/]+)$/);
   if (mobileOrderMatch) return handleMobileAdminOrder(req, res, decodeURIComponent(mobileOrderMatch[1]));
   if (req.method === "POST" && url.pathname === "/api/admin/login") return handleAdminLogin(req, res);

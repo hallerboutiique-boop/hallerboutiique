@@ -3,7 +3,7 @@
   "description": "App iOS e Android per la gestione ordini Haller Boutique.",
   "license": "UNLICENSED",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "main": "index.ts",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
@@ -13,6 +13,7 @@
     "expo-font": "~57.0.1",
     "expo-linear-gradient": "~57.0.1",
     "expo-notifications": "~57.0.6",
+    "expo-print": "~57.0.1",
     "expo-secure-store": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "react": "19.2.3",

@@ -23,6 +23,19 @@ function monthKey(value) {
   return dateKey(value).slice(0, 7);
 }
 
+function labelText(value, maxLength = 180) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, maxLength);
+}
+
+function escapeLabelHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 export function isExpoPushToken(value) {
   return /^(ExponentPushToken|ExpoPushToken)\[[A-Za-z0-9_-]+\]$/.test(String(value || "").trim());
 }
@@ -76,6 +89,127 @@ export function publicMobileOrder(order) {
     totalValue: finiteMoney(order?.totalValue),
     total: String(order?.total || ""),
   };
+}
+
+export function buildShippingLabel(order, generatedAt = new Date().toISOString()) {
+  const mobileOrder = publicMobileOrder(order);
+  if (mobileOrder.status !== ORDER_STATUS.CONFIRMED) {
+    const error = new Error("Conferma l'ordine prima di generare l'etichetta.");
+    error.code = "ORDER_NOT_CONFIRMED";
+    throw error;
+  }
+
+  const itemCount = mobileOrder.products.reduce((sum, product) => sum + product.quantity, 0);
+  return {
+    version: 1,
+    generatedAt,
+    orderId: labelText(mobileOrder.id, 100),
+    orderCode: labelText(mobileOrder.orderCode || mobileOrder.id, 80),
+    sender: {
+      name: "Haller Boutique",
+      address: "Via Fabio Filzi 7",
+      postalCode: "20124",
+      city: "Milano",
+      country: "Italia",
+      phone: "3447873142",
+      website: "hallerboutiique.com",
+    },
+    recipient: {
+      name: labelText(mobileOrder.customer.name || "Cliente", 120),
+      address: labelText(mobileOrder.customer.address, 180),
+      postalCode: labelText(mobileOrder.customer.postalCode, 20),
+      city: labelText(mobileOrder.customer.city, 80),
+      country: "Italia",
+      phone: labelText(mobileOrder.customer.phone, 60),
+      email: labelText(mobileOrder.customer.email, 180),
+    },
+    parcel: {
+      packages: 1,
+      itemCount,
+    },
+  };
+}
+
+export function shippingLabelQrPayload(label) {
+  return JSON.stringify({
+    v: 1,
+    ordine: label.orderCode,
+    mittente: {
+      nome: label.sender.name,
+      indirizzo: label.sender.address,
+      cap: label.sender.postalCode,
+      citta: label.sender.city,
+      paese: label.sender.country,
+      telefono: label.sender.phone,
+    },
+    destinatario: label.recipient.name,
+    indirizzo: label.recipient.address,
+    cap: label.recipient.postalCode,
+    citta: label.recipient.city,
+    paese: label.recipient.country,
+    telefono: label.recipient.phone,
+    email: label.recipient.email,
+    colli: label.parcel.packages,
+  });
+}
+
+export function renderShippingLabelHtml(label, qrCodeDataUrl) {
+  const sender = label.sender;
+  const recipient = label.recipient;
+  const qr = escapeLabelHtml(qrCodeDataUrl);
+  const recipientLocality = [recipient.postalCode, recipient.city].filter(Boolean).join(" ");
+  return `<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    @page { size: 100mm 150mm; margin: 0; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; width: 100mm; height: 150mm; background: #fff; color: #000; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+    .label { width: 100mm; min-height: 150mm; padding: 6mm; border: 0.5mm solid #000; display: flex; flex-direction: column; }
+    .top { display: flex; justify-content: space-between; gap: 4mm; border-bottom: 0.6mm solid #000; padding-bottom: 4mm; }
+    .eyebrow { font-size: 7.5pt; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    .sender { font-size: 8.5pt; line-height: 1.35; margin-top: 1.5mm; }
+    .code { text-align: right; font-size: 9pt; }
+    .code strong { display: block; font-size: 16pt; margin-top: 1mm; overflow-wrap: anywhere; }
+    .destination { padding: 6mm 0 5mm; border-bottom: 0.6mm solid #000; }
+    .name { font-size: 19pt; line-height: 1.05; font-weight: 900; margin: 2.5mm 0 4mm; overflow-wrap: anywhere; }
+    .address { font-size: 14pt; line-height: 1.25; font-weight: 750; overflow-wrap: anywhere; }
+    .contact { margin-top: 4mm; font-size: 9pt; line-height: 1.45; overflow-wrap: anywhere; }
+    .bottom { display: grid; grid-template-columns: 1fr 35mm; gap: 5mm; align-items: end; padding-top: 5mm; flex: 1; }
+    .meta { align-self: stretch; display: flex; flex-direction: column; justify-content: space-between; }
+    .parcel { border: 0.45mm solid #000; padding: 3mm; font-size: 10pt; line-height: 1.5; }
+    .notice { font-size: 7.5pt; line-height: 1.35; color: #333; }
+    .qr { width: 35mm; height: 35mm; object-fit: contain; image-rendering: crisp-edges; }
+  </style>
+</head>
+<body>
+  <main class="label">
+    <section class="top">
+      <div>
+        <div class="eyebrow">Mittente</div>
+        <div class="sender"><strong>${escapeLabelHtml(sender.name)}</strong><br>${escapeLabelHtml(sender.address)}<br>${escapeLabelHtml(`${sender.postalCode} ${sender.city}`)} · ${escapeLabelHtml(sender.country)}<br>Tel. ${escapeLabelHtml(sender.phone)} · ${escapeLabelHtml(sender.website)}</div>
+      </div>
+      <div class="code"><span class="eyebrow">Ordine</span><strong>${escapeLabelHtml(label.orderCode)}</strong></div>
+    </section>
+    <section class="destination">
+      <div class="eyebrow">Destinatario</div>
+      <div class="name">${escapeLabelHtml(recipient.name)}</div>
+      <div class="address">${escapeLabelHtml(recipient.address)}<br>${escapeLabelHtml(recipientLocality)}<br>${escapeLabelHtml(recipient.country)}</div>
+      <div class="contact">${recipient.phone ? `Tel. ${escapeLabelHtml(recipient.phone)}` : ""}${recipient.phone && recipient.email ? "<br>" : ""}${recipient.email ? escapeLabelHtml(recipient.email) : ""}</div>
+    </section>
+    <section class="bottom">
+      <div class="meta">
+        <div class="parcel"><strong>COLLI:</strong> ${escapeLabelHtml(label.parcel.packages)}<br><strong>ARTICOLI:</strong> ${escapeLabelHtml(label.parcel.itemCount)}</div>
+        <div class="notice">Etichetta logistica interna. Il QR contiene i dati necessari alla spedizione e il numero ordine.</div>
+      </div>
+      <img class="qr" src="${qr}" alt="QR dati spedizione">
+    </section>
+  </main>
+</body>
+</html>`;
 }
 
 export function transitionOrder(order, targetStatus, now = new Date().toISOString()) {

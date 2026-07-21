@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
+import * as Print from "expo-print";
 import * as SecureStore from "expo-secure-store";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -28,6 +29,7 @@ import {
   fetchDashboard,
   fetchOrder,
   fetchOrders,
+  fetchShippingLabel,
   login,
   registerPushToken,
   unregisterPushToken,
@@ -37,6 +39,8 @@ import { registerForOrderNotifications } from "./src/notifications";
 import type { MobileOrder, MobileSession, OrderStatus, OrdersDashboard, OrdersFilter } from "./src/types";
 
 const SESSION_KEY = "haller_mobile_admin_session";
+const SHIPPING_LABEL_WIDTH_POINTS = 283;
+const SHIPPING_LABEL_HEIGHT_POINTS = 425;
 
 const palette = {
   background: "#090909",
@@ -350,12 +354,14 @@ function OrderDetailModal({
   visible,
   loading,
   onClose,
+  onPrintLabel,
   onStatus,
 }: {
   order: MobileOrder | null;
   visible: boolean;
   loading: boolean;
   onClose: () => void;
+  onPrintLabel: () => Promise<void>;
   onStatus: (status: OrderStatus) => Promise<void>;
 }) {
   const requestStatus = (status: OrderStatus) => {
@@ -363,7 +369,7 @@ function OrderDetailModal({
     Alert.alert(
       confirming ? "Confermare l’ordine?" : "Rifiutare l’ordine?",
       confirming
-        ? "L’ordine verrà conteggiato negli incassi confermati."
+        ? "L’ordine verrà conteggiato negli incassi e si aprirà l’etichetta di spedizione pronta da stampare."
         : "L’ordine non verrà conteggiato e la disponibilità dei prodotti sarà ripristinata.",
       [
         { text: "Annulla", style: "cancel" },
@@ -460,6 +466,18 @@ function OrderDetailModal({
                 <Pressable disabled={loading} onPress={() => requestStatus("Confermato")} style={({ pressed }) => [styles.confirmButton, pressed && styles.pressed, loading && styles.disabled]}>
                   {loading ? <ActivityIndicator color="#171109" /> : <Ionicons name="checkmark" size={20} color="#171109" />}
                   <Text style={styles.confirmButtonText}>Conferma</Text>
+                </Pressable>
+              </View>
+            ) : order.status === "Confermato" ? (
+              <View style={styles.detailActions}>
+                <Pressable
+                  accessibilityLabel="Stampa etichetta di spedizione"
+                  disabled={loading}
+                  onPress={() => void onPrintLabel()}
+                  style={({ pressed }) => [styles.labelButton, pressed && styles.pressed, loading && styles.disabled]}
+                >
+                  {loading ? <ActivityIndicator color="#171109" /> : <Ionicons name="print-outline" size={20} color="#171109" />}
+                  <Text style={styles.labelButtonText}>Stampa etichetta</Text>
                 </Pressable>
               </View>
             ) : null}
@@ -594,6 +612,28 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }: {
     return true;
   }), [filter, orders]);
 
+  const openShippingLabel = useCallback(async (orderId: string) => {
+    const label = await fetchShippingLabel(session.token, orderId);
+    await Print.printAsync({
+      html: label.html,
+      width: SHIPPING_LABEL_WIDTH_POINTS,
+      height: SHIPPING_LABEL_HEIGHT_POINTS,
+    });
+  }, [session.token]);
+
+  const printShippingLabel = async () => {
+    if (!selectedOrder) return;
+    setActionLoading(true);
+    setError("");
+    try {
+      await openShippingLabel(selectedOrder.id);
+    } catch (caught) {
+      await handleApiError(caught);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const changeStatus = async (status: OrderStatus) => {
     if (!selectedOrder) return;
     setActionLoading(true);
@@ -603,6 +643,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }: {
       setSelectedOrder(updated);
       setOrders((current) => current.map((order) => order.id === updated.id ? updated : order));
       setDashboard(await fetchDashboard(session.token));
+      if (status === "Confermato") await openShippingLabel(updated.id);
     } catch (caught) {
       await handleApiError(caught);
     } finally {
@@ -700,6 +741,7 @@ function AuthenticatedApp({ session, onLogout, onSessionExpired }: {
         visible={detailVisible}
         loading={actionLoading}
         onClose={() => { setDetailVisible(false); setSelectedOrder(null); }}
+        onPrintLabel={printShippingLabel}
         onStatus={changeStatus}
       />
     </SafeAreaView>
@@ -887,4 +929,6 @@ const styles = StyleSheet.create({
   rejectButtonText: { color: palette.red, fontSize: 14, fontWeight: "800" },
   confirmButton: { flex: 1.15, height: 52, borderRadius: 14, backgroundColor: palette.goldLight, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
   confirmButtonText: { color: "#171109", fontSize: 14, fontWeight: "900" },
+  labelButton: { flex: 1, height: 52, borderRadius: 14, backgroundColor: palette.goldLight, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 7 },
+  labelButtonText: { color: "#171109", fontSize: 14, fontWeight: "900" },
 });

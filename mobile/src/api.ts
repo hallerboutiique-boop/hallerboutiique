@@ -1,5 +1,5 @@
 import Constants from "expo-constants";
-import type { MobileOrder, MobileSession, OrderStatus, OrdersDashboard, OrdersFilter } from "./types";
+import type { MobileOrder, MobileSession, OrderStatus, OrdersDashboard, OrdersFilter, ShippingLabel } from "./types";
 
 const configuredBaseUrl =
   process.env.EXPO_PUBLIC_API_BASE_URL ||
@@ -77,6 +77,15 @@ export async function updateOrderStatus(token: string, orderId: string, status: 
     token,
   );
   return data.order;
+}
+
+export async function fetchShippingLabel(token: string, orderId: string): Promise<ShippingLabel> {
+  const data = await request<ApiEnvelope & { label: ShippingLabel }>(
+    `/api/mobile/admin/orders/${encodeURIComponent(orderId)}/shipping-label`,
+    {},
+    token,
+  );
+  return data.label;
 }
 
 export async function fetchDashboard(token: string): Promise<OrdersDashboard> {

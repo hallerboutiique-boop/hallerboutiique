@@ -3,10 +3,13 @@ import test from "node:test";
 import {
   ORDER_STATUS,
   buildOrdersDashboard,
+  buildShippingLabel,
   isExpoPushToken,
   normalizePushSubscription,
   publicMobileOrder,
+  renderShippingLabelHtml,
   sendExpoPushNotifications,
+  shippingLabelQrPayload,
   transitionOrder,
 } from "./mobile-admin.js";
 
@@ -66,6 +69,40 @@ test("returns only mobile order fields", () => {
   });
   assert.equal(order.customer.name, "Mario");
   assert.equal("ipAddress" in order, false);
+});
+
+test("builds a printable 100x150 shipping label only for confirmed orders", () => {
+  const source = {
+    id: "ord_1",
+    orderCode: "HB-1001",
+    status: "Confermato",
+    customer: {
+      name: "Mario Rossi",
+      email: "mario@example.com",
+      phone: "+39 333 1234567",
+      address: "Via Roma 10 <interno>",
+      city: "Milano",
+      postalCode: "20100",
+    },
+    products: [
+      { name: "Polo", quantity: 2, value: 50 },
+      { name: "Scarpe", quantity: 1, value: 80 },
+    ],
+  };
+  const label = buildShippingLabel(source, "2026-07-21T12:00:00.000Z");
+  assert.equal(label.orderCode, "HB-1001");
+  assert.equal(label.parcel.itemCount, 3);
+  const qrPayload = shippingLabelQrPayload(label);
+  assert.match(qrPayload, /Mario Rossi/);
+  assert.match(qrPayload, /Via Fabio Filzi 7/);
+  assert.match(qrPayload, /3447873142/);
+
+  const html = renderShippingLabelHtml(label, "data:image/png;base64,qr-test");
+  assert.match(html, /size: 100mm 150mm/);
+  assert.match(html, /Mario Rossi/);
+  assert.match(html, /Via Roma 10 &lt;interno&gt;/);
+  assert.match(html, /data:image\/png;base64,qr-test/);
+  assert.throws(() => buildShippingLabel({ ...source, status: "Nuovo" }), /Conferma l'ordine/);
 });
 
 test("sends order pushes and reports stale tokens", async () => {
