@@ -1,0 +1,100 @@
+name: Build iOS and upload to TestFlight
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/build-ios-testflight.yml"
+      - "mobile/**"
+      - "pnpm-workspace.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-submit-ios:
+    name: iOS TestFlight
+    if: ${{ vars.IOS_SIGNING_READY == 'true' }}
+    runs-on: macos-15
+    timeout-minutes: 60
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      IOS_DISTRIBUTION_CERTIFICATE_BASE64: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_BASE64 }}
+      IOS_DISTRIBUTION_CERTIFICATE_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_CERTIFICATE_PASSWORD }}
+      IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_APP_ID: ${{ secrets.APP_STORE_CONNECT_APP_ID }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.28.1
+          run_install: false
+
+      - name: Validate Apple and Expo credentials
+        run: |
+          test -n "$EXPO_TOKEN"
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_BASE64"
+          test -n "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD"
+          test -n "$IOS_PROVISIONING_PROFILE_BASE64"
+          test -n "$APP_STORE_CONNECT_API_KEY_BASE64"
+          test -n "$APP_STORE_CONNECT_KEY_ID"
+          test -n "$APP_STORE_CONNECT_ISSUER_ID"
+          test -n "$APP_STORE_CONNECT_APP_ID"
+
+      - name: Restore signing credentials
+        working-directory: mobile
+        run: |
+          mkdir -p .ci-credentials
+          printf '%s' "$IOS_DISTRIBUTION_CERTIFICATE_BASE64" | base64 --decode > .ci-credentials/distribution.p12
+          printf '%s' "$IOS_PROVISIONING_PROFILE_BASE64" | base64 --decode > .ci-credentials/profile.mobileprovision
+          printf '%s' "$APP_STORE_CONNECT_API_KEY_BASE64" | base64 --decode > .ci-credentials/AuthKey.p8
+          jq -n \
+            --arg password "$IOS_DISTRIBUTION_CERTIFICATE_PASSWORD" \
+            '{ios:{provisioningProfilePath:".ci-credentials/profile.mobileprovision",distributionCertificate:{path:".ci-credentials/distribution.p12",password:$password}}}' \
+            > credentials.json
+
+      - name: Configure TestFlight submission
+        working-directory: mobile
+        run: |
+          jq \
+            --arg keyPath ".ci-credentials/AuthKey.p8" \
+            --arg keyId "$APP_STORE_CONNECT_KEY_ID" \
+            --arg issuerId "$APP_STORE_CONNECT_ISSUER_ID" \
+            --arg appId "$APP_STORE_CONNECT_APP_ID" \
+            '.submit["github-ios"].ios = {ascApiKeyPath:$keyPath,ascApiKeyId:$keyId,ascApiKeyIssuerId:$issuerId,ascAppId:$appId}' \
+            eas.json > eas.ci.json
+          mv eas.ci.json eas.json
+
+      - name: Install dependencies
+        working-directory: mobile
+        run: pnpm install --frozen-lockfile
+
+      - name: Build signed IPA locally
+        working-directory: mobile
+        run: pnpm dlx eas-cli@latest build --platform ios --profile github-ios --local --non-interactive --output Haller-Ordini-iOS.ipa
+
+      - name: Upload IPA to TestFlight
+        working-directory: mobile
+        run: pnpm dlx eas-cli@latest submit --platform ios --profile github-ios --path Haller-Ordini-iOS.ipa --non-interactive
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Haller-Ordini-iOS
+          path: mobile/Haller-Ordini-iOS.ipa
+          if-no-files-found: error
+          retention-days: 14

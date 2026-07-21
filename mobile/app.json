@@ -24,7 +24,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.hallerboutique.orders",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "Haller Ordini invia notifiche quando arriva un nuovo ordine."
+        "NSUserNotificationsUsageDescription": "Haller Ordini invia notifiche quando arriva un nuovo ordine.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
