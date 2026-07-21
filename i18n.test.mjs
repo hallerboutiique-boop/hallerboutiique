@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=primary-preview-hq-1/);
+  assert.match(checkout, /script\.js\?v=last-stock-selection-cleanup-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -86,6 +86,9 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(styles, /\.catalog-search-result\s*\{[\s\S]*?overflow:\s*hidden/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
   assert.match(script, /isLastAvailable/);
+  const featuredStart = script.indexOf("function getHomeFeaturedProducts()");
+  const featuredEnd = script.indexOf("function findProduct", featuredStart);
+  assert.match(script.slice(featuredStart, featuredEnd), /\.filter\(\(product\) => !product\.isLastAvailable\)/);
   assert.match(script, /"scarpe donna": "Scarpe"/);
   assert.match(script, /function getCatalogGenderProducts\(gender\)/);
   assert.match(script, /gender === "donna"[\s\S]*?!product\.isLastAvailable/);
