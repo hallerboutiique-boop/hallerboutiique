@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test i18n.test.mjs product-image-zoom.test.mjs mobile-admin.test.mjs",
+    "test": "node --test i18n.test.mjs product-image-zoom.test.mjs try-on-image.test.mjs mobile-admin.test.mjs",
     "mobile:assets": "node scripts/generate-mobile-assets.mjs",
     "bunny:purge": "node scripts/purge-bunny-cache.mjs"
   },

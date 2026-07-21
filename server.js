@@ -27,6 +27,7 @@ import {
   transitionOrder,
 } from "./mobile-admin.js";
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
+import { normalizeTryOnProductImage } from "./try-on-image.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -2703,7 +2704,7 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   const mode = fieldValue(parts, "mode", 20) === "bundle" ? "bundle" : "single";
   const bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
   if (mode === "bundle" && bundleItems.length === 0) return badRequest(res, copy.unavailable);
-  const productImages = mode === "bundle"
+  const uploadedProductImages = mode === "bundle"
     ? parts.filter((part) => part.name === "productImage" && part.filename).map((part, index) => {
         const productExt = imageExtension(part.filename, part.contentType);
         if (!productExt || productExt === ".svg" || part.data.length === 0) return null;
@@ -2714,8 +2715,22 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
         };
       })
     : [];
-  if (mode === "bundle" && (productImages.length !== bundleItems.length || productImages.some((item) => !item))) {
+  if (mode === "bundle" && (uploadedProductImages.length !== bundleItems.length || uploadedProductImages.some((item) => !item))) {
     return badRequest(res, copy.bundleImages);
+  }
+  let productImages = uploadedProductImages;
+  if (mode === "bundle") {
+    try {
+      productImages = await Promise.all(
+        uploadedProductImages.map((productImage, index) => normalizeTryOnProductImage(productImage, index)),
+      );
+    } catch (error) {
+      console.error("[try-on] product image normalization failed", {
+        itemIds: bundleItems.map((item) => item.id),
+        error: cleanTrackingString(error?.message, 220),
+      });
+      return badRequest(res, copy.bundleImages);
+    }
   }
   const progress = streamProgress ? createProgressStream(res) : null;
   progress?.update(24, copy.received);
@@ -2741,6 +2756,7 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
     console.error("[try-on] generation failed", {
       mode,
       itemCount: bundleItems.length,
+      itemIds: bundleItems.map((item) => item.id),
       status: Number(error?.status || 0),
       error: cleanTrackingString(error?.message, 220),
     });
