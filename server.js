@@ -13,6 +13,7 @@ import {
   S3Client,
 } from "@aws-sdk/client-s3";
 import sharp from "sharp";
+import { createLessZoomedProductImage } from "./product-image-zoom.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -57,8 +58,18 @@ const productImageStorage = productImageBucketName
   : null;
 let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
+let productZoomImageOptimizationJob = null;
 let productMutationQueue = Promise.resolve();
 let productImageOptimizationStatus = {
+  state: "idle",
+  total: 0,
+  processed: 0,
+  optimized: 0,
+  skipped: 0,
+  failed: 0,
+  current: "",
+};
+let productZoomImageOptimizationStatus = {
   state: "idle",
   total: 0,
   processed: 0,
@@ -217,7 +228,12 @@ function referencedProductUploadNames(data) {
   [...items, ...custom].forEach((product) => {
     const renditionImages = Object.values(cleanProductImageRenditions(product?.imageRenditions, product?.images))
       .flatMap((entries) => entries.map((entry) => entry.url));
-    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages), ...renditionImages].forEach((image) => {
+    [
+      ...cleanProductImages(product?.images),
+      ...cleanProductImages(product?.originalImages),
+      ...cleanProductImages(product?.zoomImages),
+      ...renditionImages,
+    ].forEach((image) => {
       const name = uploadFileName(image);
       if (name) referenced.add(name);
     });
@@ -244,7 +260,12 @@ function referencedProductObjectKeys(data) {
   [...items, ...custom].forEach((product) => {
     const renditionImages = Object.values(cleanProductImageRenditions(product?.imageRenditions, product?.images))
       .flatMap((entries) => entries.map((entry) => entry.url));
-    [...cleanProductImages(product?.images), ...cleanProductImages(product?.originalImages), ...renditionImages].forEach((image) => {
+    [
+      ...cleanProductImages(product?.images),
+      ...cleanProductImages(product?.originalImages),
+      ...cleanProductImages(product?.zoomImages),
+      ...renditionImages,
+    ].forEach((image) => {
       const key = productObjectKey(image);
       if (key) referenced.add(key);
     });
@@ -434,6 +455,18 @@ async function readProductImageSource(image) {
   return data;
 }
 
+async function createAndStoreProductZoomImage(productId, publishedImage, originalImage) {
+  const output = await createLessZoomedProductImage(publishedImage, originalImage);
+  const fingerprint = createHash("sha256")
+    .update(originalImage)
+    .update(publishedImage)
+    .digest("hex")
+    .slice(0, 16);
+  const name = `${slugifyProduct(productId)}-zoom-${fingerprint}-${output.width}x${output.height}.webp`;
+  const url = await storeProductImage(name, output.data, output.type);
+  return { url, width: output.width, height: output.height };
+}
+
 async function persistProductImageOptimization(data) {
   await writeJson(productsFile, {
     updatedAt: new Date().toISOString(),
@@ -460,6 +493,23 @@ async function productImageRenditionsExist(entries) {
     return false;
   });
   return checks.every(Boolean);
+}
+
+async function productImageExists(image) {
+  const key = productObjectKey(image);
+  if (key && productImageStorage) {
+    try {
+      await productImageStorage.send(new HeadObjectCommand({ Bucket: productImageBucketName, Key: key }));
+      return true;
+    } catch (error) {
+      if (error?.name === "NotFound" || error?.$metadata?.httpStatusCode === 404) return false;
+      throw error;
+    }
+  }
+  const uploadName = uploadFileName(image);
+  return uploadName
+    ? fs.access(path.join(uploadsDir, uploadName)).then(() => true, () => false)
+    : false;
 }
 
 async function optimizeExistingProductImages({ primaryOnly = false, force = false, productId = "", refreshHighQuality = false } = {}) {
@@ -542,6 +592,65 @@ async function optimizeExistingProductImages({ primaryOnly = false, force = fals
   };
 }
 
+async function optimizeExistingProductZoomImages({ force = false, productId = "" } = {}) {
+  const data = await readProductOverrides();
+  const products = [
+    ...Object.entries(data.items).map(([id, product]) => ({ id, product })),
+    ...data.custom.map((product, index) => ({ id: product.id || `custom-${index}`, product })),
+  ].filter((entry) => !productId || entry.id === productId);
+  const tasks = products.flatMap(({ id, product }) => {
+    const images = cleanProductImages(product.images);
+    const originals = cleanProductImages(product.originalImages);
+    const currentZoomImages = cleanProductImages(product.zoomImages);
+    product.zoomImages = images.map((image, index) => currentZoomImages[index] || image);
+    return images
+      .map((image, index) => ({ id, product, image, original: originals[index], index }))
+      .filter((task) => task.original && task.original !== task.image);
+  });
+
+  productZoomImageOptimizationStatus = {
+    state: "running",
+    total: tasks.length,
+    processed: 0,
+    optimized: 0,
+    skipped: 0,
+    failed: 0,
+    current: "",
+  };
+
+  for (const task of tasks) {
+    productZoomImageOptimizationStatus.current = `${task.id}: ${task.image}`;
+    const previous = task.product.zoomImages[task.index] || task.image;
+    try {
+      if (!force && previous !== task.image && await productImageExists(previous)) {
+        productZoomImageOptimizationStatus.skipped += 1;
+      } else {
+        const [publishedImage, originalImage] = await Promise.all([
+          readProductImageSource(task.image),
+          readProductImageSource(task.original),
+        ]);
+        const generated = await createAndStoreProductZoomImage(task.id, publishedImage, originalImage);
+        task.product.zoomImages[task.index] = generated.url;
+        await persistProductImageOptimization(data);
+        productZoomImageOptimizationStatus.optimized += 1;
+      }
+    } catch (error) {
+      task.product.zoomImages[task.index] = previous;
+      productZoomImageOptimizationStatus.failed += 1;
+      console.error(`Product zoom image optimization failed for ${task.image}: ${error.message}`);
+    } finally {
+      productZoomImageOptimizationStatus.processed += 1;
+    }
+  }
+
+  await persistProductImageOptimization(data);
+  productZoomImageOptimizationStatus = {
+    ...productZoomImageOptimizationStatus,
+    state: productZoomImageOptimizationStatus.failed ? "completed_with_errors" : "completed",
+    current: "",
+  };
+}
+
 function handleProductImageOptimization(req, res, url) {
   if (!isLocalRequest(req)) return notFound(res);
   if (req.method === "GET") return json(res, 200, { ok: true, ...productImageOptimizationStatus });
@@ -562,6 +671,31 @@ function handleProductImageOptimization(req, res, url) {
       });
   }
   return json(res, 202, { ok: true, ...productImageOptimizationStatus });
+}
+
+function handleProductZoomImageOptimization(req, res, url) {
+  if (!isLocalRequest(req)) return notFound(res);
+  if (req.method === "GET") return json(res, 200, { ok: true, ...productZoomImageOptimizationStatus });
+  if (req.method !== "POST") return notFound(res);
+  if (!productZoomImageOptimizationJob) {
+    productZoomImageOptimizationJob = enqueueProductMutation(() => optimizeExistingProductZoomImages({
+      force: url.searchParams.get("force") === "1",
+      productId: cleanTrackingString(url.searchParams.get("product"), 120),
+    }))
+      .catch((error) => {
+        productZoomImageOptimizationStatus = {
+          ...productZoomImageOptimizationStatus,
+          state: "failed",
+          current: "",
+          message: error.message,
+        };
+        console.error(`Product zoom image optimization stopped: ${error.message}`);
+      })
+      .finally(() => {
+        productZoomImageOptimizationJob = null;
+      });
+  }
+  return json(res, 202, { ok: true, ...productZoomImageOptimizationStatus });
 }
 
 async function deleteProductObjects(keys) {
@@ -1149,6 +1283,9 @@ function mergeProduct(product, overrides) {
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
       : Array.isArray(product.originalImages) ? product.originalImages : product.images,
+    zoomImages: Array.isArray(override.zoomImages)
+      ? override.zoomImages
+      : Array.isArray(product.zoomImages) ? product.zoomImages : images,
     imageRenditions: cleanProductImageRenditions(override.imageRenditions, images),
   };
 }
@@ -1221,6 +1358,9 @@ function cleanProductPatch(body) {
     inventory: cleanProductInventory(body.inventory),
     images,
     originalImages: cleanProductImages(body.originalImages),
+    zoomImages: cleanProductImages(body.zoomImages).length
+      ? cleanProductImages(body.zoomImages)
+      : images,
     imageRenditions: cleanProductImageRenditions(body.imageRenditions, images),
     imageVariant,
     updatedAt: new Date().toISOString(),
@@ -2151,12 +2291,17 @@ async function handleAdminProductImages(req, res) {
     const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
     const originalUrl = await storeProductImage(originalName, originalPart.data, originalPart.contentType);
     const targetIndex = Number.isInteger(originalImageIndexes[partIndex]) ? originalImageIndexes[partIndex] : partIndex;
-    return { targetIndex, url: originalUrl };
+    return { targetIndex, url: originalUrl, data: originalPart.data };
   }));
   const originalSavedByIndex = new Map(
     uploadedOriginals
       .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
       .map((entry) => [entry.targetIndex, entry.url])
+  );
+  const originalUploadByIndex = new Map(
+    uploadedOriginals
+      .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
+      .map((entry) => [entry.targetIndex, entry])
   );
 
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
@@ -2172,9 +2317,26 @@ async function handleAdminProductImages(req, res) {
   const legacyImageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
   const imageVariant = imageVariants[savedInputIndexes[0]] || legacyImageVariant;
   const sourceSaved = saved.map((image, savedIndex) => originalSavedByIndex.get(savedInputIndexes[savedIndex]) || image);
+  const zoomSaved = await mapWithConcurrency(validUploadedImages, 1, async (entry) => {
+    const variant = imageVariants[entry.inputIndex] || legacyImageVariant;
+    const originalUpload = originalUploadByIndex.get(entry.inputIndex);
+    if (variant !== "cropped" || !originalUpload) return entry.url;
+    const generated = await createAndStoreProductZoomImage(
+      productId,
+      imageParts[entry.inputIndex].data,
+      originalUpload.data
+    );
+    return generated.url;
+  });
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
     return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 100);
+  };
+  const mergeZoomImages = (currentImages, currentZoomImages) => {
+    const current = cleanProductImages(currentImages);
+    const zoom = cleanProductImages(currentZoomImages);
+    const aligned = current.map((image, index) => zoom[index] || image);
+    return (makePrimary ? [...zoomSaved, ...aligned] : [...aligned, ...zoomSaved]).slice(0, 100);
   };
 
   let product;
@@ -2188,6 +2350,7 @@ async function handleAdminProductImages(req, res) {
       baseName: undefined,
       images,
       originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      zoomImages: mergeZoomImages(existing.images, existing.zoomImages),
       imageRenditions: cleanProductImageRenditions({
         ...(existing.imageRenditions || {}),
         ...uploadedImageRenditions,
@@ -2205,6 +2368,7 @@ async function handleAdminProductImages(req, res) {
       ...existing,
       images,
       originalImages: mergeUploadedImages(existing.originalImages, sourceSaved),
+      zoomImages: mergeZoomImages(existing.images, existing.zoomImages),
       imageRenditions: {
         ...(existing.imageRenditions || {}),
         ...uploadedImageRenditions,
@@ -2219,6 +2383,7 @@ async function handleAdminProductImages(req, res) {
     ok: true,
     images: saved,
     originalImages: sourceSaved,
+    zoomImages: zoomSaved,
     imageRenditions: uploadedImageRenditions,
     product,
   });
@@ -2266,6 +2431,11 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
     const originalName = `ai-product-original-${Date.now()}-${randomBytes(4).toString("hex")}${sourceExt}`;
     originalImageUrl = await storeProductImage(originalName, sourceImage.data, sourceImage.contentType);
   }
+  let zoomImageUrl = imageUrl;
+  if (imageVariant === "cropped" && sourceImage !== image) {
+    const generated = await createAndStoreProductZoomImage("ai-product", image.data, sourceImage.data);
+    zoomImageUrl = generated.url;
+  }
   const sourceMime = sourceImage.contentType || (sourceExt === ".png" ? "image/png" : sourceExt === ".webp" ? "image/webp" : "image/jpeg");
   const dataUrl = `data:${sourceMime};base64,${sourceImage.data.toString("base64")}`;
   progress?.update(42, "Foto preparata");
@@ -2277,10 +2447,11 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
     const suggestion = {
       ...cleanAiSuggestion(rawSuggestion, imageUrl),
       originalImages: [originalImageUrl],
+      zoomImages: [zoomImageUrl],
       imageRenditions: imageRenditions.length ? { [imageUrl]: imageRenditions } : {},
       imageVariant,
     };
-    const result = { ok: true, image: imageUrl, originalImage: originalImageUrl, suggestion };
+    const result = { ok: true, image: imageUrl, originalImage: originalImageUrl, zoomImage: zoomImageUrl, suggestion };
     if (progress) return progress.done(result);
     json(res, 200, result);
   } catch (error) {
@@ -2988,6 +3159,7 @@ async function oauthCallback(req, res, providerKey, url) {
 
 async function handleApi(req, res, url) {
   if (url.pathname === "/api/internal/product-image-optimization") return handleProductImageOptimization(req, res, url);
+  if (url.pathname === "/api/internal/product-zoom-image-optimization") return handleProductZoomImageOptimization(req, res, url);
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);

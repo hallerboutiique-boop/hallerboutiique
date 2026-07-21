@@ -327,10 +327,14 @@ function syncProductImageFields() {
     .filter((entry) => entry.image)
     .map((entry) => entry.originalImage || entry.image)
     .join("\n");
+  productForm.elements.zoomImages.value = productImageEntries
+    .filter((entry) => entry.image)
+    .map((entry) => entry.zoomImage || entry.image)
+    .join("\n");
   productForm.elements.imageVariant.value = productImageEntries[0]?.variant || "original";
 }
 
-function setProductImageEntries(images = [], originals = [], primaryVariant = "original", imageRenditions = {}) {
+function setProductImageEntries(images = [], originals = [], zoomImages = [], primaryVariant = "original", imageRenditions = {}) {
   clearProductImageEntries();
   productImageEntries = images.slice(0, maximumProductImages).map((image, index) => {
     const originalImage = originals[index] || image;
@@ -338,6 +342,7 @@ function setProductImageEntries(images = [], originals = [], primaryVariant = "o
       key: nextProductImageKey(),
       image,
       originalImage,
+      zoomImage: zoomImages[index] || image,
       renditions: Array.isArray(imageRenditions?.[image]) ? imageRenditions[image] : [],
       variant: index === 0 ? primaryVariant : originalImage !== image ? "cropped" : "original",
       pendingImage: null,
@@ -728,6 +733,7 @@ async function createAiProductFromImage(image, { originalFile, variant = "origin
       ...(data.suggestion || {}),
       images: data.suggestion?.images || (data.image ? [data.image] : []),
       originalImages: data.suggestion?.originalImages || (data.originalImage ? [data.originalImage] : []),
+      zoomImages: data.suggestion?.zoomImages || (data.zoomImage ? [data.zoomImage] : []),
       imageRenditions: data.suggestion?.imageRenditions || {},
       imageVariant: data.suggestion?.imageVariant || variant,
     };
@@ -772,6 +778,9 @@ async function analyzeAndSaveAiProductFile(file) {
     originalImages: Array.isArray(suggestion.originalImages) && suggestion.originalImages.length
       ? suggestion.originalImages
       : data.originalImage ? [data.originalImage] : images,
+    zoomImages: Array.isArray(suggestion.zoomImages) && suggestion.zoomImages.length
+      ? suggestion.zoomImages
+      : data.zoomImage ? [data.zoomImage] : images,
     imageRenditions: suggestion.imageRenditions || {},
     imageVariant: suggestion.imageVariant || "original",
   };
@@ -918,6 +927,7 @@ async function uploadPendingProductImages(productId) {
       revokeProductImagePreview(entry);
       entry.image = data.images[index];
       entry.originalImage = data.originalImages?.[index] || data.images[index];
+      entry.zoomImage = data.zoomImages?.[index] || data.images[index];
       entry.renditions = data.imageRenditions?.[entry.image] || [];
       entry.pendingImage = null;
       entry.originalFile = null;
@@ -1302,6 +1312,7 @@ function fillProductForm(product) {
   setProductImageEntries(
     product.images || [],
     product.originalImages || product.images || [],
+    product.zoomImages || product.images || [],
     product.imageVariant || "original",
     product.imageRenditions || {}
   );
@@ -1328,6 +1339,7 @@ function fillAiProductDraft(suggestion) {
   setProductImageEntries(
     suggestion.images || [],
     suggestion.originalImages || suggestion.images || [],
+    suggestion.zoomImages || suggestion.images || [],
     suggestion.imageVariant || "original",
     suggestion.imageRenditions || {}
   );
@@ -1341,9 +1353,10 @@ function startNewProduct() {
   productForm.reset();
   productForm.elements.id.value = "";
   productForm.elements.originalImages.value = "";
+  productForm.elements.zoomImages.value = "";
   productForm.elements.imageVariant.value = "original";
   productForm.elements.sizeType.value = "none";
-  setProductImageEntries([], [], "original", {});
+  setProductImageEntries([], [], [], "original", {});
   if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
   setProductMessage("Compila tutti i dati: marca, collezione e categoria possono essere nuove.");
   setProductUploadStatus("Puoi selezionare fino a 100 foto insieme.");
@@ -1969,6 +1982,7 @@ productForm?.addEventListener("submit", async (event) => {
       const initialPayload = Object.fromEntries(new FormData(productForm));
       initialPayload.images = [];
       initialPayload.originalImages = [];
+      initialPayload.zoomImages = [];
       initialPayload.imageRenditions = {};
       const created = await api("/api/admin/products", {
         method: "POST",
@@ -1988,6 +2002,9 @@ productForm?.addEventListener("submit", async (event) => {
     payload.originalImages = productImageEntries
       .filter((entry) => entry.image)
       .map((entry) => entry.originalImage || entry.image);
+    payload.zoomImages = productImageEntries
+      .filter((entry) => entry.image)
+      .map((entry) => entry.zoomImage || entry.image);
     payload.imageRenditions = Object.fromEntries(
       productImageEntries
         .filter((entry) => entry.image && entry.renditions.length)

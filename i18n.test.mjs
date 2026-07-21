@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=zoom-original-crop-1/);
+  assert.match(checkout, /script\.js\?v=zoom-hires-crop-2/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -265,7 +265,8 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /new PutBucketCorsCommand/);
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
-  assert.match(adminHtml, /admin\.js\?v=ai-product-results-4/);
+  assert.match(adminHtml, /name="zoomImages"/);
+  assert.match(adminHtml, /admin\.js\?v=zoom-hires-crop-2/);
 });
 
 test("checkout renders product images from the cart", async () => {
@@ -292,6 +293,8 @@ test("responsive product images preserve originals and keep the navigation menu 
   const zoomSourceStart = script.indexOf("function productZoomImageSource(product, image, index)");
   const zoomSourceEnd = script.indexOf("function productPageUrl", zoomSourceStart);
   const zoomSourceImplementation = script.slice(zoomSourceStart, zoomSourceEnd);
+  assert.match(zoomSourceImplementation, /const dedicatedZoomSource = Array\.isArray\(product\?\.zoomImages\)/);
+  assert.match(zoomSourceImplementation, /if \(dedicatedZoomSource\) return withProductImageVersion\(dedicatedZoomSource\)/);
   assert.match(zoomSourceImplementation, /const publishedSource = Array\.isArray\(product\?\.images\)/);
   assert.doesNotMatch(zoomSourceImplementation, /originalImages/);
   const zoomOpenStart = script.indexOf("function openProductImageZoom(control)");
@@ -300,6 +303,10 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.match(zoomOpenImplementation, /zoomImage\.removeAttribute\("srcset"\)/);
   assert.match(zoomOpenImplementation, /zoomImage\.src = source/);
   assert.doesNotMatch(zoomOpenImplementation, /zoomImage\.src = previewSource/);
+  assert.match(server, /async function optimizeExistingProductZoomImages/);
+  assert.match(server, /createAndStoreProductZoomImage/);
+  assert.match(server, /product\.zoomImages\[task\.index\] = generated\.url/);
+  assert.match(server, /"\/api\/internal\/product-zoom-image-optimization"/);
   assert.match(script, /data-product-image-deferred/);
   assert.match(script, /function observeProductImages\(root = document\)/);
   assert.match(index, /assets\/hero-man-v2\.webp/);
