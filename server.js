@@ -50,7 +50,7 @@ const sessionSecret = process.env.SESSION_SECRET || "dev-session-secret-change-m
 const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
-const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-1.5";
+const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
@@ -1673,21 +1673,30 @@ function appendImageFormData(form, field, image) {
 
 function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
   const form = new FormData();
+  const hasSeparateProductImages = productImages.length > 0;
   const bundleIncludesBag = bundleItems.some((item) => /\b(?:bag|bags|borsa|borse|purse|handbag|sac)\b/i.test(`${item.name} ${item.category} ${item.sizeType}`));
-  if (bundleItems.length > 0) {
+  if (hasSeparateProductImages) {
     appendImageFormData(form, "image[]", userImage);
     productImages.forEach((image) => appendImageFormData(form, "image[]", image));
   } else {
     appendImageFormData(form, "image", userImage);
   }
   form.append("model", openaiTryOnModel);
-  form.append("size", bundleItems.length > 0 ? "1024x1536" : "1024x1024");
+  form.append("size", bundleItems.length > 0 || hasSeparateProductImages ? "1024x1536" : "1024x1024");
+  form.append("quality", "high");
   if (openaiTryOnModel !== "gpt-image-2") form.append("input_fidelity", "high");
-  const bundlePrompt = bundleItems.length > 0
+  const identityLock = [
+    "PERSON LOCK — highest priority: input image 1 is the immutable identity and scene reference.",
+    "Do not modify, redraw, regenerate, retouch, beautify, sharpen, blur or reinterpret the customer's head, face, facial geometry, eyes, eyebrows, nose, mouth, teeth, jaw, ears, skin tone, skin texture, expression or hair.",
+    "Preserve the exact identity, likeness, age, body shape, pose, hands, camera angle, framing, lighting and background from input image 1.",
+    "If any clothing instruction conflicts with identity preservation, preserve the person and adapt only the garment.",
+  ].join(" ");
+  const tryOnPrompt = bundleItems.length > 0
     ? [
-        "Create one realistic full-body virtual try-on preview for an ecommerce fashion checkout.",
-        "Input image 1 is the customer's original, unmodified photo. Preserve this person's identity, face, hair, skin, body shape, pose, age and background as closely as possible.",
+        "Edit input image 1 to create one photorealistic virtual try-on preview for an ecommerce fashion checkout.",
+        identityLock,
         `The remaining input images are the original catalog product photos, in this exact order: ${bundleItems.map((item, index) => `input image ${index + 2} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`).join("; ")}.`,
+        "Allowed change: replace only the clothing, footwear and accessory pixels needed to dress the existing person. Keep every other pixel and visual attribute as close to input image 1 as possible.",
         "Dress and style the customer with every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any item.",
         "Layer garments naturally. Put tops, trousers and outerwear on the body; put sneakers or shoes on both feet; place bags in the customer's hand, over the shoulder or across the body; place accessories in their natural position.",
         "Use each original product photo as the authoritative visual reference. If a product name or category conflicts with its photo, follow the photo. Preserve the exact product type, color, logo, print, material, cut, proportions, shape and visible details.",
@@ -1695,14 +1704,27 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
         bundleIncludesBag
           ? "The cart includes a bag product. Show only that exact referenced bag and do not invent any additional bag."
           : "The cart contains no bag product. The customer must not carry or wear any bag, purse, handbag, pouch or shopping bag.",
-        "Use a full-length portrait composition with the customer visible from head to toe, both feet unobstructed and every actual bag fully visible. If the customer photo crops the lower legs or feet, extend the frame naturally while preserving the visible person and scene.",
-        "Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions or add unrelated products, props or logos.",
+        "When input image 1 already shows the full body, keep the customer visible from head to toe with both feet unobstructed and every actual bag fully visible. Otherwise preserve the original framing; never reframe, rescale or extend the image in a way that changes the head or face.",
+        "Modify only the clothing and accessory areas needed for the outfit. Do not change body proportions, pose or add unrelated products, props or logos.",
         "Return one premium, photorealistic portrait outfit preview. Do not return a collage, split screen, labels or product panels.",
       ].join(" ")
+    : hasSeparateProductImages
+      ? [
+          "Edit input image 1 to create a photorealistic virtual try-on preview for an ecommerce fashion site.",
+          identityLock,
+          "Input image 2 is the authoritative original catalog product photo.",
+          `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
+          "Allowed change: replace only the clothing, footwear or accessory pixels needed to put the product from input image 2 on the existing person. Keep everything else the same.",
+          "Preserve the product's exact type, color, logo, print, material, cut, proportions, shape and visible details. Ignore packaging, cards, stands, mannequins and background props in the product photo.",
+          "Fit the product naturally to the customer's existing pose and body geometry with realistic fabric behavior, lighting, shadows and color temperature.",
+          "Do not change the background, camera angle, framing, image quality or any part of the face. Do not add unrelated accessories, text, logos or watermarks.",
+          "Return one premium photorealistic portrait, never a collage or split screen.",
+        ].join(" ")
     : [
         "Create a realistic virtual try-on preview for an ecommerce fashion site.",
         "The reference image is split into two panels: the left panel is the customer and the right panel is the Haller Boutique product photo or product name from the catalog.",
-        "Keep the customer's identity, face, body shape, pose and background natural. Put the product from the right panel on the customer, preserving its color, logo, print, cut and visible details when a product photo is present.",
+        identityLock,
+        "Put the product from the right panel on the customer, preserving its color, logo, print, cut and visible details when a product photo is present.",
         `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
         "For shoes, show the customer head to toe and place the shoes on both feet. For a bag, show it carried naturally in the hand, over the shoulder or across the body and keep it fully visible.",
         "Only change the outfit area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
@@ -1710,7 +1732,7 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
       ].join(" ");
   form.append(
     "prompt",
-    bundlePrompt
+    tryOnPrompt
   );
   return form;
 }
@@ -2704,8 +2726,9 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
   const mode = fieldValue(parts, "mode", 20) === "bundle" ? "bundle" : "single";
   const bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
   if (mode === "bundle" && bundleItems.length === 0) return badRequest(res, copy.unavailable);
-  const uploadedProductImages = mode === "bundle"
-    ? parts.filter((part) => part.name === "productImage" && part.filename).map((part, index) => {
+  const uploadedProductImages = parts
+    .filter((part) => part.name === "productImage" && part.filename)
+    .map((part, index) => {
         const productExt = imageExtension(part.filename, part.contentType);
         if (!productExt || productExt === ".svg" || part.data.length === 0) return null;
         return {
@@ -2713,13 +2736,18 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
           mime: imageMimeFromExtension(productExt),
           filename: `product-${index + 1}${productExt}`,
         };
-      })
-    : [];
-  if (mode === "bundle" && (uploadedProductImages.length !== bundleItems.length || uploadedProductImages.some((item) => !item))) {
+      });
+  if (uploadedProductImages.some((item) => !item)) {
+    return badRequest(res, copy.bundleImages);
+  }
+  if (mode === "bundle" && uploadedProductImages.length !== bundleItems.length) {
+    return badRequest(res, copy.bundleImages);
+  }
+  if (mode === "single" && uploadedProductImages.length > 1) {
     return badRequest(res, copy.bundleImages);
   }
   let productImages = uploadedProductImages;
-  if (mode === "bundle") {
+  if (uploadedProductImages.length > 0) {
     try {
       productImages = await Promise.all(
         uploadedProductImages.map((productImage, index) => normalizeTryOnProductImage(productImage, index)),
