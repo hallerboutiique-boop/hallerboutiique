@@ -163,6 +163,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/checkout-logo-inline-original-1/styles.css", "/styles.css"],
   ["/assets-v/checkout-clothing-tryon-1/script.js", "/script.js"],
   ["/assets-v/checkout-clothing-tryon-1/styles.css", "/styles.css"],
+  ["/assets-v/home-hide-last-stock-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 

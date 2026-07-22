@@ -91,7 +91,13 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(script.slice(featuredStart, featuredEnd), /\.filter\(\(product\) => !product\.isLastAvailable\)/);
   assert.match(script, /"scarpe donna": "Scarpe"/);
   assert.match(script, /function getCatalogGenderProducts\(gender\)/);
-  assert.match(script, /gender === "donna"[\s\S]*?!product\.isLastAvailable/);
+  const genderProductsStart = script.indexOf("function getCatalogGenderProducts(gender)");
+  const genderProductsEnd = script.indexOf("function getCategoryProducts", genderProductsStart);
+  assert.match(script.slice(genderProductsStart, genderProductsEnd), /getGenderProducts\(gender\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
+  const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
+  const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
+  assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
+  assert.match(index, /\/assets-v\/home-hide-last-stock-1\/script\.js/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -249,17 +255,20 @@ test("checkout keeps the full original mobile logo inline with the header icons"
 });
 
 test("Bunny receives immutable path-versioned storefront assets instead of ignored query versions", async () => {
-  const scriptPages = ["account.html", "index.html", "product.html", "ultimi-disponibili.html"];
-  const [server, checkout, ...pages] = await Promise.all([
+  const scriptPages = ["account.html", "product.html", "ultimi-disponibili.html"];
+  const [server, checkout, index, ...pages] = await Promise.all([
     readFile("server.js", "utf8"),
     readFile("checkout.html", "utf8"),
+    readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
+  assert.match(index, /\/assets-v\/home-hide-last-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/home-hide-last-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/styles\.css", "\/styles\.css"/);
 });

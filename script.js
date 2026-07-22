@@ -1748,10 +1748,7 @@ function getGenderProducts(gender) {
 }
 
 function getCatalogGenderProducts(gender) {
-  const products = getGenderProducts(gender);
-  return gender === "donna"
-    ? products.filter((product) => !product.isLastAvailable)
-    : products;
+  return getGenderProducts(gender).filter((product) => !product.isLastAvailable);
 }
 
 function getCategoryProducts(gender, category) {
@@ -1917,8 +1914,9 @@ function renderCatalogSearchResults(query = "") {
   const root = document.querySelector("[data-catalog-search-results]");
   if (!root) return;
   const value = String(query).trim().toLowerCase();
+  const availableProducts = getAllProducts().filter((product) => !product.isLastAvailable);
   const products = value
-    ? getAllProducts().filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
+    ? availableProducts.filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();
   root.innerHTML = products.length
     ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(translateCatalogCategory(product.category))} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
