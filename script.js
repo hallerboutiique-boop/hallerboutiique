@@ -201,6 +201,46 @@ translations.ro = {
   "last-stock-nav": "Ultimele disponibile", "last-stock-warning": "Ultimul disponibil", "catalog-choose-category": "Alege o categorie", "catalog-choose-brand": "Alege o marca", "catalog-all-brands": "Toate marcile", "catalog-all-products": "Toate modelele", "catalog-viewing": "Vizualizezi", "catalog-search-title": "Cauta in catalog", "catalog-search-placeholder": "Model, categorie sau marca", "catalog-search-empty": "Nu a fost gasit niciun model.", "catalog-search-results": "Rezultatele cautarii", "catalog-close": "Inchide", "catalog-last-title": "Ultimele disponibile", "catalog-last-description": "Articolele cu o singura bucata ramasa, organizate dupa categorie si marca.", "catalog-last-empty": "Nu exista ultime articole de afisat.", "catalog-last-choose": "Alege departamentul", "catalog-back": "Inapoi la selectie", "remove-cart-item": "Elimina din cos", "product-back": "Inapoi la catalog", "product-details": "Detalii produs", "product-description": "Selectat de Haller Boutique pentru calitate, stil si atentie la detalii.", "product-not-found": "Produsul nu a fost gasit.", "gallery-previous": "Fotografia anterioara", "gallery-next": "Fotografia urmatoare", "open-product": "Deschide pagina produsului", "zoom-open": "Mareste imaginea", "zoom-close": "Inchide imaginea", "zoom-in": "Mareste", "zoom-out": "Micsoreaza", "zoom-reset": "Reseteaza zoomul"
 };
 
+const checkoutAddressTranslations = {
+  it: {
+    "checkout-address-label": "Via e numero civico",
+    "checkout-address-placeholder": "Via Roma 10, Milano",
+    "checkout-address-help": "Scrivi via, numero civico e città, poi seleziona uno degli indirizzi consigliati.",
+    "checkout-address-automatic": "Automatico",
+    "checkout-address-province": "Provincia",
+    "checkout-address-country": "Paese",
+    "checkout-address-searching": "Cerco gli indirizzi consigliati...",
+    "checkout-address-empty": "Nessun indirizzo completo trovato. Aggiungi numero civico e città.",
+    "checkout-address-error": "I suggerimenti non sono disponibili. Riprova tra poco.",
+    "checkout-address-selected": "Indirizzo verificato: città, CAP, provincia e Paese compilati automaticamente.",
+    "checkout-address-required": "Seleziona uno degli indirizzi consigliati.",
+    "checkout-form-required": "Completa tutti i campi obbligatori evidenziati.",
+    "checkout-products-required": "Aggiungi almeno un prodotto al carrello.",
+  },
+  en: {
+    "checkout-address-label": "Street and house number", "checkout-address-placeholder": "Via Roma 10, Milan", "checkout-address-help": "Enter street, house number and city, then select a suggested address.", "checkout-address-automatic": "Automatic", "checkout-address-province": "Province", "checkout-address-country": "Country", "checkout-address-searching": "Finding suggested addresses...", "checkout-address-empty": "No complete address found. Add the house number and city.", "checkout-address-error": "Address suggestions are unavailable. Please try again shortly.", "checkout-address-selected": "Address verified: city, postcode, province and country filled automatically.", "checkout-address-required": "Select one of the suggested addresses.", "checkout-form-required": "Complete all highlighted required fields.", "checkout-products-required": "Add at least one product to your cart.",
+  },
+  fr: {
+    "checkout-address-label": "Rue et numéro", "checkout-address-placeholder": "Via Roma 10, Milan", "checkout-address-help": "Saisissez la rue, le numéro et la ville, puis sélectionnez une adresse suggérée.", "checkout-address-automatic": "Automatique", "checkout-address-province": "Province", "checkout-address-country": "Pays", "checkout-address-searching": "Recherche des adresses suggérées...", "checkout-address-empty": "Aucune adresse complète trouvée. Ajoutez le numéro et la ville.", "checkout-address-error": "Les suggestions d'adresse sont indisponibles. Réessayez dans un instant.", "checkout-address-selected": "Adresse vérifiée : ville, code postal, province et pays remplis automatiquement.", "checkout-address-required": "Sélectionnez une adresse suggérée.", "checkout-form-required": "Complétez tous les champs obligatoires signalés.", "checkout-products-required": "Ajoutez au moins un produit au panier.",
+  },
+  de: {
+    "checkout-address-label": "Straße und Hausnummer", "checkout-address-placeholder": "Via Roma 10, Mailand", "checkout-address-help": "Straße, Hausnummer und Stadt eingeben und dann eine vorgeschlagene Adresse auswählen.", "checkout-address-automatic": "Automatisch", "checkout-address-province": "Provinz", "checkout-address-country": "Land", "checkout-address-searching": "Adressvorschläge werden gesucht...", "checkout-address-empty": "Keine vollständige Adresse gefunden. Hausnummer und Stadt ergänzen.", "checkout-address-error": "Adressvorschläge sind nicht verfügbar. Bitte gleich erneut versuchen.", "checkout-address-selected": "Adresse bestätigt: Stadt, PLZ, Provinz und Land wurden automatisch ausgefüllt.", "checkout-address-required": "Wählen Sie eine der vorgeschlagenen Adressen.", "checkout-form-required": "Füllen Sie alle markierten Pflichtfelder aus.", "checkout-products-required": "Legen Sie mindestens ein Produkt in den Warenkorb.",
+  },
+  es: {
+    "checkout-address-label": "Calle y número", "checkout-address-placeholder": "Via Roma 10, Milán", "checkout-address-help": "Escribe la calle, el número y la ciudad y selecciona una dirección sugerida.", "checkout-address-automatic": "Automático", "checkout-address-province": "Provincia", "checkout-address-country": "País", "checkout-address-searching": "Buscando direcciones sugeridas...", "checkout-address-empty": "No se encontró una dirección completa. Añade el número y la ciudad.", "checkout-address-error": "Las sugerencias de dirección no están disponibles. Inténtalo de nuevo en breve.", "checkout-address-selected": "Dirección verificada: ciudad, código postal, provincia y país completados automáticamente.", "checkout-address-required": "Selecciona una de las direcciones sugeridas.", "checkout-form-required": "Completa todos los campos obligatorios marcados.", "checkout-products-required": "Añade al menos un producto al carrito.",
+  },
+  sq: {
+    "checkout-address-label": "Rruga dhe numri", "checkout-address-placeholder": "Via Roma 10, Milano", "checkout-address-help": "Shkruani rrugën, numrin dhe qytetin, pastaj zgjidhni një adresë të sugjeruar.", "checkout-address-automatic": "Automatik", "checkout-address-province": "Provinca", "checkout-address-country": "Shteti", "checkout-address-searching": "Po kërkohen adresat e sugjeruara...", "checkout-address-empty": "Nuk u gjet adresë e plotë. Shtoni numrin dhe qytetin.", "checkout-address-error": "Sugjerimet e adresës nuk janë të disponueshme. Provoni përsëri pas pak.", "checkout-address-selected": "Adresa u verifikua: qyteti, kodi postar, provinca dhe shteti u plotësuan automatikisht.", "checkout-address-required": "Zgjidhni një nga adresat e sugjeruara.", "checkout-form-required": "Plotësoni të gjitha fushat e detyrueshme të shënuara.", "checkout-products-required": "Shtoni të paktën një produkt në shportë.",
+  },
+  ro: {
+    "checkout-address-label": "Strada și numărul", "checkout-address-placeholder": "Via Roma 10, Milano", "checkout-address-help": "Scrie strada, numărul și orașul, apoi selectează o adresă sugerată.", "checkout-address-automatic": "Automat", "checkout-address-province": "Provincie", "checkout-address-country": "Țară", "checkout-address-searching": "Se caută adrese sugerate...", "checkout-address-empty": "Nu a fost găsită o adresă completă. Adaugă numărul și orașul.", "checkout-address-error": "Sugestiile de adresă nu sunt disponibile. Încearcă din nou în scurt timp.", "checkout-address-selected": "Adresă verificată: orașul, codul poștal, provincia și țara au fost completate automat.", "checkout-address-required": "Selectează una dintre adresele sugerate.", "checkout-form-required": "Completează toate câmpurile obligatorii evidențiate.", "checkout-products-required": "Adaugă cel puțin un produs în coș.",
+  },
+};
+
+Object.entries(checkoutAddressTranslations).forEach(([language, copy]) => {
+  Object.assign(translations[language], copy);
+});
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
 }
@@ -3223,6 +3263,7 @@ function setupCheckoutPayments() {
 
   function setPaymentMethod(method) {
     const isCrypto = method === "crypto";
+    const txHashInput = document.querySelector('input[name="tx-hash"]');
 
     paymentInputs.forEach((input) => {
       input.checked = input.value === method;
@@ -3246,6 +3287,10 @@ function setupCheckoutPayments() {
       checkoutNote.textContent = isCrypto
         ? translate("crypto-note")
         : translate("no-online-payment");
+    }
+    if (txHashInput) {
+      txHashInput.required = isCrypto;
+      if (!isCrypto) txHashInput.setCustomValidity("");
     }
 
     updatePaymentPacket();
@@ -3311,6 +3356,220 @@ function collectCheckoutProducts() {
   return item && item.name ? [{ id: item.id, name: item.name, price: item.price, size: item.size || "", quantity: 1 }] : [];
 }
 
+let selectedCheckoutAddress = null;
+
+function setCheckoutAddressHelp(key, error = false) {
+  const help = document.querySelector("[data-address-help]");
+  if (!help) return;
+  help.dataset.i18n = key;
+  help.textContent = translate(key);
+  help.classList.toggle("is-error", error);
+}
+
+function setCheckoutAutomaticAddress(address = null) {
+  const values = {
+    city: address?.city || "",
+    "postal-code": address?.postalCode || "",
+    province: address?.province || "",
+    country: address?.country || "",
+    "country-code": address?.countryCode || "",
+    "address-id": address?.id || "",
+  };
+  Object.entries(values).forEach(([name, value]) => {
+    const field = document.querySelector(`[name="${name}"]`);
+    if (field) field.value = value;
+  });
+}
+
+function setupCheckoutAddressAutocomplete() {
+  const root = document.querySelector("[data-address-autocomplete]");
+  const input = root?.querySelector('input[name="address"]');
+  const list = root?.querySelector("[data-address-suggestions]");
+  const spinner = root?.querySelector("[data-address-search-spinner]");
+  if (!root || !input || !list) return;
+
+  let suggestions = [];
+  let activeIndex = -1;
+  let searchTimer = 0;
+  let requestController = null;
+
+  function closeSuggestions() {
+    list.hidden = true;
+    list.replaceChildren();
+    suggestions = [];
+    activeIndex = -1;
+    input.setAttribute("aria-expanded", "false");
+    input.removeAttribute("aria-activedescendant");
+  }
+
+  function selectSuggestion(suggestion) {
+    selectedCheckoutAddress = suggestion;
+    input.value = suggestion.address;
+    input.setCustomValidity("");
+    input.classList.remove("is-invalid");
+    setCheckoutAutomaticAddress(suggestion);
+    setCheckoutAddressHelp("checkout-address-selected");
+    closeSuggestions();
+    document.querySelectorAll(".checkout-form input").forEach((field) => field.classList.remove("is-invalid"));
+  }
+
+  function renderSuggestions(items) {
+    suggestions = items;
+    activeIndex = -1;
+    list.replaceChildren();
+    items.forEach((suggestion, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "address-suggestion";
+      button.id = `checkout-address-option-${index}`;
+      button.setAttribute("role", "option");
+      button.setAttribute("aria-selected", "false");
+      button.textContent = suggestion.label;
+      button.addEventListener("pointerdown", (event) => event.preventDefault());
+      button.addEventListener("click", () => selectSuggestion(suggestion));
+      list.append(button);
+    });
+
+    const attribution = document.createElement("p");
+    attribution.className = "address-attribution";
+    attribution.append("Dati indirizzo © ");
+    const link = document.createElement("a");
+    link.href = "https://www.openstreetmap.org/copyright";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = "OpenStreetMap contributors";
+    attribution.append(link);
+    list.append(attribution);
+    list.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+  }
+
+  function moveActive(direction) {
+    if (suggestions.length === 0) return;
+    activeIndex = (activeIndex + direction + suggestions.length) % suggestions.length;
+    list.querySelectorAll(".address-suggestion").forEach((button, index) => {
+      const active = index === activeIndex;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+      if (active) button.scrollIntoView({ block: "nearest" });
+    });
+    input.setAttribute("aria-activedescendant", `checkout-address-option-${activeIndex}`);
+  }
+
+  async function searchAddresses(query) {
+    requestController?.abort();
+    const controller = new AbortController();
+    requestController = controller;
+    spinner?.classList.add("is-active");
+    setCheckoutAddressHelp("checkout-address-searching");
+    try {
+      const response = await fetch(`/api/address-suggestions?q=${encodeURIComponent(query)}`, {
+        signal: controller.signal,
+        headers: { Accept: "application/json" },
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || translate("checkout-address-error"));
+      if (!Array.isArray(data.suggestions) || data.suggestions.length === 0) {
+        closeSuggestions();
+        setCheckoutAddressHelp("checkout-address-empty", true);
+        return;
+      }
+      renderSuggestions(data.suggestions);
+      setCheckoutAddressHelp("checkout-address-required");
+    } catch (error) {
+      if (error.name === "AbortError") return;
+      closeSuggestions();
+      setCheckoutAddressHelp("checkout-address-error", true);
+    } finally {
+      if (requestController === controller) {
+        requestController = null;
+        spinner?.classList.remove("is-active");
+      }
+    }
+  }
+
+  input.setCustomValidity(translate("checkout-address-required"));
+  input.addEventListener("input", () => {
+    window.clearTimeout(searchTimer);
+    requestController?.abort();
+    requestController = null;
+    spinner?.classList.remove("is-active");
+    selectedCheckoutAddress = null;
+    setCheckoutAutomaticAddress();
+    input.setCustomValidity(translate("checkout-address-required"));
+    closeSuggestions();
+    const query = input.value.replace(/\s+/g, " ").trim();
+    if (query.length < 3) {
+      requestController?.abort();
+      spinner?.classList.remove("is-active");
+      setCheckoutAddressHelp("checkout-address-help");
+      return;
+    }
+    searchTimer = window.setTimeout(() => searchAddresses(query), 380);
+  });
+
+  input.addEventListener("keydown", (event) => {
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      moveActive(event.key === "ArrowDown" ? 1 : -1);
+    } else if (event.key === "Enter" && activeIndex >= 0) {
+      event.preventDefault();
+      selectSuggestion(suggestions[activeIndex]);
+    } else if (event.key === "Escape") {
+      closeSuggestions();
+    }
+  });
+
+  input.addEventListener("focus", () => {
+    if (suggestions.length > 0) {
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+    }
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!root.contains(event.target)) closeSuggestions();
+  });
+}
+
+function validateCheckoutForm() {
+  const form = document.querySelector(".checkout-form");
+  const message = document.querySelector("[data-checkout-form-message]");
+  const addressInput = form?.querySelector('input[name="address"]');
+  if (!form) return false;
+
+  if (!selectedCheckoutAddress) {
+    addressInput?.setCustomValidity(translate("checkout-address-required"));
+  }
+
+  const valid = form.checkValidity();
+  form.querySelectorAll("input").forEach((field) => {
+    field.classList.toggle("is-invalid", !field.validity.valid);
+  });
+  if (!valid) {
+    if (message) {
+      message.textContent = translate("checkout-form-required");
+      message.classList.add("is-error");
+    }
+    form.reportValidity();
+    form.querySelector(":invalid")?.focus({ preventScroll: false });
+    return false;
+  }
+
+  if (collectCheckoutProducts().length === 0) {
+    if (message) {
+      message.textContent = translate("checkout-products-required");
+      message.classList.add("is-error");
+    }
+    return false;
+  }
+
+  if (message) {
+    message.textContent = "";
+    message.classList.remove("is-error");
+  }
+  return true;
+}
+
 function checkoutField(name) {
   const field = document.querySelector(`[name="${name}"]`);
   return field ? field.value.trim() : "";
@@ -3341,6 +3600,11 @@ async function confirmCheckoutOrder(button) {
       address: checkoutField("address"),
       city: checkoutField("city"),
       postalCode: checkoutField("postal-code"),
+      province: checkoutField("province"),
+      country: checkoutField("country"),
+      countryCode: checkoutField("country-code"),
+      addressId: checkoutField("address-id"),
+      addressVerified: Boolean(selectedCheckoutAddress),
     },
     paymentMethod: selectedPaymentLabel(),
     txHash: checkoutField("tx-hash"),
@@ -3426,6 +3690,10 @@ function applySiteLanguage(language) {
   siteLanguage = translations[language] ? language : "it";
   document.documentElement.lang = siteLanguage;
   translatePage();
+  const checkoutAddressInput = document.querySelector('input[name="address"]');
+  if (checkoutAddressInput && !selectedCheckoutAddress) {
+    checkoutAddressInput.setCustomValidity(translate("checkout-address-required"));
+  }
   renderCatalog();
   renderProductDetail();
   renderCheckoutProductSummary();
@@ -3608,9 +3876,13 @@ document.addEventListener("click", (event) => {
   }
 });
 
-const checkoutSubmitButton = document.querySelector(".checkout-submit");
-if (checkoutSubmitButton) {
-  checkoutSubmitButton.addEventListener("click", () => confirmCheckoutOrder(checkoutSubmitButton));
+const checkoutForm = document.querySelector(".checkout-form");
+const checkoutSubmitButton = checkoutForm?.querySelector(".checkout-submit");
+if (checkoutForm && checkoutSubmitButton) {
+  checkoutForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    if (validateCheckoutForm()) confirmCheckoutOrder(checkoutSubmitButton);
+  });
 }
 
 const discountButton = document.querySelector("[data-discount-apply]");
@@ -3628,6 +3900,7 @@ if (discountButton && discountInput && discountMessage) {
 }
 
 setupCheckoutPayments();
+setupCheckoutAddressAutocomplete();
 setupBundleTryOn();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";

@@ -28,6 +28,7 @@ import {
 } from "./mobile-admin.js";
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
 import { normalizeTryOnProductImage } from "./try-on-image.mjs";
+import { normalizePhotonSuggestions, validateCheckoutOrder } from "./checkout-address.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -60,6 +61,7 @@ const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
 const geoLookupTimeoutMs = 1800;
+const addressSuggestionTimeoutMs = 4500;
 const minimumStorageReserveBytes = 64 * 1024 * 1024;
 const orphanUploadGraceMs = 10 * 60 * 1000;
 const productImageRenditionWidths = [480, 720, 1080, 1440];
@@ -99,6 +101,8 @@ let productZoomImageOptimizationStatus = {
   current: "",
 };
 const geoCache = new Map();
+const addressSuggestionCache = new Map();
+const addressSuggestionRateLimits = new Map();
 const tryOnJobs = new Map();
 const tryOnRequestJobs = new Map();
 
@@ -152,6 +156,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/tryon-polling-2/script.js", "/script.js"],
   ["/assets-v/checkout-mobile-logo-2/styles.css", "/styles.css"],
   ["/assets-v/checkout-mobile-logo-3/styles.css", "/styles.css"],
+  ["/assets-v/checkout-address-1/script.js", "/script.js"],
+  ["/assets-v/checkout-address-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1122,6 +1128,76 @@ async function lookupIpLocation(ip) {
     return location;
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function rememberAddressSuggestions(key, suggestions) {
+  if (addressSuggestionCache.size >= 500) {
+    addressSuggestionCache.delete(addressSuggestionCache.keys().next().value);
+  }
+  addressSuggestionCache.set(key, {
+    suggestions,
+    expiresAt: Date.now() + 24 * 60 * 60 * 1000,
+  });
+}
+
+function canRequestAddressSuggestions(ip) {
+  const key = cleanIp(ip) || "unknown";
+  const now = Date.now();
+  const current = addressSuggestionRateLimits.get(key);
+  if (!current || current.expiresAt <= now) {
+    addressSuggestionRateLimits.set(key, { count: 1, expiresAt: now + 60 * 1000 });
+    if (addressSuggestionRateLimits.size > 2000) {
+      addressSuggestionRateLimits.delete(addressSuggestionRateLimits.keys().next().value);
+    }
+    return true;
+  }
+  current.count += 1;
+  return current.count <= 30;
+}
+
+async function handleAddressSuggestions(req, res, url) {
+  const query = String(url.searchParams.get("q") || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 160);
+  if (query.length < 3) return json(res, 200, { ok: true, suggestions: [] });
+
+  const cacheKey = query.toLocaleLowerCase("it");
+  const cached = addressSuggestionCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return json(res, 200, { ok: true, suggestions: cached.suggestions });
+  }
+  if (!canRequestAddressSuggestions(clientIp(req))) {
+    return json(res, 429, { ok: false, message: "Troppe ricerche. Attendi qualche secondo e riprova." });
+  }
+
+  const endpoint = new URL("https://photon.komoot.io/api/");
+  endpoint.searchParams.set("q", query);
+  endpoint.searchParams.set("limit", "12");
+  endpoint.searchParams.set("countrycode", "IT");
+  endpoint.searchParams.append("layer", "house");
+  endpoint.searchParams.append("layer", "street");
+
+  try {
+    const response = await fetch(endpoint, {
+      signal: AbortSignal.timeout(addressSuggestionTimeoutMs),
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "HallerBoutique/1.0 (https://www.hallerboutiique.com/)",
+      },
+    });
+    if (!response.ok) throw new Error(`Address lookup failed: ${response.status}`);
+    const suggestions = normalizePhotonSuggestions(await response.json());
+    rememberAddressSuggestions(cacheKey, suggestions);
+    return json(res, 200, { ok: true, suggestions });
+  } catch (error) {
+    console.error(`[address] Suggestions unavailable: ${error.message}`);
+    return json(res, 503, {
+      ok: false,
+      message: "I suggerimenti dell'indirizzo non sono disponibili. Riprova tra poco.",
+    });
   }
 }
 
@@ -3301,6 +3377,8 @@ async function processMobilePushNotifications() {
 
 async function handleCreateOrder(req, res) {
   const body = await parseBody(req);
+  const validation = validateCheckoutOrder(body);
+  if (!validation.ok) return badRequest(res, validation.message);
   const now = new Date().toISOString();
   const sessionId = cleanSessionId(body.sessionId);
   const products = cleanProducts(body.products || body.items);
@@ -3327,7 +3405,12 @@ async function handleCreateOrder(req, res) {
       phone: cleanTrackingString(body.customer?.phone, 60),
       city: cleanTrackingString(body.customer?.city, 80),
       postalCode: cleanTrackingString(body.customer?.postalCode, 20),
+      province: cleanTrackingString(body.customer?.province, 80),
+      country: cleanTrackingString(body.customer?.country, 80),
+      countryCode: cleanTrackingString(body.customer?.countryCode, 8).toUpperCase(),
       address: cleanTrackingString(body.customer?.address, 180),
+      addressId: cleanTrackingString(body.customer?.addressId, 80),
+      addressVerified: body.customer?.addressVerified === true,
     },
     paymentMethod: cleanTrackingString(body.paymentMethod, 80) || "Contrassegno",
     txHash: cleanTrackingString(body.txHash, 180),
@@ -3686,6 +3769,7 @@ async function handleApi(req, res, url) {
   if (url.pathname === "/api/internal/product-zoom-image-optimization") return handleProductZoomImageOptimization(req, res, url);
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
+  if (req.method === "GET" && url.pathname === "/api/address-suggestions") return handleAddressSuggestions(req, res, url);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
   const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);

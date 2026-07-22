@@ -74,6 +74,9 @@ export function publicMobileOrder(order) {
       address: String(order?.customer?.address || ""),
       city: String(order?.customer?.city || ""),
       postalCode: String(order?.customer?.postalCode || ""),
+      province: String(order?.customer?.province || ""),
+      country: String(order?.customer?.country || "Italia"),
+      countryCode: String(order?.customer?.countryCode || "IT"),
     },
     paymentMethod: String(order?.paymentMethod || ""),
     txHash: String(order?.txHash || ""),
@@ -118,7 +121,8 @@ export function buildShippingLabel(order, generatedAt = new Date().toISOString()
       address: labelText(mobileOrder.customer.address, 180),
       postalCode: labelText(mobileOrder.customer.postalCode, 20),
       city: labelText(mobileOrder.customer.city, 80),
-      country: "Italia",
+      province: labelText(mobileOrder.customer.province, 80),
+      country: labelText(mobileOrder.customer.country || "Italia", 80),
       phone: labelText(mobileOrder.customer.phone, 60),
       email: labelText(mobileOrder.customer.email, 180),
     },
@@ -156,7 +160,10 @@ export function renderShippingLabelHtml(label, qrCodeDataUrl) {
   const sender = label.sender;
   const recipient = label.recipient;
   const qr = escapeLabelHtml(qrCodeDataUrl);
-  const recipientLocality = [recipient.postalCode, recipient.city].filter(Boolean).join(" ");
+  const recipientLocality = [
+    [recipient.postalCode, recipient.city].filter(Boolean).join(" "),
+    recipient.province ? `(${recipient.province})` : "",
+  ].filter(Boolean).join(" ");
   return `<!doctype html>
 <html lang="it">
 <head>

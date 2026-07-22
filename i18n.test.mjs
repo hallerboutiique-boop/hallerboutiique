@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/tryon-polling-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -229,7 +229,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout reserves independent mobile columns for back, logo and actions", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/checkout-mobile-logo-3\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-address-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?width:\s*min\(54vw, 202px\)/);
@@ -238,15 +238,19 @@ test("checkout reserves independent mobile columns for back, logo and actions", 
 });
 
 test("Bunny receives immutable path-versioned storefront assets instead of ignored query versions", async () => {
-  const scriptPages = ["account.html", "checkout.html", "index.html", "product.html", "ultimi-disponibili.html"];
-  const [server, ...pages] = await Promise.all([
+  const scriptPages = ["account.html", "index.html", "product.html", "ultimi-disponibili.html"];
+  const [server, checkout, ...pages] = await Promise.all([
     readFile("server.js", "utf8"),
+    readFile("checkout.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
+  assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-address-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-mobile-logo-3\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-address-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-address-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {

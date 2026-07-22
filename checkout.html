@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/checkout-mobile-logo-3/styles.css">
+    <link rel="stylesheet" href="/assets-v/checkout-address-1/styles.css">
   </head>
   <body>
     <header class="site-header checkout-site-header">
@@ -54,39 +54,54 @@
       </section>
 
       <section class="checkout-layout" aria-label="Checkout ordine">
-        <form class="checkout-form">
+        <form class="checkout-form" novalidate>
           <fieldset>
             <legend>Dati cliente</legend>
             <label>
-              <span>Nome e cognome</span>
-              <input type="text" name="name" autocomplete="name" placeholder="Mario Rossi">
+              <span>Nome e cognome <b class="required-marker" aria-hidden="true">*</b></span>
+              <input type="text" name="name" autocomplete="shipping name" placeholder="Mario Rossi" minlength="2" maxlength="120" required>
             </label>
             <label>
-              <span>Telefono</span>
-              <input type="tel" name="phone" autocomplete="tel" placeholder="+39 333 000 0000">
+              <span>Telefono <b class="required-marker" aria-hidden="true">*</b></span>
+              <input type="tel" name="phone" autocomplete="shipping tel" inputmode="tel" placeholder="+39 333 000 0000" minlength="6" maxlength="60" required>
             </label>
             <label>
-              <span>Email</span>
-              <input type="email" name="email" autocomplete="email" placeholder="nome@email.it">
+              <span>Email <b class="required-marker" aria-hidden="true">*</b></span>
+              <input type="email" name="email" autocomplete="shipping email" placeholder="nome@email.it" maxlength="180" required>
             </label>
           </fieldset>
 
           <fieldset>
             <legend>Indirizzo di consegna</legend>
-            <label>
-              <span>Indirizzo</span>
-              <input type="text" name="address" autocomplete="street-address" placeholder="Via Roma 10">
+            <label class="address-autocomplete">
+              <span><span data-i18n="checkout-address-label">Via e numero civico</span> <b class="required-marker" aria-hidden="true">*</b></span>
+              <div class="address-autocomplete-control" data-address-autocomplete>
+                <input type="text" name="address" autocomplete="off" placeholder="Via Roma 10, Milano" data-i18n-placeholder="checkout-address-placeholder" role="combobox" aria-autocomplete="list" aria-controls="checkout-address-suggestions" aria-expanded="false" maxlength="180" required>
+                <i class="address-search-spinner" data-address-search-spinner aria-hidden="true"></i>
+                <div class="address-suggestions" id="checkout-address-suggestions" data-address-suggestions role="listbox" hidden></div>
+              </div>
+              <small class="address-help" data-address-help data-i18n="checkout-address-help">Scrivi via, numero civico e città, poi seleziona uno degli indirizzi consigliati.</small>
             </label>
             <div class="checkout-grid">
               <label>
-                <span>Citt&agrave;</span>
-                <input type="text" name="city" autocomplete="address-level2" placeholder="Milano">
+                <span>Citt&agrave; <b class="required-marker" aria-hidden="true">*</b></span>
+                <input type="text" name="city" autocomplete="shipping address-level2" placeholder="Automatico" data-i18n-placeholder="checkout-address-automatic" readonly required>
               </label>
               <label>
-                <span>CAP</span>
-                <input type="text" name="postal-code" autocomplete="postal-code" placeholder="20100">
+                <span>CAP <b class="required-marker" aria-hidden="true">*</b></span>
+                <input type="text" name="postal-code" autocomplete="shipping postal-code" inputmode="numeric" placeholder="Automatico" data-i18n-placeholder="checkout-address-automatic" pattern="[0-9]{5}" readonly required>
+              </label>
+              <label>
+                <span><span data-i18n="checkout-address-province">Provincia</span> <b class="required-marker" aria-hidden="true">*</b></span>
+                <input type="text" name="province" autocomplete="shipping address-level1" placeholder="Automatico" data-i18n-placeholder="checkout-address-automatic" readonly required>
+              </label>
+              <label>
+                <span><span data-i18n="checkout-address-country">Paese</span> <b class="required-marker" aria-hidden="true">*</b></span>
+                <input type="text" name="country" autocomplete="shipping country-name" placeholder="Automatico" data-i18n-placeholder="checkout-address-automatic" readonly required>
               </label>
             </div>
+            <input type="hidden" name="country-code" value="">
+            <input type="hidden" name="address-id" value="">
           </fieldset>
 
           <fieldset>
@@ -108,7 +123,7 @@
             <legend>Pagamento</legend>
             <div class="payment-methods" aria-label="Scegli metodo di pagamento">
               <label class="payment-option is-active">
-                <input type="radio" name="payment-method" value="cod" checked>
+                <input type="radio" name="payment-method" value="cod" checked required>
                 <span>Pagamento</span>
                 <strong>Contrassegno</strong>
               </label>
@@ -221,8 +236,8 @@
                 <h3>Tracciamento pagamento</h3>
                 <p>Per riconoscere il pagamento, invia sempre codice ordine e TX hash. Per Base/TRON/SOL il TX hash con codice ordine &egrave; obbligatorio.</p>
                 <label class="crypto-tx-field">
-                  <span>TX hash pagamento</span>
-                  <input type="text" name="tx-hash" autocomplete="off" placeholder="Incolla qui hash o ID transazione">
+                  <span>TX hash pagamento <b class="required-marker" aria-hidden="true">*</b></span>
+                  <input type="text" name="tx-hash" autocomplete="off" placeholder="Incolla qui hash o ID transazione" minlength="6" maxlength="180">
                 </label>
                 <textarea data-payment-packet readonly></textarea>
                 <button type="button" data-copy-payment-packet>
@@ -233,7 +248,8 @@
             </div>
           </fieldset>
 
-          <button class="checkout-submit" type="button">Conferma ordine</button>
+          <p class="checkout-form-message" data-checkout-form-message aria-live="assertive"></p>
+          <button class="checkout-submit" type="submit">Conferma ordine</button>
         </form>
 
         <aside class="order-summary" aria-label="Riepilogo ordine">
@@ -309,6 +325,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=restore-latest-ui-1"></script>
-    <script src="/assets-v/tryon-polling-2/script.js"></script>
+    <script src="/assets-v/checkout-address-1/script.js"></script>
   </body>
 </html>
