@@ -2,9 +2,9 @@ import sharp from "sharp";
 
 const tryOnReferenceMaxDimension = 2048;
 
-export async function normalizeTryOnProductImage(image, index = 0) {
+async function normalizeTryOnImage(image, filename, invalidMessage = "Foto try-on non valida.") {
   if (!Buffer.isBuffer(image?.data) || image.data.length === 0) {
-    throw new Error("Foto prodotto try-on non valida.");
+    throw new Error(invalidMessage);
   }
 
   const output = await sharp(image.data, { failOn: "error" })
@@ -27,6 +27,14 @@ export async function normalizeTryOnProductImage(image, index = 0) {
   return {
     data: output.data,
     mime: "image/jpeg",
-    filename: `product-${index + 1}.jpg`,
+    filename,
   };
+}
+
+export function normalizeTryOnProductImage(image, index = 0) {
+  return normalizeTryOnImage(image, `product-${index + 1}.jpg`, "Foto prodotto try-on non valida.");
+}
+
+export function normalizeTryOnCustomerImage(image) {
+  return normalizeTryOnImage(image, "customer.jpg");
 }
