@@ -102,6 +102,7 @@ test("builds a printable 100x150 shipping label only for confirmed orders", () =
   assert.match(html, /Mario Rossi/);
   assert.match(html, /Via Roma 10 &lt;interno&gt;/);
   assert.match(html, /data:image\/png;base64,qr-test/);
+  assert.doesNotMatch(html, /hallerboutiique\.com/);
   assert.throws(() => buildShippingLabel({ ...source, status: "Nuovo" }), /Conferma l'ordine/);
 });
 
