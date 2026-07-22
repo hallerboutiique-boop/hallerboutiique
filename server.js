@@ -151,6 +151,7 @@ const publicFiles = new Set([
 const versionedPublicFiles = new Map([
   ["/assets-v/tryon-polling-2/script.js", "/script.js"],
   ["/assets-v/checkout-mobile-logo-2/styles.css", "/styles.css"],
+  ["/assets-v/checkout-mobile-logo-3/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 

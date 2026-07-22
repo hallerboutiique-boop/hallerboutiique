@@ -229,9 +229,11 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout reserves independent mobile columns for back, logo and actions", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/checkout-mobile-logo-2\/styles\.css/);
-  assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 116px/);
+  assert.match(checkout, /\/assets-v\/checkout-mobile-logo-3\/styles\.css/);
+  assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
+  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?width:\s*min\(54vw, 202px\)/);
+  assert.match(styles, /\.checkout-site-header \.header-actions \.cart-button\s*\{[\s\S]*?display:\s*none/);
   assert.match(styles, /\.checkout-site-header \.checkout-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
@@ -244,7 +246,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-mobile-logo-2\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-mobile-logo-3\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
