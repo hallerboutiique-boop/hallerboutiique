@@ -6944,7 +6944,7 @@ body.is-product-zoom-open {
   }
 
   .legal-brand img {
-    width: min(52vw, 230px);
+    width: min(52vw, 260px);
     max-width: 100%;
   }
 

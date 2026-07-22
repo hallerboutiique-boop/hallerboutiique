@@ -279,6 +279,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   assert.match(styles, /\.utility-site-header:not\(\.checkout-site-header\) \.logo\s*\{[\s\S]*?grid-column:\s*2/);
   assert.match(styles, /\.site-header:not\(\.utility-site-header\) \.logo img\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
   assert.match(styles, /\.utility-site-header \.logo\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
+  assert.match(styles, /\.legal-brand img\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
   assert.match(styles, /\.legal-header\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 36px/);
 });
 
