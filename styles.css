@@ -6875,6 +6875,18 @@ body.is-product-zoom-open {
     width: min(52vw, 260px);
   }
 
+  /* Keep every utility header at the same mobile logo size as the home page. */
+  .utility-site-header .logo {
+    grid-column: 2;
+    width: min(52vw, 260px);
+    max-width: 260px;
+  }
+
+  .utility-site-header .logo img {
+    width: 100%;
+    max-width: 100%;
+  }
+
   .utility-site-header:not(.checkout-site-header) .header-bar {
     grid-template-columns: 36px minmax(0, 1fr) 76px;
     grid-template-rows: 76px;
@@ -6902,17 +6914,17 @@ body.is-product-zoom-open {
 
   .checkout-site-header .logo {
     position: static;
-    grid-column: 1 / -1;
+    grid-column: 2;
     grid-row: 1;
-    width: min(100%, 520px);
-    max-width: none;
+    width: min(52vw, 260px);
+    max-width: 260px;
     justify-self: center;
     transform: none;
   }
 
   .checkout-site-header .logo img {
     width: 100%;
-    max-width: none;
+    max-width: 100%;
   }
 
   .legal-header {
