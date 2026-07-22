@@ -1202,7 +1202,7 @@ function createSizesMarkup(product) {
   `;
 }
 
-const productImageVersion = "product-zoom-preserve-crop-1";
+const productImageVersion = "product-zoom-original-crop-2";
 const productImageGalleries = {
   "Louis Vuitton Skate Beige/White": [
     "assets/products/louis-vuitton-skate-beige-white-1.webp",

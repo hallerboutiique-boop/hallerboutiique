@@ -339,7 +339,7 @@ test("responsive product images preserve originals and keep the navigation menu 
   assert.match(server, /async function optimizeExistingProductZoomImages/);
   assert.match(server, /createAndStoreProductZoomImage/);
   assert.match(server, /createMatchingProductZoomImage/);
-  assert.match(server, /matching-published-crop-v1/);
+  assert.match(server, /original-pixels-matching-crop-v2/);
   assert.match(server, /product\.zoomImages\[task\.index\] = generated\.url/);
   assert.match(server, /"\/api\/internal\/product-zoom-image-optimization"/);
   assert.match(server, /function productZoomDeliveryPath\(value\)/);

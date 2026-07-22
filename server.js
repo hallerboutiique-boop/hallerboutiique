@@ -503,11 +503,12 @@ async function readProductImageSource(image) {
   return data;
 }
 
-async function createAndStoreProductZoomImage(productId, publishedImage) {
-  const output = await createMatchingProductZoomImage(publishedImage);
+async function createAndStoreProductZoomImage(productId, originalImage, publishedImage) {
+  const output = await createMatchingProductZoomImage(originalImage, publishedImage);
   const fingerprint = createHash("sha256")
+    .update(originalImage)
     .update(publishedImage)
-    .update("matching-published-crop-v1")
+    .update("original-pixels-matching-crop-v2")
     .digest("hex")
     .slice(0, 16);
   const extension = output.type === "image/jpeg" ? "jpg" : "webp";
@@ -667,15 +668,18 @@ async function optimizeExistingProductZoomImages({ force = false, productId = ""
     current: "",
   };
 
-  await mapWithConcurrency(tasks, 3, async (task) => {
+  await mapWithConcurrency(tasks, 1, async (task) => {
     productZoomImageOptimizationStatus.current = `${task.id}: ${task.image}`;
     const previous = task.product.zoomImages[task.index] || task.image;
     try {
       if (!force && previous !== task.image && await productImageExists(previous)) {
         productZoomImageOptimizationStatus.skipped += 1;
       } else {
-        const publishedImage = await readProductImageSource(task.image);
-        const generated = await createAndStoreProductZoomImage(task.id, publishedImage);
+        const [originalImage, publishedImage] = await Promise.all([
+          readProductImageSource(task.original),
+          readProductImageSource(task.image),
+        ]);
+        const generated = await createAndStoreProductZoomImage(task.id, originalImage, publishedImage);
         task.product.zoomImages[task.index] = generated.url;
         await persistProductImageOptimization(data);
         productZoomImageOptimizationStatus.optimized += 1;
@@ -2562,7 +2566,11 @@ async function handleAdminProductImages(req, res) {
     const variant = imageVariants[entry.inputIndex] || legacyImageVariant;
     const originalUpload = originalUploadByIndex.get(entry.inputIndex);
     if (variant !== "cropped" || !originalUpload) return entry.url;
-    const generated = await createAndStoreProductZoomImage(productId, imageParts[entry.inputIndex].data);
+    const generated = await createAndStoreProductZoomImage(
+      productId,
+      originalUpload.data,
+      imageParts[entry.inputIndex].data
+    );
     return generated.url;
   });
   const mergeUploadedImages = (current, incoming) => {
@@ -2670,7 +2678,7 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   }
   let zoomImageUrl = imageUrl;
   if (imageVariant === "cropped" && sourceImage !== image) {
-    const generated = await createAndStoreProductZoomImage("ai-product", image.data);
+    const generated = await createAndStoreProductZoomImage("ai-product", sourceImage.data, image.data);
     zoomImageUrl = generated.url;
   }
   const sourceMime = sourceImage.contentType || (sourceExt === ".png" ? "image/png" : sourceExt === ".webp" ? "image/webp" : "image/jpeg");
