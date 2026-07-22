@@ -81,7 +81,7 @@ test("checkout markup and server expose required autocomplete flow", async () =>
     assert.match(checkout, new RegExp(`name="${field}"[^>]*readonly required`));
   }
   assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-address-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-logo-large-1\/styles\.css/);
   assert.match(script, /function setupCheckoutAddressAutocomplete/);
   assert.match(script, /\/api\/address-suggestions\?q=/);
   assert.match(script, /addressVerified: Boolean\(selectedCheckoutAddress\)/);

@@ -6265,8 +6265,8 @@ body.is-product-zoom-open {
     position: static;
     grid-column: 2;
     grid-row: 1;
-    width: min(54vw, 202px);
-    max-width: none;
+    width: min(62vw, 240px);
+    max-width: calc(100vw - 144px);
     justify-self: center;
     transform: none;
   }
