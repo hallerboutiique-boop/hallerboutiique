@@ -226,14 +226,15 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
   assert.match(server, /const tryOnJobRetentionMs = 15 \* 60 \* 1000/);
 });
 
-test("checkout reserves independent mobile columns and gives its logo the maximum safe width", async () => {
+test("checkout gives the original logo its own full-width mobile row", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/checkout-logo-large-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-logo-original-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
+  assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*auto 36px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
-  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?width:\s*min\(62vw, 240px\)/);
-  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?max-width:\s*calc\(100vw - 144px\)/);
+  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?grid-column:\s*1 \/ -1/);
+  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?width:\s*min\(100%, 520px\)/);
   assert.match(styles, /\.checkout-site-header \.header-actions \.cart-button\s*\{[\s\S]*?display:\s*none/);
   assert.match(styles, /\.checkout-site-header \.checkout-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });
@@ -247,11 +248,11 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
   assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-logo-large-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-logo-original-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-address-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-logo-large-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-logo-original-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {

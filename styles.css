@@ -6252,21 +6252,24 @@ body.is-product-zoom-open {
 
   .checkout-site-header .header-bar {
     grid-template-columns: 36px minmax(0, 1fr) 76px;
+    grid-template-rows: auto 36px;
+    height: auto;
+    min-height: 108px;
     gap: 6px;
   }
 
   .checkout-site-header .header-bar > .icon-button {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
     justify-self: start;
   }
 
   .checkout-site-header .logo {
     position: static;
-    grid-column: 2;
+    grid-column: 1 / -1;
     grid-row: 1;
-    width: min(62vw, 240px);
-    max-width: calc(100vw - 144px);
+    width: min(100%, 520px);
+    max-width: none;
     justify-self: center;
     transform: none;
   }
@@ -6278,7 +6281,7 @@ body.is-product-zoom-open {
 
   .checkout-site-header .header-actions {
     grid-column: 3;
-    grid-row: 1;
+    grid-row: 2;
     justify-self: end;
   }
 
