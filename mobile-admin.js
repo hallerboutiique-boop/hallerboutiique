@@ -112,7 +112,6 @@ export function buildShippingLabel(order, generatedAt = new Date().toISOString()
       city: "Milano",
       country: "Italia",
       phone: "3447873142",
-      website: "hallerboutiique.com",
     },
     recipient: {
       name: labelText(mobileOrder.customer.name || "Cliente", 120),
@@ -190,7 +189,7 @@ export function renderShippingLabelHtml(label, qrCodeDataUrl) {
     <section class="top">
       <div>
         <div class="eyebrow">Mittente</div>
-        <div class="sender"><strong>${escapeLabelHtml(sender.name)}</strong><br>${escapeLabelHtml(sender.address)}<br>${escapeLabelHtml(`${sender.postalCode} ${sender.city}`)} · ${escapeLabelHtml(sender.country)}<br>Tel. ${escapeLabelHtml(sender.phone)} · ${escapeLabelHtml(sender.website)}</div>
+        <div class="sender"><strong>${escapeLabelHtml(sender.name)}</strong><br>${escapeLabelHtml(sender.address)}<br>${escapeLabelHtml(`${sender.postalCode} ${sender.city}`)} · ${escapeLabelHtml(sender.country)}<br>Tel. ${escapeLabelHtml(sender.phone)}</div>
       </div>
       <div class="code"><span class="eyebrow">Ordine</span><strong>${escapeLabelHtml(label.orderCode)}</strong></div>
     </section>
