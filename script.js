@@ -1383,7 +1383,7 @@ function normalizeCustomProduct(product) {
 
 async function loadProductOverrides() {
   try {
-    const response = await fetch("/api/products");
+    const response = await fetch(`/api/products?v=${encodeURIComponent(productImageVersion)}`, { cache: "no-store" });
     if (!response.ok) return;
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
