@@ -54,6 +54,8 @@ const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
+const tryOnJobRetentionMs = 15 * 60 * 1000;
+const tryOnMaxActiveJobs = 4;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
@@ -97,6 +99,8 @@ let productZoomImageOptimizationStatus = {
   current: "",
 };
 const geoCache = new Map();
+const tryOnJobs = new Map();
+const tryOnRequestJobs = new Map();
 
 function enqueueProductMutation(mutation) {
   const result = productMutationQueue.then(mutation, mutation);
@@ -2303,6 +2307,96 @@ function tryOnFailureMessage(error, copy) {
   return copy.unavailable;
 }
 
+function cleanTryOnRequestId(value) {
+  const id = String(value || "").trim();
+  return /^[a-zA-Z0-9_-]{16,120}$/.test(id) ? id : "";
+}
+
+function pruneTryOnJobs() {
+  const cutoff = Date.now() - tryOnJobRetentionMs;
+  for (const [id, job] of tryOnJobs) {
+    if (job.updatedAt < cutoff) tryOnJobs.delete(id);
+  }
+  for (const [requestId, entry] of tryOnRequestJobs) {
+    if (entry.createdAt < cutoff || !tryOnJobs.has(entry.jobId)) tryOnRequestJobs.delete(requestId);
+  }
+}
+
+function publicTryOnJob(job) {
+  const payload = {
+    ok: job.state !== "failed",
+    jobId: job.id,
+    state: job.state,
+    progress: job.progress,
+    message: job.message,
+  };
+  if (job.state === "completed") return { ...payload, ...job.result };
+  return payload;
+}
+
+function startTryOnJob({ userImage, productImages, productName, category, bundleItems, mode, saveTryOn, customerImage, productId, copy }) {
+  pruneTryOnJobs();
+  const activeJobs = [...tryOnJobs.values()].filter((job) => job.state === "queued" || job.state === "running").length;
+  if (activeJobs >= tryOnMaxActiveJobs) return null;
+
+  const id = `tryon-job-${randomBytes(18).toString("hex")}`;
+  const job = {
+    id,
+    state: "queued",
+    progress: 24,
+    message: copy.received,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    result: null,
+  };
+  tryOnJobs.set(id, job);
+
+  void (async () => {
+    try {
+      job.state = "running";
+      job.progress = 60;
+      job.message = mode === "bundle" ? copy.bundleGenerating : copy.generating;
+      job.updatedAt = Date.now();
+      const generated = await generateTryOnImage({ userImage, productImages, productName, category, bundleItems });
+      job.progress = 92;
+      job.message = mode === "bundle" ? copy.bundlePreview : copy.preview;
+      job.updatedAt = Date.now();
+      const archived = saveTryOn && customerImage
+        ? await archiveTryOn({ customerImage, generated, productId, productName, category })
+        : null;
+      job.state = "completed";
+      job.progress = 100;
+      job.message = mode === "bundle" ? copy.bundlePreview : copy.preview;
+      job.result = { image: generated, saved: Boolean(archived), mode };
+      job.updatedAt = Date.now();
+    } catch (error) {
+      job.state = "failed";
+      job.progress = 100;
+      job.message = tryOnFailureMessage(error, copy);
+      job.updatedAt = Date.now();
+      console.error("[try-on] asynchronous generation failed", {
+        jobId: job.id,
+        mode,
+        itemCount: bundleItems.length,
+        itemIds: bundleItems.map((item) => item.id),
+        status: Number(error?.status || 0),
+        error: cleanTrackingString(error?.message, 220),
+      });
+    }
+  })();
+
+  return job;
+}
+
+function handleTryOnJob(req, res, jobId) {
+  if (req.method !== "GET") return notFound(res);
+  pruneTryOnJobs();
+  const job = tryOnJobs.get(jobId);
+  if (!job) return json(res, 404, { ok: false, state: "missing", message: tryOnLanguages.it.unavailable });
+  const status = job.state === "failed" ? 502 : 200;
+  return json(res, status, publicTryOnJob(job), job.state === "completed" || job.state === "failed" ? {} : { "Retry-After": "2" });
+}
+
 function siteChatLanguage(value) {
   const code = cleanTrackingString(value, 8).toLowerCase();
   return Object.hasOwn(siteChatLanguages, code) ? code : "it";
@@ -2706,8 +2800,15 @@ async function handleAdminAiProduct(req, res, { streamProgress = false } = {}) {
   }
 }
 
-async function handleTryOn(req, res, { streamProgress = false } = {}) {
+async function handleTryOn(req, res, { streamProgress = false, asyncJob = false } = {}) {
   if (req.method !== "POST") return notFound(res);
+
+  const requestId = asyncJob ? cleanTryOnRequestId(req.headers["x-haller-request-id"]) : "";
+  if (requestId) {
+    pruneTryOnJobs();
+    const existingJob = tryOnJobs.get(tryOnRequestJobs.get(requestId)?.jobId);
+    if (existingJob) return json(res, 202, publicTryOnJob(existingJob), { "Retry-After": "2" });
+  }
 
   const contentType = String(req.headers["content-type"] || "");
   const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[1] || contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.[2];
@@ -2777,6 +2878,24 @@ async function handleTryOn(req, res, { streamProgress = false } = {}) {
     mime: imageMimeFromExtension(ext),
     filename: `customer${ext}`,
   };
+
+  if (asyncJob) {
+    const job = startTryOnJob({
+      userImage,
+      productImages,
+      productName,
+      category,
+      bundleItems,
+      mode,
+      saveTryOn,
+      customerImage,
+      productId: fieldValue(parts, "productId", 120),
+      copy,
+    });
+    if (!job) return json(res, 429, { ok: false, message: copy.busy });
+    if (requestId) tryOnRequestJobs.set(requestId, { jobId: job.id, createdAt: Date.now() });
+    return json(res, 202, publicTryOnJob(job), { "Retry-After": "2" });
+  }
 
   try {
     progress?.update(46, mode === "bundle" ? copy.bundlePrepared : copy.prepared);
@@ -3564,7 +3683,14 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
-  if (url.pathname === "/api/try-on") return handleTryOn(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
+  const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);
+  if (tryOnJobMatch) return handleTryOnJob(req, res, tryOnJobMatch[1]);
+  if (url.pathname === "/api/try-on") {
+    return handleTryOn(req, res, {
+      streamProgress: url.searchParams.get("progress") === "1",
+      asyncJob: url.searchParams.get("async") === "1",
+    });
+  }
   if (req.method === "POST" && url.pathname === "/api/auth/register") return handleRegister(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/login") return handleLogin(req, res);
   if (req.method === "POST" && url.pathname === "/api/auth/logout") {

@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /script\.js\?v=product-zoom-original-crop-2/);
+  assert.match(checkout, /script\.js\?v=tryon-polling-1/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -211,6 +211,28 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(server, /readRequestBuffer\(req, 60 \* 1024 \* 1024\)/);
   assert.match(server, /function tryOnFailureMessage\(error, copy\)/);
   assert.match(script, /setBundleTryOnResult\(`<p>\$\{escapeHtml\(message\)\}<\/p>`\)/);
+});
+
+test("try-on uses an asynchronous job so proxies cannot break a long image request", async () => {
+  const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  assert.match(script, /\/api\/try-on\?async=1/);
+  assert.match(script, /X-Haller-Request-Id/);
+  assert.match(script, /\/api\/try-on\/jobs\/\$\{encodeURIComponent\(data\.jobId\)\}/);
+  assert.doesNotMatch(script, /\/api\/try-on\?progress=1/);
+  assert.match(server, /function startTryOnJob\(/);
+  assert.match(server, /function handleTryOnJob\(/);
+  assert.match(server, /tryOnJobMatch/);
+  assert.match(server, /asyncJob: url\.searchParams\.get\("async"\) === "1"/);
+  assert.match(server, /const tryOnJobRetentionMs = 15 \* 60 \* 1000/);
+});
+
+test("checkout reserves independent mobile columns for back, logo and actions", async () => {
+  const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
+  assert.match(checkout, /class="site-header checkout-site-header"/);
+  assert.match(checkout, /styles\.css\?v=checkout-mobile-logo-1/);
+  assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 116px/);
+  assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
+  assert.match(styles, /\.checkout-site-header \.checkout-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {

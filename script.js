@@ -2620,42 +2620,66 @@ function resetTryOnProgress() {
 }
 
 async function uploadWithProgress(path, body, onProgress) {
-  const response = await fetch(path, { method: "POST", body });
-  const reader = response.body?.getReader();
-  if (!reader) {
-    const data = await response.json();
-    if (!response.ok || data.ok === false) throw new Error(data.message || translate("tryon-unavailable"));
-    return data;
-  }
+  const requestId = window.crypto?.randomUUID?.()
+    || `tryon_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  let response;
 
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let finalEvent = null;
-  const consume = (line) => {
-    if (!line.trim()) return;
-    const event = JSON.parse(line);
-    if (event.type === "progress") {
-      onProgress?.(event);
-      return;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      response = await fetch(path, {
+        method: "POST",
+        body,
+        cache: "no-store",
+        headers: { "X-Haller-Request-Id": requestId },
+      });
+      break;
+    } catch (error) {
+      if (attempt === 1) throw new Error(translate("tryon-unavailable"));
+      await new Promise((resolve) => setTimeout(resolve, 900));
     }
-    finalEvent = event;
-  };
-
-  while (true) {
-    const { done, value } = await reader.read();
-    buffer += decoder.decode(value || new Uint8Array(), { stream: !done });
-    const lines = buffer.split("\n");
-    buffer = lines.pop() || "";
-    lines.forEach(consume);
-    if (done) break;
   }
-  consume(buffer);
 
-  if (!finalEvent) throw new Error(translate("tryon-unavailable"));
-  if (finalEvent.type === "error") throw new Error(finalEvent.message || translate("tryon-unavailable"));
-  const data = finalEvent.data || finalEvent;
-  if (!response.ok || data.ok === false) throw new Error(data.message || translate("tryon-unavailable"));
-  return data;
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error(translate("tryon-unavailable"));
+  }
+  if (!response.ok || data.ok === false || !data.jobId) {
+    throw new Error(data.message || translate("tryon-unavailable"));
+  }
+
+  const startedAt = Date.now();
+  let networkFailures = 0;
+  let lastProgress = -1;
+  while (Date.now() - startedAt < 4 * 60 * 1000) {
+    if (data.progress !== lastProgress || data.message) {
+      onProgress?.(data);
+      lastProgress = data.progress;
+    }
+    if (data.state === "completed") return data;
+    if (data.state === "failed" || data.state === "missing") {
+      throw new Error(data.message || translate("tryon-unavailable"));
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 1800));
+    try {
+      const pollResponse = await fetch(`/api/try-on/jobs/${encodeURIComponent(data.jobId)}?v=${Date.now()}`, {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const next = await pollResponse.json();
+      if (!pollResponse.ok && next.state !== "failed") {
+        throw new Error(next.message || translate("tryon-unavailable"));
+      }
+      data = next;
+      networkFailures = 0;
+    } catch (error) {
+      networkFailures += 1;
+      if (networkFailures >= 5) throw new Error(translate("tryon-unavailable"));
+    }
+  }
+  throw new Error(translate("tryon-unavailable"));
 }
 
 function setTryOnResult(content) {
@@ -2741,7 +2765,7 @@ async function generateTryOn() {
     formData.append("language", siteLanguage);
     setTryOnProgress(16, translate("tryon-inputs-ready"));
     setTryOnMessage(translate("tryon-sending"));
-    const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
+    const data = await uploadWithProgress("/api/try-on?async=1", formData, (event) => {
       setTryOnProgress(event.progress, event.message);
       setTryOnMessage(event.message);
     });
@@ -2946,7 +2970,7 @@ async function generateBundleTryOn() {
       formData.append("saveTryOn", "yes");
     }
     setBundleTryOnProgress(16, translate("bundle-tryon-inputs-ready"));
-    const data = await uploadWithProgress("/api/try-on?progress=1", formData, (event) => {
+    const data = await uploadWithProgress("/api/try-on?async=1", formData, (event) => {
       setBundleTryOnProgress(event.progress, event.message);
       setBundleTryOnMessage(event.message);
     });

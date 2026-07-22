@@ -6118,6 +6118,52 @@ body.is-product-zoom-open {
     gap: 4px;
   }
 
+  .checkout-site-header .header-bar {
+    grid-template-columns: 36px minmax(0, 1fr) 116px;
+    gap: 6px;
+  }
+
+  .checkout-site-header .header-bar > .icon-button {
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: start;
+  }
+
+  .checkout-site-header .logo {
+    position: static;
+    grid-column: 2;
+    grid-row: 1;
+    width: 100%;
+    max-width: none;
+    justify-self: center;
+    transform: none;
+  }
+
+  .checkout-site-header .logo img {
+    width: 100%;
+    max-width: 180px;
+  }
+
+  .checkout-site-header .header-actions {
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: end;
+  }
+
+  .checkout-site-header .checkout-nav {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    min-height: 82px;
+    padding: 8px 4px 10px;
+    column-gap: 8px;
+    row-gap: 0;
+    overflow: visible;
+  }
+
+  .checkout-site-header .checkout-nav a {
+    justify-content: center;
+  }
+
   .cart-button span {
     top: -1px;
     right: -2px;
