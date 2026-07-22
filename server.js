@@ -168,6 +168,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/mobile-logo-all-pages-1/styles.css", "/styles.css"],
   ["/assets-v/mobile-logo-all-pages-2/styles.css", "/styles.css"],
   ["/assets-v/mobile-logo-all-pages-3/styles.css", "/styles.css"],
+  ["/assets-v/header-logo-stable-1/styles.css", "/styles.css"],
   ["/assets-v/checkout-open-images-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-full-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-gallery-1/script.js", "/script.js"],

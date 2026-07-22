@@ -6351,21 +6351,6 @@ body.is-product-zoom-open {
     justify-self: start;
   }
 
-  .checkout-site-header .logo {
-    position: static;
-    grid-column: 1 / -1;
-    grid-row: 1;
-    width: min(100%, 520px);
-    max-width: none;
-    justify-self: center;
-    transform: none;
-  }
-
-  .checkout-site-header .logo img {
-    width: 100%;
-    max-width: none;
-  }
-
   .checkout-site-header .header-actions {
     grid-column: 3;
     grid-row: 1;
@@ -6949,13 +6934,13 @@ body.is-product-zoom-open {
   }
 
   .checkout-site-header .logo {
-    position: static;
-    grid-column: 2;
-    grid-row: 1;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    grid-column: auto;
     width: min(52vw, 260px);
-    max-width: 260px;
-    justify-self: center;
-    transform: none;
+    max-width: calc(100vw - 168px);
+    transform: translate(-50%, -50%);
   }
 
   .checkout-site-header .logo img {
