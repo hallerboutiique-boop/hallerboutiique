@@ -5477,7 +5477,8 @@ body.motion-enabled .product-actions .buy-action:hover {
 
 .bundle-tryon-heading p,
 .bundle-tryon-heading h2,
-.bundle-tryon-heading span {
+.bundle-tryon-heading span,
+.bundle-tryon-heading .bundle-tryon-limit {
   margin: 0;
 }
 
@@ -5500,6 +5501,19 @@ body.motion-enabled .product-actions .buy-action:hover {
   color: var(--text);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.bundle-tryon-heading .bundle-tryon-limit {
+  width: fit-content;
+  padding: 7px 10px;
+  border: 1px solid rgba(var(--gold-rgb), 0.58);
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.08);
+  font-size: 12px;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .bundle-tryon-products {

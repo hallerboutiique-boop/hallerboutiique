@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -168,14 +168,14 @@ test("catalog categories, product pages and galleries follow the storefront flow
   assert.match(styles, /\.product-detail\s*\{/);
 });
 
-test("try-on supports clothing, shoes and bags", async () => {
+test("single-product try-on continues to support clothing, shoes and bags", async () => {
   const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.doesNotMatch(script, /product\.sizeType !== "clothing"/);
   assert.match(script, /image: productPrimaryImage\(product\)/);
   assert.match(server, /function cleanTryOnBundleItems/);
-  assert.match(server, /put sneakers or shoes on both feet/i);
-  assert.match(server, /place bags in the customer's hand/i);
-  assert.match(server, /Do not omit, replace, redesign, duplicate or invent any item/);
+  assert.match(server, /replace only the clothing, footwear or accessory pixels/);
+  assert.match(server, /For shoes, show the customer head to toe and place the shoes on both feet/);
+  assert.match(server, /For a bag, show it carried naturally in the hand/);
 });
 
 test("single try-on keeps the original customer photo separate and locks facial identity", async () => {
@@ -193,7 +193,14 @@ test("single try-on keeps the original customer photo separate and locks facial 
 });
 
 test("bundle try-on keeps the customer original and normalizes separate product images", async () => {
-  const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
+  const [checkout, script, server] = await Promise.all([
+    readFile("checkout.html", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+  ]);
+  assert.match(checkout, /data-i18n="bundle-tryon-limit">Solo abiti · massimo 2 prodotti/);
+  assert.match(script, /\.filter\(\(item\) => item\.sizeType === "clothing"\)/);
+  assert.match(script, /\.slice\(0, 2\)/);
   assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadOriginalBundleProductImage\)\)/);
   assert.doesNotMatch(script, /bundle-try-on-reference\.png/);
   assert.match(server, /appendImageFormData\(form, "image\[\]", userImage\)/);
@@ -202,11 +209,13 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(server, /input image 1 is the immutable identity and scene reference/);
   assert.match(server, /Use each original product photo as the authoritative visual reference/);
   assert.match(server, /bundleItems\.length > 0 \|\| hasSeparateProductImages \? "1024x1536" : "1024x1024"/);
-  assert.match(server, /Catalog photos may also show boxes, packaging/);
-  assert.match(server, /visible from head to toe with both feet unobstructed/);
-  assert.match(server, /const bundleIncludesBag = bundleItems\.some/);
-  assert.match(server, /The cart contains no bag product/);
-  assert.match(server, /If a product name or category conflicts with its photo, follow the photo/);
+  assert.match(server, /strict maximum of two garments/);
+  assert.match(server, /Do not change, replace, redraw, recolor, remove or add shoes/);
+  assert.match(server, /Preserve the customer's original footwear and accessories exactly/);
+  assert.match(server, /Ignore every non-clothing element completely/);
+  assert.match(server, /bundleItems\.length > 2/);
+  assert.match(server, /item\.sizeType !== "clothing"/);
+  assert.match(server, /return badRequest\(res, copy\.bundleRules\)/);
   assert.match(server, /const openaiTryOnTimeoutMs = 180000/);
   assert.match(server, /readRequestBuffer\(req, 60 \* 1024 \* 1024\)/);
   assert.match(server, /function tryOnFailureMessage\(error, copy\)/);
@@ -229,7 +238,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the full original mobile logo inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/checkout-logo-inline-original-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
@@ -247,12 +256,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
-  assert.match(checkout, /\/assets-v\/checkout-address-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-logo-inline-original-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-address-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-logo-inline-original-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
