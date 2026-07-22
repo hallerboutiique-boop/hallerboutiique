@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-open-images-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -244,7 +244,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the full original mobile logo inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-2\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
@@ -261,7 +261,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/, pageNames[index]);
+    assert.match(html, /\/assets-v\/mobile-logo-all-pages-2\/styles\.css/, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -283,13 +283,13 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
   assert.match(index, /\/assets-v\/home-hide-last-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-open-images-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-2\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/home-hide-last-stock-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/mobile-logo-all-pages-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-open-images-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/mobile-logo-all-pages-2\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
@@ -380,10 +380,19 @@ test("checkout renders product images from the cart", async () => {
   assert.match(checkout, /data-checkout-summary-products/);
   assert.match(script, /function renderCheckoutProductSummary\(\)/);
   assert.match(script, /function getCheckoutItemImage\(item\)/);
-  assert.match(script, /renderCheckoutProductSummary\(\);/);
+  assert.match(script, /function getCheckoutItemZoomImage\(item, previewImage\)/);
+  assert.match(script, /productZoomImageSource\(product, productImage, 0\)/);
+  assert.match(script, /zoomImage:\s*productZoomImageSource\(product, productPrimaryImage\(product\), 0\)/);
+  assert.match(script, /item\?\.zoomImage \|\| item\?\.tryOnImage \|\| previewImage/);
+  assert.match(script, /data-product-zoom-open data-zoom-src=/);
+  assert.match(script, /control\.dataset\.zoomSrc \|\| activeImage\?\.dataset\.originalSrc/);
+  assert.match(script, /control\.dataset\.zoomFallback \|\| activeImage\?\.currentSrc/);
+  assert.ok((script.match(/renderCheckoutProductSummary\(\);/g) || []).length >= 3);
   assert.match(script, /function removeCheckoutItem\(index\)/);
   assert.match(script, /data-checkout-remove-index/);
   assert.match(styles, /\.checkout-summary-product-image img\s*\{[\s\S]*?object-fit:\s*contain/);
+  assert.match(styles, /\.checkout-summary-product-image\s*\{[\s\S]*?cursor:\s*zoom-in/);
+  assert.match(styles, /\.checkout-summary-product-zoom-icon\s*\{/);
   assert.match(styles, /\.checkout-summary-remove\s*\{/);
 });
 

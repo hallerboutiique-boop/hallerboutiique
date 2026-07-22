@@ -1431,11 +1431,13 @@ async function loadProductOverrides() {
     renderCatalog();
     renderProductDetail();
     renderBundleTryOn();
+    renderCheckoutProductSummary();
   } catch {
     productOverrides = {};
     customProducts = [];
     renderProductDetail();
     renderBundleTryOn();
+    renderCheckoutProductSummary();
   }
 }
 
@@ -1710,6 +1712,7 @@ function saveCheckoutItem(productId, size = "") {
     size,
     image: productPrimaryImage(product),
     tryOnImage: productPrimaryTryOnImage(product),
+    zoomImage: productZoomImageSource(product, productPrimaryImage(product), 0),
     savedAt: new Date().toISOString(),
   };
 
@@ -2098,8 +2101,8 @@ function openProductImageZoom(control) {
   const dialog = ensureProductImageZoomDialog();
   const stage = dialog?.querySelector("[data-product-zoom-stage]");
   const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
-  const source = activeImage?.dataset.originalSrc;
-  const fallbackSource = activeImage?.currentSrc || activeImage?.src || "";
+  const source = control.dataset.zoomSrc || activeImage?.dataset.originalSrc;
+  const fallbackSource = control.dataset.zoomFallback || activeImage?.currentSrc || activeImage?.src || "";
   if (!source || !dialog || !stage || !zoomImage) return;
   productImageZoomScale = 1;
   productImageZoomGesture = null;
@@ -3096,6 +3099,13 @@ function getCheckoutItemImage(item) {
   return product ? productPrimaryImage(product) : "";
 }
 
+function getCheckoutItemZoomImage(item, previewImage) {
+  const product = item?.id ? findProductById(item.id) : findProduct(item?.name);
+  if (!product) return withProductImageVersion(item?.zoomImage || item?.tryOnImage || previewImage || "");
+  const productImage = productPrimaryImage(product);
+  return productImage ? productZoomImageSource(product, productImage, 0) : withProductImageVersion(previewImage || "");
+}
+
 function renderCheckoutProductSummary() {
   const root = document.querySelector("[data-checkout-summary-products]");
   const empty = document.querySelector("[data-checkout-summary-empty]");
@@ -3111,13 +3121,15 @@ function renderCheckoutProductSummary() {
 
   root.innerHTML = items.map((item, index) => {
     const image = getCheckoutItemImage(item);
+    const previewImage = image ? withProductImageVersion(image) : "";
+    const zoomImage = image ? getCheckoutItemZoomImage(item, image) : "";
     const size = String(item.size || "").trim();
     const imageMarkup = image
-      ? `<img src="${escapeHtml(withProductImageVersion(image))}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async">`
+      ? `<button class="checkout-summary-product-image" type="button" data-product-zoom-open data-zoom-src="${escapeHtml(zoomImage)}" data-zoom-fallback="${escapeHtml(previewImage)}" aria-label="${escapeHtml(translate("zoom-open"))}: ${escapeHtml(item.name || "")}" title="${escapeHtml(translate("zoom-open"))}"><img src="${escapeHtml(previewImage)}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async"><span class="checkout-summary-product-zoom-icon" aria-hidden="true"><i data-lucide="zoom-in"></i></span></button>`
       : `<span class="checkout-summary-product-placeholder"><i data-lucide="image"></i></span>`;
     return `
       <article class="checkout-summary-product">
-        <div class="checkout-summary-product-image">${imageMarkup}</div>
+        ${imageMarkup}
         <div class="checkout-summary-product-copy">
           <h3>${escapeHtml(item.name || translate("checkout-to-confirm"))}</h3>
           ${size ? `<p>${escapeHtml(translate("sizes"))}: ${escapeHtml(size)}</p>` : ""}
