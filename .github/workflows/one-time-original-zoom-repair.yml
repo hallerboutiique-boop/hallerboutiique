@@ -1,0 +1,107 @@
+name: One-time original zoom repair
+
+on:
+  push:
+    paths:
+      - .github/workflows/one-time-original-zoom-repair.yml
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Apply tested original-pixel zoom implementation
+        run: |
+          python3 - <<'PY'
+          import base64
+          import gzip
+          from pathlib import Path
+          Path('/tmp/original-zoom.patch').write_bytes(gzip.decompress(base64.b64decode("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")))
+          PY
+          git apply /tmp/original-zoom.patch
+
+      - name: Test implementation
+        run: |
+          corepack enable
+          pnpm install --frozen-lockfile
+          pnpm test
+
+      - name: Publish tested implementation to main
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add i18n.test.mjs product-image-zoom.mjs product-image-zoom.test.mjs script.js server.js
+          git commit -m 'Use original pixels for cropped image zoom'
+          git push origin HEAD:main
+
+      - name: Regenerate every cropped zoom from its original
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import shlex
+          import urllib.request
+
+          javascript = r"""
+          (async () => {
+            const base = 'http://127.0.0.1:8080/api/internal/product-zoom-image-optimization';
+            const started = await fetch(base + '?force=1', { method: 'POST' });
+            if (!started.ok) throw new Error('start ' + started.status + ': ' + await started.text());
+            console.log(await started.text());
+            for (let attempt = 0; attempt < 360; attempt += 1) {
+              await new Promise((resolve) => setTimeout(resolve, 4000));
+              const response = await fetch(base);
+              if (!response.ok) throw new Error('poll ' + response.status + ': ' + await response.text());
+              const status = await response.json();
+              console.log(JSON.stringify(status));
+              if (status.state !== 'running') {
+                if (status.state !== 'completed' || status.failed !== 0) process.exit(2);
+                if (status.total < 1 || status.optimized !== status.total) process.exit(3);
+                return;
+              }
+            }
+            throw new Error('original zoom repair timed out');
+          })().catch((error) => { console.error(error); process.exit(1); });
+          """
+          command = ['/bin/sh', '-lc', 'node -e ' + shlex.quote(javascript)]
+          payload = json.dumps({'command': command, 'timeout': 1500}).encode()
+          request = urllib.request.Request(
+              'https://api.machines.dev/v1/apps/hallerboutiique/machines/18590d2a679978/exec',
+              data=payload,
+              headers={'Authorization': 'Bearer ' + os.environ['FLY_API_TOKEN'], 'Content-Type': 'application/json'},
+              method='POST',
+          )
+          with urllib.request.urlopen(request, timeout=1550) as response:
+              raw = response.read().decode('utf-8', 'replace')
+          print(raw)
+          result = json.loads(raw) if raw else {}
+          if isinstance(result, dict) and result.get('exit_code', 0) != 0:
+              raise SystemExit(result.get('exit_code', 1))
+          PY
+
+      - name: Purge Bunny cache when configured
+        env:
+          BUNNY_API_KEY: ${{ secrets.BUNNY_API_KEY }}
+        run: |
+          if [ -z "$BUNNY_API_KEY" ]; then
+            echo 'Bunny secret is not configured in Actions; immutable zoom URLs need no purge.'
+            exit 0
+          fi
+          node scripts/purge-bunny-cache.mjs
+
+      - name: Remove temporary workflow
+        run: |
+          git pull --rebase origin main
+          git rm .github/workflows/one-time-original-zoom-repair.yml
+          git commit -m 'Remove completed original zoom repair workflow'
+          git push origin HEAD:main
