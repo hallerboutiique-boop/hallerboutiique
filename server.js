@@ -148,6 +148,10 @@ const publicFiles = new Set([
   "/account.js",
   "/admin.js",
 ]);
+const versionedPublicFiles = new Map([
+  ["/assets-v/tryon-polling-2/script.js", "/script.js"],
+  ["/assets-v/checkout-mobile-logo-2/styles.css", "/styles.css"],
+]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
 const oauthProviders = {
@@ -3727,7 +3731,8 @@ async function handleApi(req, res, url) {
 }
 
 function safeStaticPath(urlPathname) {
-  const pathname = decodeURIComponent(urlPathname === "/" ? "/index.html" : urlPathname);
+  const requestedPathname = decodeURIComponent(urlPathname === "/" ? "/index.html" : urlPathname);
+  const pathname = versionedPublicFiles.get(requestedPathname) || requestedPathname;
   if (pathname.startsWith("/uploads/")) {
     if (!publicAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
     const filePath = path.normalize(path.join(uploadsDir, pathname.replace(/^\/uploads\//, "")));
