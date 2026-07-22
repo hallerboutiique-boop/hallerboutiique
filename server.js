@@ -169,6 +169,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/mobile-logo-all-pages-2/styles.css", "/styles.css"],
   ["/assets-v/mobile-logo-all-pages-3/styles.css", "/styles.css"],
   ["/assets-v/checkout-open-images-1/script.js", "/script.js"],
+  ["/assets-v/checkout-images-full-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 

@@ -2105,7 +2105,7 @@ function renderProductImageZoom({ center = false } = {}) {
 
 function openProductImageZoom(control) {
   const gallery = control.closest(".product-detail-gallery, .product-media");
-  const activeImage = gallery?.querySelector("[data-gallery-slide].is-active");
+  const activeImage = gallery?.querySelector("[data-gallery-slide].is-active") || control.querySelector("img");
   const dialog = ensureProductImageZoomDialog();
   const stage = dialog?.querySelector("[data-product-zoom-stage]");
   const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
@@ -2116,7 +2116,7 @@ function openProductImageZoom(control) {
   productImageZoomGesture = null;
   stage.scrollLeft = 0;
   stage.scrollTop = 0;
-  zoomImage.alt = activeImage.alt || "";
+  zoomImage.alt = activeImage?.alt || "";
   zoomImage.removeAttribute("data-zoom-ready");
   zoomImage.removeAttribute("data-fallback-applied");
   zoomImage.removeAttribute("srcset");

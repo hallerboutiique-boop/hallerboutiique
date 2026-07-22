@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/tryon-no-shoes-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-images-full-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -97,7 +97,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/tryon-no-shoes-1\/script\.js/);
+  assert.match(index, /\/assets-v\/checkout-images-full-1\/script\.js/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -291,11 +291,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-no-shoes-1\/script\.js/));
-  assert.match(index, /\/assets-v\/tryon-no-shoes-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/tryon-no-shoes-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/checkout-images-full-1\/script\.js/));
+  assert.match(index, /\/assets-v\/checkout-images-full-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-images-full-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-3\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
+  assert.match(server, /"\/assets-v\/checkout-images-full-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/mobile-logo-all-pages-3\/styles\.css", "\/styles\.css"/);
 });
@@ -431,6 +432,8 @@ test("responsive product images preserve originals and keep the navigation menu 
   const zoomOpenImplementation = script.slice(zoomOpenStart, zoomOpenEnd);
   assert.match(zoomOpenImplementation, /zoomImage\.removeAttribute\("srcset"\)/);
   assert.match(zoomOpenImplementation, /zoomImage\.src = source/);
+  assert.match(zoomOpenImplementation, /control\.querySelector\("img"\)/);
+  assert.match(zoomOpenImplementation, /zoomImage\.alt = activeImage\?\.alt \|\| ""/);
   assert.doesNotMatch(zoomOpenImplementation, /zoomImage\.src = previewSource/);
   assert.match(server, /async function optimizeExistingProductZoomImages/);
   assert.match(server, /createAndStoreProductZoomImage/);
