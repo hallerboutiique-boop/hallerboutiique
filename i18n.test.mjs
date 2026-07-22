@@ -243,8 +243,8 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 
 test("checkout keeps the full original mobile logo inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
-  assert.match(checkout, /class="site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/styles\.css/);
+  assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
+  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*static[\s\S]*?transform:\s*none/);
@@ -252,6 +252,25 @@ test("checkout keeps the full original mobile logo inline with the header icons"
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?width:\s*min\(100%, 520px\)/);
   assert.match(styles, /\.checkout-site-header \.header-actions \.cart-button\s*\{[\s\S]*?display:\s*none/);
   assert.match(styles, /\.checkout-site-header \.checkout-nav\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+});
+
+test("mobile logos use collision-free layouts on every storefront page", async () => {
+  const pageNames = ["index.html", "account.html", "checkout.html", "product.html", "ultimi-disponibili.html", "spedizioni.html", "termini.html", "privacy.html", "admin.html"];
+  const [styles, ...pages] = await Promise.all([
+    readFile("styles.css", "utf8"),
+    ...pageNames.map((file) => readFile(file, "utf8")),
+  ]);
+  pages.forEach((html, index) => {
+    assert.match(html, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/, pageNames[index]);
+  });
+  assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
+  assert.match(pages[1], /class="icon-button is-current account-current-action"/);
+  assert.match(pages[8], /class="site-header utility-site-header admin-site-header"/);
+  assert.match(styles, /\.utility-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*minmax\(116px, 1fr\) auto minmax\(116px, 1fr\)/);
+  assert.match(styles, /\.utility-site-header:not\(\.checkout-site-header\) \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
+  assert.match(styles, /\.utility-site-header:not\(\.checkout-site-header\) \.logo\s*\{[\s\S]*?grid-column:\s*2/);
+  assert.match(styles, /\.site-header:not\(\.utility-site-header\) \.logo img\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
+  assert.match(styles, /\.legal-header\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 36px/);
 });
 
 test("Bunny receives immutable path-versioned storefront assets instead of ignored query versions", async () => {
@@ -265,12 +284,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-polling-2\/script\.js/));
   assert.match(index, /\/assets-v\/home-hide-last-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-clothing-tryon-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-polling-2\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/home-hide-last-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/checkout-clothing-tryon-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/mobile-logo-all-pages-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {

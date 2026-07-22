@@ -6800,3 +6800,108 @@ body.is-product-zoom-open {
     width: 100%;
   }
 }
+
+/* Stable three-zone header for account, checkout and admin pages. */
+.utility-site-header .header-bar {
+  grid-template-columns: minmax(116px, 1fr) auto minmax(116px, 1fr);
+}
+
+.utility-site-header .header-bar > .icon-button {
+  grid-column: 1;
+  grid-row: 1;
+  z-index: 2;
+  justify-self: start;
+}
+
+.utility-site-header .logo {
+  position: static;
+  grid-column: 2;
+  grid-row: 1;
+  z-index: 1;
+  justify-self: center;
+  transform: none;
+}
+
+.utility-site-header .header-actions {
+  grid-column: 3;
+  grid-row: 1;
+  z-index: 2;
+  justify-self: end;
+}
+
+.account-site-header .account-current-action,
+.admin-site-header .admin-secondary-action {
+  display: none;
+}
+
+@media (max-width: 560px) {
+  .site-header:not(.utility-site-header) .logo img {
+    width: min(52vw, 260px);
+  }
+
+  .utility-site-header:not(.checkout-site-header) .header-bar {
+    grid-template-columns: 36px minmax(0, 1fr) 76px;
+    grid-template-rows: 76px;
+    height: 76px;
+    min-height: 76px;
+    gap: 6px;
+  }
+
+  .utility-site-header:not(.checkout-site-header) .logo {
+    grid-column: 2;
+    width: 100%;
+    max-width: 260px;
+  }
+
+  .utility-site-header:not(.checkout-site-header) .logo img {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .utility-site-header:not(.checkout-site-header) .header-actions {
+    grid-column: 3;
+    width: 76px;
+    justify-content: flex-end;
+  }
+
+  .checkout-site-header .logo {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: min(100%, 520px);
+    max-width: none;
+    justify-self: center;
+    transform: none;
+  }
+
+  .checkout-site-header .logo img {
+    width: 100%;
+    max-width: none;
+  }
+
+  .legal-header {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    gap: 10px;
+  }
+
+  .legal-back {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .legal-brand {
+    grid-column: 2;
+    justify-self: center;
+  }
+
+  .legal-brand img {
+    width: min(52vw, 230px);
+    max-width: 100%;
+  }
+
+  .legal-language-picker {
+    grid-column: 3;
+    justify-self: end;
+  }
+}
