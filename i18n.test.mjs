@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/checkout-images-full-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -97,7 +97,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/checkout-images-full-1\/script\.js/);
+  assert.match(index, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -291,12 +291,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/checkout-images-full-1\/script\.js/));
-  assert.match(index, /\/assets-v\/checkout-images-full-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-images-full-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/checkout-images-gallery-1\/script\.js/));
+  assert.match(index, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/mobile-logo-all-pages-3\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/checkout-images-full-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-images-gallery-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/mobile-logo-all-pages-3\/styles\.css", "\/styles\.css"/);
 });
@@ -390,11 +390,16 @@ test("checkout renders product images from the cart", async () => {
   assert.match(script, /function renderCheckoutProductSummary\(\)/);
   assert.match(script, /function getCheckoutItemImage\(item\)/);
   assert.match(script, /function getCheckoutItemZoomImage\(item, previewImage\)/);
+  assert.match(script, /function getCheckoutItemZoomGallery\(item, previewImage\)/);
   assert.match(script, /productZoomImageSource\(product, productImage, 0\)/);
   assert.match(script, /zoomImage:\s*productZoomImageSource\(product, productPrimaryImage\(product\), 0\)/);
   assert.match(script, /item\?\.zoomImage \|\| item\?\.tryOnImage \|\| previewImage/);
   assert.match(script, /data-product-zoom-open data-zoom-src=/);
-  assert.match(script, /control\.dataset\.zoomSrc \|\| activeImage\?\.dataset\.originalSrc/);
+  assert.match(script, /data-zoom-gallery=/);
+  assert.match(script, /function navigateProductImageZoom\(direction\)/);
+  assert.match(script, /data-product-zoom-previous/);
+  assert.match(script, /data-product-zoom-next/);
+  assert.match(script, /control\.dataset\.zoomGallery/);
   assert.match(script, /control\.dataset\.zoomFallback \|\| activeImage\?\.currentSrc/);
   assert.ok((script.match(/renderCheckoutProductSummary\(\);/g) || []).length >= 3);
   assert.match(script, /function removeCheckoutItem\(index\)/);
@@ -403,6 +408,8 @@ test("checkout renders product images from the cart", async () => {
   assert.match(styles, /\.checkout-summary-product-image\s*\{[\s\S]*?cursor:\s*zoom-in/);
   assert.match(styles, /\.checkout-summary-product-zoom-icon\s*\{/);
   assert.match(styles, /\.checkout-summary-remove\s*\{/);
+  assert.match(styles, /\.product-image-zoom-nav\s*\{/);
+  assert.match(styles, /\.product-image-zoom-counter\s*\{/);
 });
 
 test("responsive product images preserve originals and keep the navigation menu text-only", async () => {
@@ -430,11 +437,14 @@ test("responsive product images preserve originals and keep the navigation menu 
   const zoomOpenStart = script.indexOf("function openProductImageZoom(control)");
   const zoomOpenEnd = script.indexOf("function adjustProductImageZoom", zoomOpenStart);
   const zoomOpenImplementation = script.slice(zoomOpenStart, zoomOpenEnd);
-  assert.match(zoomOpenImplementation, /zoomImage\.removeAttribute\("srcset"\)/);
-  assert.match(zoomOpenImplementation, /zoomImage\.src = source/);
+  const zoomLoadStart = script.indexOf("function loadProductImageZoom(index");
+  const zoomLoadEnd = script.indexOf("function navigateProductImageZoom", zoomLoadStart);
+  const zoomLoadImplementation = script.slice(zoomLoadStart, zoomLoadEnd);
+  assert.match(zoomLoadImplementation, /zoomImage\.removeAttribute\("srcset"\)/);
+  assert.match(zoomLoadImplementation, /zoomImage\.src = source/);
   assert.match(zoomOpenImplementation, /control\.querySelector\("img"\)/);
-  assert.match(zoomOpenImplementation, /zoomImage\.alt = activeImage\?\.alt \|\| ""/);
-  assert.doesNotMatch(zoomOpenImplementation, /zoomImage\.src = previewSource/);
+  assert.match(zoomLoadImplementation, /zoomImage\.alt = entry\.alt \|\| ""/);
+  assert.doesNotMatch(zoomLoadImplementation, /zoomImage\.src = previewSource/);
   assert.match(server, /async function optimizeExistingProductZoomImages/);
   assert.match(server, /createAndStoreProductZoomImage/);
   assert.match(server, /createMatchingProductZoomImage/);

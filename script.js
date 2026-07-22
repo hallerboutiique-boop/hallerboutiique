@@ -17,6 +17,8 @@ let productImageObserver = null;
 let prioritizedProductImage = false;
 let productImageZoomScale = 1;
 let productImageZoomGesture = null;
+let productImageZoomGallery = [];
+let productImageZoomIndex = 0;
 const galleryClickSuppression = new WeakMap();
 
 const translations = {
@@ -1552,6 +1554,9 @@ function createProductImageZoomMarkup() {
     <dialog class="product-image-zoom" data-product-zoom-dialog aria-label="${translate("zoom-open")}">
       <div class="product-image-zoom-shell">
         <button class="product-image-zoom-close" type="button" data-product-zoom-close aria-label="${translate("zoom-close")}" title="${translate("zoom-close")}"><i data-lucide="x"></i></button>
+        <button class="product-image-zoom-nav product-image-zoom-previous" type="button" data-product-zoom-previous aria-label="${translate("gallery-previous")}" title="${translate("gallery-previous")}"><i data-lucide="chevron-left"></i></button>
+        <button class="product-image-zoom-nav product-image-zoom-next" type="button" data-product-zoom-next aria-label="${translate("gallery-next")}" title="${translate("gallery-next")}"><i data-lucide="chevron-right"></i></button>
+        <div class="product-image-zoom-counter" data-product-zoom-counter aria-live="polite"></div>
         <div class="product-image-zoom-stage" data-product-zoom-stage>
           <img data-product-zoom-image alt="" draggable="false">
         </div>
@@ -2103,35 +2108,114 @@ function renderProductImageZoom({ center = false } = {}) {
   }
 }
 
+function getProductImageZoomGallery(control, gallery, activeImage) {
+  let entries = [];
+  if (control.dataset.zoomGallery) {
+    try {
+      entries = JSON.parse(control.dataset.zoomGallery);
+    } catch {
+      entries = [];
+    }
+  }
+  if (!Array.isArray(entries) || entries.length === 0) {
+    entries = gallery
+      ? [...gallery.querySelectorAll("[data-gallery-slide]")].map((image) => ({
+        src: image.dataset.originalSrc || image.currentSrc || image.src,
+        fallback: image.dataset.fallbackSrc || image.currentSrc || image.src,
+        alt: image.alt,
+      }))
+      : [];
+  }
+  if (entries.length === 0 && activeImage) {
+    entries = [{
+      src: activeImage.dataset.originalSrc || activeImage.currentSrc || activeImage.src,
+      fallback: activeImage.dataset.fallbackSrc || activeImage.currentSrc || activeImage.src,
+      alt: activeImage.alt,
+    }];
+  }
+  return entries
+    .map((entry) => ({
+      src: typeof entry === "string" ? entry : entry?.src,
+      fallback: typeof entry === "string" ? entry : entry?.fallback,
+      alt: typeof entry === "string" ? "" : entry?.alt,
+    }))
+    .filter((entry) => entry.src)
+    .map((entry) => ({
+      src: String(entry.src),
+      fallback: String(entry.fallback || entry.src),
+      alt: String(entry.alt || ""),
+    }));
+}
+
+function updateProductImageZoomGalleryControls(dialog) {
+  const hasMultipleImages = productImageZoomGallery.length > 1;
+  const previous = dialog?.querySelector("[data-product-zoom-previous]");
+  const next = dialog?.querySelector("[data-product-zoom-next]");
+  const counter = dialog?.querySelector("[data-product-zoom-counter]");
+  if (previous) previous.hidden = !hasMultipleImages;
+  if (next) next.hidden = !hasMultipleImages;
+  if (counter) {
+    counter.hidden = !hasMultipleImages;
+    counter.textContent = hasMultipleImages
+      ? `${productImageZoomIndex + 1} / ${productImageZoomGallery.length}`
+      : "";
+  }
+}
+
+function loadProductImageZoom(index, { center = true } = {}) {
+  const dialog = document.querySelector("[data-product-zoom-dialog]");
+  const stage = dialog?.querySelector("[data-product-zoom-stage]");
+  const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
+  if (!dialog?.open || !stage || !zoomImage || productImageZoomGallery.length === 0) return;
+
+  productImageZoomIndex = (index + productImageZoomGallery.length) % productImageZoomGallery.length;
+  const entry = productImageZoomGallery[productImageZoomIndex];
+  const source = entry.src;
+  const fallbackSource = entry.fallback || source;
+  productImageZoomScale = 1;
+  productImageZoomGesture = null;
+  stage.scrollLeft = 0;
+  stage.scrollTop = 0;
+  zoomImage.alt = entry.alt || "";
+  zoomImage.removeAttribute("data-zoom-ready");
+  zoomImage.removeAttribute("data-fallback-applied");
+  zoomImage.removeAttribute("srcset");
+  zoomImage.style.removeProperty("width");
+  zoomImage.style.removeProperty("height");
+  zoomImage.onload = () => renderProductImageZoom({ center });
+  zoomImage.onerror = () => {
+    if (!fallbackSource || fallbackSource === source || zoomImage.dataset.fallbackApplied) return;
+    zoomImage.dataset.fallbackApplied = "true";
+    zoomImage.src = fallbackSource;
+  };
+  updateProductImageZoomGalleryControls(dialog);
+  zoomImage.src = source;
+  if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center });
+}
+
+function navigateProductImageZoom(direction) {
+  if (productImageZoomGallery.length < 2) return;
+  loadProductImageZoom(productImageZoomIndex + direction);
+}
+
 function openProductImageZoom(control) {
   const gallery = control.closest(".product-detail-gallery, .product-media");
   const activeImage = gallery?.querySelector("[data-gallery-slide].is-active") || control.querySelector("img");
   const dialog = ensureProductImageZoomDialog();
   const stage = dialog?.querySelector("[data-product-zoom-stage]");
   const zoomImage = dialog?.querySelector("[data-product-zoom-image]");
-  const source = control.dataset.zoomSrc || activeImage?.dataset.originalSrc;
   const fallbackSource = control.dataset.zoomFallback || activeImage?.currentSrc || activeImage?.src || "";
-  if (!source || !dialog || !stage || !zoomImage) return;
-  productImageZoomScale = 1;
-  productImageZoomGesture = null;
-  stage.scrollLeft = 0;
-  stage.scrollTop = 0;
-  zoomImage.alt = activeImage?.alt || "";
-  zoomImage.removeAttribute("data-zoom-ready");
-  zoomImage.removeAttribute("data-fallback-applied");
-  zoomImage.removeAttribute("srcset");
-  zoomImage.style.removeProperty("width");
-  zoomImage.style.removeProperty("height");
-  zoomImage.onload = () => renderProductImageZoom({ center: true });
-  zoomImage.onerror = () => {
-    if (!fallbackSource || fallbackSource === source || zoomImage.dataset.fallbackApplied) return;
-    zoomImage.dataset.fallbackApplied = "true";
-    zoomImage.src = fallbackSource;
-  };
+  const galleryEntries = getProductImageZoomGallery(control, gallery, activeImage);
+  if (galleryEntries.length === 0 && control.dataset.zoomSrc) {
+    galleryEntries.push({ src: control.dataset.zoomSrc, fallback: fallbackSource, alt: activeImage?.alt || "" });
+  }
+  if (!dialog || !stage || !zoomImage || galleryEntries.length === 0) return;
+  productImageZoomGallery = galleryEntries;
+  const requestedIndex = Number.parseInt(control.dataset.zoomIndex || "0", 10);
+  productImageZoomIndex = Number.isInteger(requestedIndex) ? requestedIndex : 0;
   if (!dialog.open) dialog.showModal();
   document.body.classList.add("is-product-zoom-open");
-  zoomImage.src = source;
-  if (zoomImage.complete && zoomImage.naturalWidth) renderProductImageZoom({ center: true });
+  loadProductImageZoom(productImageZoomIndex);
 }
 
 function adjustProductImageZoom(multiplier) {
@@ -2145,6 +2229,9 @@ function closeProductImageZoom() {
   document.body.classList.remove("is-product-zoom-open");
   productImageZoomScale = 1;
   productImageZoomGesture = null;
+  productImageZoomGallery = [];
+  productImageZoomIndex = 0;
+  updateProductImageZoomGalleryControls(dialog);
   if (image) {
     image.onload = null;
     image.onerror = null;
@@ -3115,6 +3202,21 @@ function getCheckoutItemZoomImage(item, previewImage) {
   return productImage ? productZoomImageSource(product, productImage, 0) : withProductImageVersion(previewImage || "");
 }
 
+function getCheckoutItemZoomGallery(item, previewImage) {
+  const product = item?.id ? findProductById(item.id) : findProduct(item?.name);
+  const productGallery = product ? getProductGallery(product) : [];
+  if (productGallery.length > 0) {
+    return productGallery.map((image, index) => ({
+      src: productZoomImageSource(product, image, index),
+      fallback: withProductImageVersion(image),
+      alt: `${item?.name || product.name} - ${index + 1}`,
+    }));
+  }
+  const fallback = withProductImageVersion(previewImage || item?.image || "");
+  const source = withProductImageVersion(item?.zoomImage || item?.tryOnImage || previewImage || "");
+  return source ? [{ src: source, fallback, alt: item?.name || "" }] : [];
+}
+
 function renderCheckoutProductSummary() {
   const root = document.querySelector("[data-checkout-summary-products]");
   const empty = document.querySelector("[data-checkout-summary-empty]");
@@ -3131,10 +3233,12 @@ function renderCheckoutProductSummary() {
   root.innerHTML = items.map((item, index) => {
     const image = getCheckoutItemImage(item);
     const previewImage = image ? withProductImageVersion(image) : "";
-    const zoomImage = image ? getCheckoutItemZoomImage(item, image) : "";
+    const zoomGallery = image ? getCheckoutItemZoomGallery(item, image) : [];
+    const zoomImage = zoomGallery[0]?.src || (image ? getCheckoutItemZoomImage(item, image) : "");
+    const zoomGalleryData = JSON.stringify(zoomGallery);
     const size = String(item.size || "").trim();
     const imageMarkup = image
-      ? `<button class="checkout-summary-product-image" type="button" data-product-zoom-open data-zoom-src="${escapeHtml(zoomImage)}" data-zoom-fallback="${escapeHtml(previewImage)}" aria-label="${escapeHtml(translate("zoom-open"))}: ${escapeHtml(item.name || "")}" title="${escapeHtml(translate("zoom-open"))}"><img src="${escapeHtml(previewImage)}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async"><span class="checkout-summary-product-zoom-icon" aria-hidden="true"><i data-lucide="zoom-in"></i></span></button>`
+      ? `<button class="checkout-summary-product-image" type="button" data-product-zoom-open data-zoom-src="${escapeHtml(zoomImage)}" data-zoom-fallback="${escapeHtml(previewImage)}" data-zoom-gallery="${escapeHtml(zoomGalleryData)}" data-zoom-index="0" aria-label="${escapeHtml(translate("zoom-open"))}: ${escapeHtml(item.name || "")}" title="${escapeHtml(translate("zoom-open"))}"><img src="${escapeHtml(previewImage)}" alt="${escapeHtml(item.name || "")}" loading="eager" decoding="async"><span class="checkout-summary-product-zoom-icon" aria-hidden="true"><i data-lucide="zoom-in"></i></span></button>`
       : `<span class="checkout-summary-product-placeholder"><i data-lucide="image"></i></span>`;
     return `
       <article class="checkout-summary-product">
@@ -3772,6 +3876,8 @@ document.addEventListener("click", (event) => {
   const zoomIn = event.target.closest("[data-product-zoom-in]");
   const zoomOut = event.target.closest("[data-product-zoom-out]");
   const zoomReset = event.target.closest("[data-product-zoom-reset]");
+  const zoomPrevious = event.target.closest("[data-product-zoom-previous]");
+  const zoomNext = event.target.closest("[data-product-zoom-next]");
   const productCard = event.target.closest("[data-product-url]");
 
   if (zoomOpen) {
@@ -3786,6 +3892,11 @@ document.addEventListener("click", (event) => {
 
   if (zoomClose || (zoomDialog && event.target === zoomDialog)) {
     zoomDialog?.close();
+    return;
+  }
+
+  if (zoomPrevious || zoomNext) {
+    navigateProductImageZoom(zoomPrevious ? -1 : 1);
     return;
   }
 
@@ -3893,6 +4004,15 @@ document.addEventListener("click", (event) => {
 
   if (productCard && !event.target.closest("button, a, input, label")) {
     window.location.href = productCard.dataset.productUrl;
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  const dialog = document.querySelector("[data-product-zoom-dialog]");
+  if (!dialog?.open || productImageZoomGallery.length < 2) return;
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    event.preventDefault();
+    navigateProductImageZoom(event.key === "ArrowLeft" ? -1 : 1);
   }
 });
 
