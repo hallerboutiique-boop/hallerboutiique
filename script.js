@@ -318,6 +318,7 @@ const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"
 let productOverrides = {};
 let customProducts = [];
 let productCatalogDataReady = false;
+let productCatalogRetryDelay = 1500;
 let catalogState = { gender: "", category: "", brand: "", productIds: [] };
 let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
@@ -1471,11 +1472,15 @@ async function loadProductOverrides() {
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
+    productCatalogDataReady = true;
+    productCatalogRetryDelay = 1500;
   } catch {
     productOverrides = {};
     customProducts = [];
+    productCatalogDataReady = false;
+    window.setTimeout(loadProductOverrides, productCatalogRetryDelay);
+    productCatalogRetryDelay = Math.min(productCatalogRetryDelay * 2, 15000);
   } finally {
-    productCatalogDataReady = true;
     renderCatalog();
     renderProductDetail();
     renderBundleTryOn();

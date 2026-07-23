@@ -178,6 +178,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/tryon-all-photos-1/script.js", "/script.js"],
   ["/assets-v/tryon-primary-photo-1/script.js", "/script.js"],
   ["/assets-v/home-hide-last-stock-mobile-1/script.js", "/script.js"],
+  ["/assets-v/inventory-last-stock-1/script.js", "/script.js"],
+  ["/assets-v/home-tryon-callout-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -2369,12 +2371,12 @@ async function handleProducts(req, res) {
     return {
       ...publicProduct,
       zoomImages: cleanProductImages(publicProduct.zoomImages).map(productZoomDeliveryPath),
-      isLastAvailable: inventory === 1,
+      isLastAvailable: Number(inventory) === 1,
     };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
   json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) }, {
-    "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+    "Cache-Control": "private, no-store",
   });
 }
 
