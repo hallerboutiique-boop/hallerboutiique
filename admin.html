@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/size-by-category-1/styles.css">
+    <link rel="stylesheet" href="/assets-v/admin-sizes-search-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -196,10 +196,11 @@
             </section>
             <div class="product-admin-layout">
               <section class="dashboard-card">
-                <h2>Catalogo prodotti</h2>
+                <h2>Cerca prodotto</h2>
                 <label class="product-admin-search">
                   <span>Cerca prodotto</span>
-                  <input type="search" data-product-search placeholder="Nome, collezione o categoria">
+                  <input type="search" data-product-search placeholder="Scrivi il nome del prodotto">
+                  <small>Viene mostrata una sola anteprima del prodotto cercato.</small>
                 </label>
                 <div class="admin-product-list" data-admin-products></div>
               </section>
@@ -249,8 +250,8 @@
                   <label>
                     <span>Taglie</span>
                     <select name="sizeType">
-                      <option value="clothing">Abbigliamento XXS-XXXL</option>
-                      <option value="sneakers">Scarpe EU 34-48</option>
+                      <option value="clothing">Abbigliamento S-XXXL</option>
+                      <option value="sneakers">Scarpe EU 36-45</option>
                       <option value="none">Nessuna taglia</option>
                     </select>
                   </label>
@@ -296,7 +297,7 @@
                         <span>Interrompi</span>
                       </button>
                     </div>
-                    <small data-product-upload-status>Puoi selezionare fino a 100 foto insieme.</small>
+                    <small data-product-upload-status>Puoi selezionare fino a 100 foto: vengono caricate in gruppi di massimo 10.</small>
                   </div>
                   <div class="product-gallery-editor-header">
                     <div>
@@ -435,6 +436,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/size-by-category-1/admin.js"></script>
+    <script src="/assets-v/admin-sizes-search-1/admin.js"></script>
   </body>
 </html>

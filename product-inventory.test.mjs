@@ -17,10 +17,10 @@ test("normalizes inventory for configured product sizes", () => {
 });
 
 test("keeps the complete configured European shoe range", () => {
-  const europeanShoes = ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"];
+  const europeanShoes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
   assert.deepEqual(
-    normalizeInventoryBySize({ 34: 1, 39: 2, 48: "3", 49: 4 }, europeanShoes),
-    { 34: 1, 39: 2, 48: 3 }
+    normalizeInventoryBySize({ 35: 1, 36: 2, 39: "3", 45: 4, 46: 5 }, europeanShoes),
+    { 36: 2, 39: 3, 45: 4 }
   );
 });
 

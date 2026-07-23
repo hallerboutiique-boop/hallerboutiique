@@ -62,14 +62,14 @@ let suppressProductImageClickUntil = 0;
 let productImagePositionTimer = 0;
 let aiBatchResults = [];
 const maximumProductImages = 100;
-const productUploadBatchSize = 8;
+const productUploadBatchSize = 10;
 const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
 const aiProductResultsStorageKey = "haller-admin-ai-product-results";
 const defaultAdminProductSizes = {
-  clothing: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
-  sneakers: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"],
+  clothing: ["S", "M", "L", "XL", "XXL", "XXXL"],
+  sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
   none: [],
 };
 
@@ -1408,7 +1408,7 @@ function renderProductSizeInventory(value = null) {
     const quantity = Number.isInteger(inventoryBySize[size]) ? String(inventoryBySize[size]) : "";
     return `
       <div class="product-size-inventory-field">
-        <span>${escapeHtml(size)}</span>
+        <span>Taglia ${escapeHtml(size)}</span>
         <div class="product-size-inventory-stepper">
           <button type="button" data-product-size-inventory-step="-1" data-product-size-inventory-size="${escapeHtml(size)}" aria-label="Diminuisci quantità taglia ${escapeHtml(size)}">−</button>
           <input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(quantity)}" data-product-size-inventory-input="${escapeHtml(size)}" aria-label="Inventario taglia ${escapeHtml(size)}" placeholder="0">
@@ -1502,7 +1502,7 @@ function startNewProduct() {
   setProductImageEntries([], [], [], "original", {});
   if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
   setProductMessage("Compila tutti i dati: marca, collezione e categoria possono essere nuove.");
-  setProductUploadStatus("Puoi selezionare fino a 100 foto insieme.");
+  setProductUploadStatus("Puoi selezionare fino a 100 foto: vengono caricate in gruppi di massimo 10.");
   renderAdminProducts();
   productForm.elements.name.focus();
   productForm.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1525,44 +1525,54 @@ function updateProductSuggestions() {
 
 function filteredAdminProducts() {
   const query = (productSearch?.value || "").trim().toLowerCase();
-  if (!query) return adminProducts;
-  return adminProducts.filter((product) =>
-    [product.name, product.brand, product.collection, product.category, product.discount]
-      .filter(Boolean)
-      .some((value) => String(value).toLowerCase().includes(query))
-  );
+  if (!query) return [];
+  const score = (product) => {
+    const name = String(product.name || "").toLowerCase();
+    if (name === query) return 0;
+    if (name.startsWith(query)) return 1;
+    return 2;
+  };
+  return adminProducts
+    .filter((product) =>
+      [product.name, product.brand, product.collection, product.category, product.discount]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query))
+    )
+    .sort((left, right) => score(left) - score(right) || String(left.name).localeCompare(String(right.name), "it"))
+    .slice(0, 1);
 }
 
 function renderAdminProducts() {
   if (!adminProductsRoot) return;
+  const query = (productSearch?.value || "").trim();
+  if (!query) {
+    adminProductsRoot.innerHTML = emptyState("Cerca un prodotto per visualizzare una sola anteprima.");
+    return;
+  }
   const products = filteredAdminProducts();
   if (products.length === 0) {
     adminProductsRoot.innerHTML = emptyState("Nessun prodotto trovato.");
     return;
   }
-  adminProductsRoot.innerHTML = products
-    .map(
-      (product) => {
-        const image = Array.isArray(product.images) && product.images.length ? product.images[0] : "";
-        return `
-        <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
-          <span class="admin-product-thumb">
-            ${
-              image
-                ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
-                : `<i data-lucide="image"></i>`
-            }
-          </span>
-          <span class="admin-product-text">
-            <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
-          </span>
-        </button>
-      `;
-      }
-    )
-    .join("");
+  const product = products[0];
+  const image = Array.isArray(product.images) && product.images.length ? product.images[0] : "";
+  adminProductsRoot.innerHTML = `
+    <p class="admin-product-search-result">Anteprima del prodotto cercato</p>
+    <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
+      <span class="admin-product-thumb">
+        ${
+          image
+            ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+            : `<i data-lucide="image"></i>`
+        }
+      </span>
+      <span class="admin-product-text">
+        <strong>${escapeHtml(product.name)}</strong>
+        <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+        <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
+      </span>
+    </button>
+  `;
   if (window.lucide) window.lucide.createIcons();
 }
 

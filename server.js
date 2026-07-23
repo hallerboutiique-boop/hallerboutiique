@@ -193,9 +193,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
   ["/assets-v/size-inventory-1/script.js", "/script.js"],
   ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
-  ["/assets-v/size-by-category-1/styles.css", "/styles.css"],
-  ["/assets-v/size-by-category-1/script.js", "/script.js"],
-  ["/assets-v/size-by-category-1/admin.js", "/admin.js"],
+  ["/assets-v/admin-sizes-search-1/styles.css", "/styles.css"],
+  ["/assets-v/admin-sizes-search-1/script.js", "/script.js"],
+  ["/assets-v/admin-sizes-search-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -2754,8 +2754,8 @@ async function handleAdminProductImages(req, res) {
   const customIndex = overrides.custom.findIndex((product) => product.id === productId);
   if (!base && customIndex === -1) return badRequest(res, "Prodotto non valido.");
 
-  const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 8);
-  const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 8);
+  const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 10);
+  const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 10);
   if (originalParts.some((part) => {
     const extension = imageExtension(part.filename, part.contentType);
     return !extension || extension === ".svg" || part.data.length === 0;
