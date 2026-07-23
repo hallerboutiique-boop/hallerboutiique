@@ -173,6 +173,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/checkout-images-full-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-gallery-1/script.js", "/script.js"],
   ["/assets-v/tryon-all-non-shoes-2/script.js", "/script.js"],
+  ["/assets-v/tryon-all-products-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1801,14 +1802,16 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
     ? [
         "Edit input image 1 to create one photorealistic virtual try-on preview for an ecommerce fashion checkout.",
         identityLock,
-        `The remaining input images are the original catalog product photos, in this exact order: ${bundleItems.map((item, index) => `input image ${index + 2} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`).join("; ")}.`,
-        "Checkout non-footwear rule — highest priority after PERSON LOCK: the referenced products may be clothing, bags or accessories, with a strict maximum of two products. Footwear is never an allowed referenced product.",
-        "Allowed change: replace only the clothing or accessory pixels needed to put the referenced products on the existing person. Keep every other pixel and visual attribute from input image 1 unchanged.",
-        "Do not change, replace, redraw, recolor, remove or add shoes, sneakers, boots, socks or any other footwear. Preserve the customer's original footwear exactly as shown in input image 1.",
+        `Product instructions in checkout order: ${bundleItems.map((item, index) => item.referenceImageIndex > 0
+          ? `input image ${item.referenceImageIndex} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`
+          : `item ${index + 1} = ${item.name} (${item.category || item.sizeType || "fashion"}), with no catalog photo available; use the product name and category as the reference`).join("; ")}.`,
+        "Checkout product rule — highest priority after PERSON LOCK: the referenced products may be clothing, footwear, bags or accessories, with a strict maximum of two products.",
+        "Allowed change: replace only the pixels in each referenced product's natural wearing or carrying area. Keep every other pixel and visual attribute from input image 1 unchanged.",
+        "For a footwear product, replace the customer's existing footwear with a realistic matching pair of the referenced model on both feet. Preserve the exact feet position, leg pose and visible socks unless the referenced footwear naturally covers them.",
         "Use every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any product.",
-        "Layer garments naturally on the body; carry bags naturally in the hand, over the shoulder or across the body; place accessories in their natural position.",
+        "Layer garments naturally on the body; fit footwear naturally to both feet; carry bags naturally in the hand, over the shoulder or across the body; place accessories in their natural position.",
         "Use each original product photo as the authoritative visual reference. Preserve the exact product type, color, logo, print, material, cut, proportions, shape and visible details.",
-        "Catalog photos may also show footwear, boxes, packaging, cards, mannequins, stands or background props. Ignore every footwear item and background prop completely and never add it to the result.",
+        "Catalog photos may also show boxes, packaging, cards, mannequins, stands, background props or products that were not referenced. Ignore every unreferenced item and background prop completely.",
         "Preserve the original framing, including the full body and both feet when visible. Never reframe, rescale or extend the image, and never alter the head, face, body proportions or pose.",
         "Return one premium, photorealistic fashion try-on preview. Do not return a collage, split screen, labels or product panels.",
       ].join(" ")
@@ -1818,21 +1821,21 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
           identityLock,
           "Input image 2 is the authoritative original catalog product photo.",
           `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
-          "Allowed change: replace only the clothing or accessory pixels needed to put the non-footwear product from input image 2 on the existing person. Keep everything else the same.",
+          "Allowed change: replace only the product's natural wearing or carrying area needed to put the product from input image 2 on the existing person. Keep everything else the same.",
           "Preserve the product's exact type, color, logo, print, material, cut, proportions, shape and visible details. Ignore packaging, cards, stands, mannequins and background props in the product photo.",
-          "Fit the product naturally to the customer's existing pose and body geometry with realistic fabric behavior, lighting, shadows and color temperature.",
-          "Never change, add or replace the customer's shoes or any other footwear. Do not change the background, camera angle, framing, image quality or any part of the face. Do not add unrelated accessories, text, logos or watermarks.",
+          "Fit the product naturally to the customer's existing pose and body geometry with realistic material behavior, lighting, shadows and color temperature.",
+          "If the referenced product is footwear, replace the customer's current footwear with a realistic matching pair on both feet while preserving exact foot placement, leg pose and visible socks. Otherwise preserve the customer's existing footwear.",
+          "Do not change the background, camera angle, framing, image quality or any part of the face. Do not add unrelated accessories, text, logos or watermarks.",
           "Return one premium photorealistic portrait, never a collage or split screen.",
         ].join(" ")
     : [
-        "Create a realistic virtual try-on preview for an ecommerce fashion site.",
-        "The reference image is split into two panels: the left panel is the customer and the right panel is the Haller Boutique product photo or product name from the catalog.",
+        "Edit input image 1 to create a realistic virtual try-on preview for an ecommerce fashion site.",
         identityLock,
-        "Put the product from the right panel on the customer, preserving its color, logo, print, cut and visible details when a product photo is present.",
+        "No catalog product photo is available. Use the supplied product name and category as the authoritative product description.",
         `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
-        "Footwear products are not supported. For a bag, show it carried naturally in the hand, over the shoulder or across the body and keep it fully visible.",
-        "Never change, add or replace the customer's shoes or any other footwear.",
-        "Only change the outfit area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
+        "Put the described product on the customer while preserving the exact person, pose, lighting, framing and background.",
+        "Footwear products are supported: replace the customer's current footwear with a realistic matching pair on both feet. For a bag, show it carried naturally in the hand, over the shoulder or across the body and keep it fully visible.",
+        "Only change the natural wearing or carrying area needed for the product. Do not create nudity. Do not change age, face, body proportions or add unrelated logos.",
         "Return a premium, realistic square preview suitable for a product try-on modal.",
       ].join(" ");
   form.append(
@@ -2387,13 +2390,13 @@ const siteChatLanguages = {
 };
 
 const tryOnLanguages = {
-  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", bundleRules: "Il try-on accetta tutto tranne le scarpe, con massimo 2 prodotti.", shoes: "Il try-on non e disponibile per le scarpe.", billing: "Credito API OpenAI esaurito: ricarica il saldo o aumenta il limite di spesa per riattivare il try-on.", received: "Foto ricevuta", prepared: "Prodotto reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "I prodotti selezionati sono pronti", bundleGenerating: "Generazione try-on in corso", bundlePreview: "Try-on ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
-  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", bundleRules: "Try-on accepts everything except footwear, with a maximum of 2 products.", shoes: "Try-on is not available for footwear.", billing: "OpenAI API credit is exhausted. Add credit or raise the spending limit to reactivate try-on.", received: "Photo received", prepared: "Real catalog product prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "The selected products are ready", bundleGenerating: "Generating the try-on", bundlePreview: "Try-on received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
-  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", bundleRules: "L'essayage accepte tout sauf les chaussures, avec un maximum de 2 produits.", shoes: "L'essayage n'est pas disponible pour les chaussures.", billing: "Le credit API OpenAI est epuise. Ajoutez du credit ou augmentez la limite de depenses.", received: "Photo reçue", prepared: "Produit reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Les produits selectionnes sont prets", bundleGenerating: "Generation de l'essayage", bundlePreview: "Essayage reçu", timeout: "La generation a pris trop de temps. Reessayez.", busy: "Le service d'essayage est momentanement occupe. Reessayez bientot.", rejected: "Une image ne peut pas etre traitee. Utilisez une photo JPG, PNG ou WebP nette.", unavailable: "L'essayage est indisponible." },
-  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", bundleRules: "Die Anprobe akzeptiert alles ausser Schuhe und maximal 2 Produkte.", shoes: "Die Anprobe ist fur Schuhe nicht verfugbar.", billing: "Das OpenAI-API-Guthaben ist aufgebraucht. Laden Sie Guthaben auf oder erhohen Sie das Ausgabenlimit.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Die ausgewahlten Produkte sind bereit", bundleGenerating: "Anprobe wird erstellt", bundlePreview: "Anprobe empfangen", timeout: "Die Generierung hat zu lange gedauert. Versuchen Sie es erneut.", busy: "Der Anprobe-Service ist vorubergehend ausgelastet. Versuchen Sie es gleich noch einmal.", rejected: "Ein Bild kann nicht verarbeitet werden. Verwenden Sie ein klares JPG-, PNG- oder WebP-Foto.", unavailable: "Die Anprobe ist nicht verfugbar." },
-  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", bundleRules: "La prueba acepta todo excepto calzado, con un maximo de 2 productos.", shoes: "La prueba no esta disponible para zapatos.", billing: "El credito de la API de OpenAI esta agotado. Anade credito o aumenta el limite de gasto.", received: "Foto recibida", prepared: "Producto real del catalogo preparado", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Los productos seleccionados estan listos", bundleGenerating: "Generando la prueba", bundlePreview: "Prueba recibida", timeout: "La generacion ha tardado demasiado. Vuelve a intentarlo.", busy: "El servicio de prueba esta ocupado temporalmente. Intentalo de nuevo en breve.", rejected: "Una imagen no se puede procesar. Usa una foto JPG, PNG o WebP nitida.", unavailable: "La prueba no esta disponible." },
-  sq: { notConfigured: "Prova me AI nuk eshte konfiguruar.", upload: "Ngarkoni foton tuaj.", format: "Formati i imazhit nuk mbeshtetet. Perdorni JPG, PNG ose WebP.", bundleImages: "Nevojiten fotot origjinale te te gjitha produkteve te bundle-it.", bundleRules: "Prova pranon gjithcka pervec kepuceve, me maksimumi 2 produkte.", shoes: "Prova nuk eshte e disponueshme per kepuce.", billing: "Krediti i API-se OpenAI ka mbaruar. Shtoni kredit ose rrisni kufirin e shpenzimeve.", received: "Fotoja u mor", prepared: "Produkti real i katalogut u pergatit", generating: "Po gjenerohet prova me AI", preview: "Pamja paraprake u mor", bundlePrepared: "Produktet e zgjedhura jane gati", bundleGenerating: "Po gjenerohet prova", bundlePreview: "Prova u mor", timeout: "Gjenerimi zgjati shume. Provoni perseri.", busy: "Sherbimi i proves eshte perkohesisht i zene. Provoni perseri pas pak.", rejected: "Nje nga imazhet nuk mund te perpunohen. Perdorni nje foto te qarte JPG, PNG ose WebP.", unavailable: "Prova nuk eshte e disponueshme." },
-  ro: { notConfigured: "Proba AI nu este configurata.", upload: "Incarca fotografia ta.", format: "Format de imagine neacceptat. Foloseste JPG, PNG sau WebP.", bundleImages: "Sunt necesare fotografiile originale ale tuturor produselor din bundle.", bundleRules: "Proba accepta totul in afara de pantofi, cu maximum 2 produse.", shoes: "Proba nu este disponibila pentru pantofi.", billing: "Creditul API OpenAI este epuizat. Adauga credit sau mareste limita de cheltuieli.", received: "Fotografie primita", prepared: "Produsul real din catalog este pregatit", generating: "Se genereaza proba AI", preview: "Previzualizare primita", bundlePrepared: "Produsele selectate sunt gata", bundleGenerating: "Se genereaza proba", bundlePreview: "Proba a fost primita", timeout: "Generarea a durat prea mult. Incearca din nou.", busy: "Serviciul de proba este temporar ocupat. Incearca din nou in curand.", rejected: "Una dintre imagini nu poate fi procesata. Foloseste o fotografie clara JPG, PNG sau WebP.", unavailable: "Proba nu este disponibila." },
+  it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", bundleRules: "Il try-on accetta tutti gli articoli, con massimo 2 prodotti.", billing: "Credito API OpenAI esaurito: ricarica il saldo o aumenta il limite di spesa per riattivare il try-on.", received: "Foto ricevuta", prepared: "Prodotto reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "I prodotti selezionati sono pronti", bundleGenerating: "Generazione try-on in corso", bundlePreview: "Try-on ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
+  en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", bundleRules: "Try-on accepts every product, with a maximum of 2 products.", billing: "OpenAI API credit is exhausted. Add credit or raise the spending limit to reactivate try-on.", received: "Photo received", prepared: "Real catalog product prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "The selected products are ready", bundleGenerating: "Generating the try-on", bundlePreview: "Try-on received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
+  fr: { notConfigured: "L'essayage IA n'est pas configure.", upload: "Importez votre photo.", format: "Format d'image non pris en charge. Utilisez JPG, PNG ou WebP.", bundleImages: "Les photos originales de chaque produit du bundle sont requises.", bundleRules: "L'essayage accepte tous les produits, avec un maximum de 2 produits.", billing: "Le credit API OpenAI est epuise. Ajoutez du credit ou augmentez la limite de depenses.", received: "Photo reçue", prepared: "Produit reel du catalogue prepare", generating: "Generation de l'essayage IA", preview: "Aperçu reçu", bundlePrepared: "Les produits selectionnes sont prets", bundleGenerating: "Generation de l'essayage", bundlePreview: "Essayage reçu", timeout: "La generation a pris trop de temps. Reessayez.", busy: "Le service d'essayage est momentanement occupe. Reessayez bientot.", rejected: "Une image ne peut pas etre traitee. Utilisez une photo JPG, PNG ou WebP nette.", unavailable: "L'essayage est indisponible." },
+  de: { notConfigured: "Die KI-Anprobe ist nicht konfiguriert.", upload: "Laden Sie Ihr Foto hoch.", format: "Nicht unterstutztes Bildformat. Verwenden Sie JPG, PNG oder WebP.", bundleImages: "Die Originalfotos aller Bundle-Produkte sind erforderlich.", bundleRules: "Die Anprobe akzeptiert alle Produkte und maximal 2 Produkte.", billing: "Das OpenAI-API-Guthaben ist aufgebraucht. Laden Sie Guthaben auf oder erhohen Sie das Ausgabenlimit.", received: "Foto empfangen", prepared: "Reales Katalogprodukt vorbereitet", generating: "KI-Anprobe wird erstellt", preview: "Vorschau empfangen", bundlePrepared: "Die ausgewahlten Produkte sind bereit", bundleGenerating: "Anprobe wird erstellt", bundlePreview: "Anprobe empfangen", timeout: "Die Generierung hat zu lange gedauert. Versuchen Sie es erneut.", busy: "Der Anprobe-Service ist vorubergehend ausgelastet. Versuchen Sie es gleich noch einmal.", rejected: "Ein Bild kann nicht verarbeitet werden. Verwenden Sie ein klares JPG-, PNG- oder WebP-Foto.", unavailable: "Die Anprobe ist nicht verfugbar." },
+  es: { notConfigured: "La prueba con IA no esta configurada.", upload: "Sube tu foto.", format: "Formato de imagen no compatible. Usa JPG, PNG o WebP.", bundleImages: "Se necesitan las fotos originales de todos los productos del conjunto.", bundleRules: "La prueba acepta todos los productos, con un maximo de 2 productos.", billing: "El credito de la API de OpenAI esta agotado. Anade credito o aumenta el limite de gasto.", received: "Foto recibida", prepared: "Producto real del catalogo preparado", generating: "Generando la prueba con IA", preview: "Vista previa recibida", bundlePrepared: "Los productos seleccionados estan listos", bundleGenerating: "Generando la prueba", bundlePreview: "Prueba recibida", timeout: "La generacion ha tardado demasiado. Vuelve a intentarlo.", busy: "El servicio de prueba esta ocupado temporalmente. Intentalo de nuevo en breve.", rejected: "Una imagen no se puede procesar. Usa una foto JPG, PNG o WebP nitida.", unavailable: "La prueba no esta disponible." },
+  sq: { notConfigured: "Prova me AI nuk eshte konfiguruar.", upload: "Ngarkoni foton tuaj.", format: "Formati i imazhit nuk mbeshtetet. Perdorni JPG, PNG ose WebP.", bundleImages: "Nevojiten fotot origjinale te te gjitha produkteve te bundle-it.", bundleRules: "Prova pranon te gjitha produktet, me maksimumi 2 produkte.", billing: "Krediti i API-se OpenAI ka mbaruar. Shtoni kredit ose rrisni kufirin e shpenzimeve.", received: "Fotoja u mor", prepared: "Produkti real i katalogut u pergatit", generating: "Po gjenerohet prova me AI", preview: "Pamja paraprake u mor", bundlePrepared: "Produktet e zgjedhura jane gati", bundleGenerating: "Po gjenerohet prova", bundlePreview: "Prova u mor", timeout: "Gjenerimi zgjati shume. Provoni perseri.", busy: "Sherbimi i proves eshte perkohesisht i zene. Provoni perseri pas pak.", rejected: "Nje nga imazhet nuk mund te perpunohen. Perdorni nje foto te qarte JPG, PNG ose WebP.", unavailable: "Prova nuk eshte e disponueshme." },
+  ro: { notConfigured: "Proba AI nu este configurata.", upload: "Incarca fotografia ta.", format: "Format de imagine neacceptat. Foloseste JPG, PNG sau WebP.", bundleImages: "Sunt necesare fotografiile originale ale tuturor produselor din bundle.", bundleRules: "Proba accepta toate produsele, cu maximum 2 produse.", billing: "Creditul API OpenAI este epuizat. Adauga credit sau mareste limita de cheltuieli.", received: "Fotografie primita", prepared: "Produsul real din catalog este pregatit", generating: "Se genereaza proba AI", preview: "Previzualizare primita", bundlePrepared: "Produsele selectate sunt gata", bundleGenerating: "Se genereaza proba", bundlePreview: "Proba a fost primita", timeout: "Generarea a durat prea mult. Incearca din nou.", busy: "Serviciul de proba este temporar ocupat. Incearca din nou in curand.", rejected: "Una dintre imagini nu poate fi procesata. Foloseste o fotografie clara JPG, PNG sau WebP.", unavailable: "Proba nu este disponibila." },
 };
 
 function tryOnFailureMessage(error, copy) {
@@ -2512,23 +2515,16 @@ function cleanTryOnBundleItems(value) {
         name: cleanTrackingString(item?.name, 140),
         category: cleanTrackingString(item?.category, 100),
         sizeType: cleanTrackingString(item?.sizeType, 40),
+        referenceImageIndex: item?.referenceImageIndex === 0
+          ? 0
+          : Number.isInteger(Number(item?.referenceImageIndex))
+            ? Number(item.referenceImageIndex)
+            : null,
       }))
       .filter((item) => item.name);
   } catch {
     return [];
   }
-}
-
-const tryOnShoeSizeTypes = new Set(["sneakers", "shoes", "shoe", "footwear"]);
-const tryOnShoeCategoryPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i;
-const tryOnShoeNameFallbackPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|slipper|slippers)\b/i;
-
-function isTryOnShoeItem(item) {
-  const sizeType = String(item?.sizeType || "").toLowerCase().trim();
-  if (tryOnShoeSizeTypes.has(sizeType)) return true;
-  const category = String(item?.category || "").trim();
-  if (tryOnShoeCategoryPattern.test(category)) return true;
-  return !category && tryOnShoeNameFallbackPattern.test(String(item?.name || ""));
 }
 
 function cleanChatCatalog(catalog) {
@@ -2943,13 +2939,9 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
 
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
-  const sizeType = fieldValue(parts, "sizeType", 40);
   const mode = fieldValue(parts, "mode", 20) === "bundle" ? "bundle" : "single";
-  const bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
-  if (mode === "single" && isTryOnShoeItem({ name: productName, category, sizeType })) {
-    return badRequest(res, copy.shoes);
-  }
-  if (mode === "bundle" && (bundleItems.length === 0 || bundleItems.length > 2 || bundleItems.some(isTryOnShoeItem))) {
+  let bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
+  if (mode === "bundle" && (bundleItems.length === 0 || bundleItems.length > 2)) {
     return badRequest(res, copy.bundleRules);
   }
   const uploadedProductImages = parts
@@ -2966,8 +2958,20 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
   if (uploadedProductImages.some((item) => !item)) {
     return badRequest(res, copy.bundleImages);
   }
-  if (mode === "bundle" && uploadedProductImages.length !== bundleItems.length) {
-    return badRequest(res, copy.bundleImages);
+  if (mode === "bundle") {
+    const legacyBundle = bundleItems.every((item) => item.referenceImageIndex === null);
+    if (legacyBundle) {
+      if (uploadedProductImages.length !== bundleItems.length) return badRequest(res, copy.bundleImages);
+      bundleItems = bundleItems.map((item, index) => ({ ...item, referenceImageIndex: index + 2 }));
+    } else {
+      const referenceIndices = bundleItems
+        .filter((item) => item.referenceImageIndex > 0)
+        .map((item) => item.referenceImageIndex);
+      const validIndices = bundleItems.every((item) => item.referenceImageIndex === 0 || item.referenceImageIndex >= 2)
+        && referenceIndices.length === uploadedProductImages.length
+        && referenceIndices.every((value, index) => value === index + 2);
+      if (!validIndices) return badRequest(res, copy.bundleImages);
+    }
   }
   if (mode === "single" && uploadedProductImages.length > 1) {
     return badRequest(res, copy.bundleImages);

@@ -141,19 +141,19 @@ Object.entries(interfaceTranslations).forEach(([language, values]) => Object.ass
 
 const bundleTryOnTranslations = {
   it: {
-    "bundle-tryon-kicker": "Try-on AI", "bundle-tryon-title": "Prova fino a 2 prodotti", "bundle-tryon-description": "Il try-on funziona con abiti, borse e accessori. Le scarpe sono escluse.", "bundle-tryon-limit": "Tutto tranne scarpe · massimo 2 prodotti", "bundle-tryon-upload": "Carica la tua foto", "bundle-tryon-result-empty": "Il risultato del try-on comparira qui.", "bundle-tryon-generate": "Genera try-on", "bundle-tryon-progress": "Avanzamento try-on AI", "bundle-tryon-empty": "Aggiungi almeno un prodotto che non sia una scarpa. Il try-on accetta massimo 2 prodotti.", "bundle-tryon-loaded": "Foto caricata. I prodotti sono pronti.", "bundle-tryon-preparing": "Preparazione dei prodotti selezionati", "bundle-tryon-inputs-ready": "Foto cliente e prodotti selezionati pronti", "bundle-tryon-ready": "Try-on pronto"
+    "bundle-tryon-kicker": "Try-on AI", "bundle-tryon-title": "Prova fino a 2 prodotti", "bundle-tryon-description": "Il try-on funziona con tutti gli articoli, scarpe comprese.", "bundle-tryon-limit": "Tutti i prodotti · massimo 2 prodotti", "bundle-tryon-upload": "Carica la tua foto", "bundle-tryon-result-empty": "Il risultato del try-on comparira qui.", "bundle-tryon-generate": "Genera try-on", "bundle-tryon-progress": "Avanzamento try-on AI", "bundle-tryon-empty": "Aggiungi almeno un prodotto. Il try-on accetta massimo 2 prodotti.", "bundle-tryon-loaded": "Foto caricata. I prodotti sono pronti.", "bundle-tryon-preparing": "Preparazione dei prodotti selezionati", "bundle-tryon-inputs-ready": "Foto cliente e prodotti selezionati pronti", "bundle-tryon-ready": "Try-on pronto"
   },
   en: {
-    "bundle-tryon-kicker": "AI try-on", "bundle-tryon-title": "Try on up to 2 products", "bundle-tryon-description": "Try-on works with clothing, bags and accessories. Shoes are excluded.", "bundle-tryon-limit": "Everything except shoes · maximum 2 products", "bundle-tryon-upload": "Upload your photo", "bundle-tryon-result-empty": "Your try-on result will appear here.", "bundle-tryon-generate": "Generate try-on", "bundle-tryon-progress": "AI try-on progress", "bundle-tryon-empty": "Add at least one product that is not footwear. Try-on accepts a maximum of 2 products.", "bundle-tryon-loaded": "Photo uploaded. Your products are ready.", "bundle-tryon-preparing": "Preparing the selected products", "bundle-tryon-inputs-ready": "Customer photo and selected products are ready", "bundle-tryon-ready": "Try-on ready"
+    "bundle-tryon-kicker": "AI try-on", "bundle-tryon-title": "Try on up to 2 products", "bundle-tryon-description": "Try-on works with every product, including shoes.", "bundle-tryon-limit": "All products · maximum 2 products", "bundle-tryon-upload": "Upload your photo", "bundle-tryon-result-empty": "Your try-on result will appear here.", "bundle-tryon-generate": "Generate try-on", "bundle-tryon-progress": "AI try-on progress", "bundle-tryon-empty": "Add at least one product. Try-on accepts a maximum of 2 products.", "bundle-tryon-loaded": "Photo uploaded. Your products are ready.", "bundle-tryon-preparing": "Preparing the selected products", "bundle-tryon-inputs-ready": "Customer photo and selected products are ready", "bundle-tryon-ready": "Try-on ready"
   },
   fr: {
-    "bundle-tryon-kicker": "Essayage IA", "bundle-tryon-title": "Essayez jusqu'a 2 produits", "bundle-tryon-description": "L'essayage fonctionne avec vetements, sacs et accessoires. Les chaussures sont exclues.", "bundle-tryon-limit": "Tout sauf chaussures · maximum 2 produits", "bundle-tryon-upload": "Importer votre photo", "bundle-tryon-result-empty": "Votre resultat d'essayage apparaitra ici.", "bundle-tryon-generate": "Generer l'essayage", "bundle-tryon-progress": "Progression de l'essayage IA", "bundle-tryon-empty": "Ajoutez au moins un produit qui ne soit pas une chaussure. Maximum 2 produits.", "bundle-tryon-loaded": "Photo importee. Vos produits sont prets.", "bundle-tryon-preparing": "Preparation des produits selectionnes", "bundle-tryon-inputs-ready": "Photo client et produits selectionnes prets", "bundle-tryon-ready": "Essayage pret"
+    "bundle-tryon-kicker": "Essayage IA", "bundle-tryon-title": "Essayez jusqu'a 2 produits", "bundle-tryon-description": "L'essayage fonctionne avec tous les produits, chaussures comprises.", "bundle-tryon-limit": "Tous les produits · maximum 2 produits", "bundle-tryon-upload": "Importer votre photo", "bundle-tryon-result-empty": "Votre resultat d'essayage apparaitra ici.", "bundle-tryon-generate": "Generer l'essayage", "bundle-tryon-progress": "Progression de l'essayage IA", "bundle-tryon-empty": "Ajoutez au moins un produit. Maximum 2 produits.", "bundle-tryon-loaded": "Photo importee. Vos produits sont prets.", "bundle-tryon-preparing": "Preparation des produits selectionnes", "bundle-tryon-inputs-ready": "Photo client et produits selectionnes prets", "bundle-tryon-ready": "Essayage pret"
   },
   de: {
-    "bundle-tryon-kicker": "KI-Anprobe", "bundle-tryon-title": "Bis zu 2 Produkte anprobieren", "bundle-tryon-description": "Die Anprobe funktioniert mit Kleidung, Taschen und Accessoires. Schuhe sind ausgeschlossen.", "bundle-tryon-limit": "Alles ausser Schuhe · maximal 2 Produkte", "bundle-tryon-upload": "Foto hochladen", "bundle-tryon-result-empty": "Ihr Anprobeergebnis erscheint hier.", "bundle-tryon-generate": "Anprobe erstellen", "bundle-tryon-progress": "Fortschritt der KI-Anprobe", "bundle-tryon-empty": "Legen Sie mindestens ein Produkt, das kein Schuh ist, in den Warenkorb. Maximal 2 Produkte.", "bundle-tryon-loaded": "Foto hochgeladen. Ihre Produkte sind bereit.", "bundle-tryon-preparing": "Ausgewahlte Produkte werden vorbereitet", "bundle-tryon-inputs-ready": "Kundenfoto und ausgewahlte Produkte sind bereit", "bundle-tryon-ready": "Anprobe bereit"
+    "bundle-tryon-kicker": "KI-Anprobe", "bundle-tryon-title": "Bis zu 2 Produkte anprobieren", "bundle-tryon-description": "Die Anprobe funktioniert mit allen Produkten, einschliesslich Schuhen.", "bundle-tryon-limit": "Alle Produkte · maximal 2 Produkte", "bundle-tryon-upload": "Foto hochladen", "bundle-tryon-result-empty": "Ihr Anprobeergebnis erscheint hier.", "bundle-tryon-generate": "Anprobe erstellen", "bundle-tryon-progress": "Fortschritt der KI-Anprobe", "bundle-tryon-empty": "Legen Sie mindestens ein Produkt in den Warenkorb. Maximal 2 Produkte.", "bundle-tryon-loaded": "Foto hochgeladen. Ihre Produkte sind bereit.", "bundle-tryon-preparing": "Ausgewahlte Produkte werden vorbereitet", "bundle-tryon-inputs-ready": "Kundenfoto und ausgewahlte Produkte sind bereit", "bundle-tryon-ready": "Anprobe bereit"
   },
   es: {
-    "bundle-tryon-kicker": "Prueba con IA", "bundle-tryon-title": "Prueba hasta 2 productos", "bundle-tryon-description": "La prueba funciona con ropa, bolsos y accesorios. Los zapatos estan excluidos.", "bundle-tryon-limit": "Todo excepto zapatos · maximo 2 productos", "bundle-tryon-upload": "Sube tu foto", "bundle-tryon-result-empty": "El resultado de la prueba aparecera aqui.", "bundle-tryon-generate": "Generar prueba", "bundle-tryon-progress": "Progreso de la prueba con IA", "bundle-tryon-empty": "Anade al menos un producto que no sea calzado. La prueba acepta un maximo de 2 productos.", "bundle-tryon-loaded": "Foto subida. Tus productos estan listos.", "bundle-tryon-preparing": "Preparando los productos seleccionados", "bundle-tryon-inputs-ready": "Foto del cliente y productos seleccionados listos", "bundle-tryon-ready": "Prueba lista"
+    "bundle-tryon-kicker": "Prueba con IA", "bundle-tryon-title": "Prueba hasta 2 productos", "bundle-tryon-description": "La prueba funciona con todos los productos, incluidos los zapatos.", "bundle-tryon-limit": "Todos los productos · maximo 2 productos", "bundle-tryon-upload": "Sube tu foto", "bundle-tryon-result-empty": "El resultado de la prueba aparecera aqui.", "bundle-tryon-generate": "Generar prueba", "bundle-tryon-progress": "Progreso de la prueba con IA", "bundle-tryon-empty": "Anade al menos un producto. La prueba acepta un maximo de 2 productos.", "bundle-tryon-loaded": "Foto subida. Tus productos estan listos.", "bundle-tryon-preparing": "Preparando los productos seleccionados", "bundle-tryon-inputs-ready": "Foto del cliente y productos seleccionados listos", "bundle-tryon-ready": "Prueba lista"
   }
 };
 
@@ -187,7 +187,7 @@ translations.sq = {
   "location-help-apple": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen per shfletuesin te cilësimet Apple dhe prekni per te provuar perseri.", "location-help-browser": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen te cilësimet e shfletuesit dhe prekni per te provuar perseri.", "location-https": "Hapeni faqen me HTTPS per te lejuar vendndodhjen.", "location-unsupported": "Ky shfletues nuk mbeshtet vendndodhjen. Hapeni faqen ne Safari ose Chrome.", "location-authorize": "Lejoni vendndodhjen ne njoftimin e shfletuesit.", "location-unavailable": "Vendndodhja nuk eshte e disponueshme. Provoni perseri pas pak.", "location-active": "Vendndodhja eshte aktive. Afatet e dorezimit ne kohe reale jane te disponueshme{accuracy}.", "location-denied": "Leja e vendndodhjes u refuzua. Hapni drynin e faqes dhe vendosni Vendndodhjen ne Lejo.", "location-gps": "Vendndodhja nuk eshte e disponueshme. Aktivizoni GPS-in dhe provoni perseri.", "location-error": "Gabim vendndodhjeje. Prekni per te provuar perseri.", "location-retry": "Vendndodhja nuk eshte e disponueshme. Prekni per te provuar perseri.",
   "checkout-to-confirm": "Per t'u konfirmuar", "checkout-to-fill": "Per t'u plotesuar", copied: "U kopjua", "copy-this-text": "Kopjo kete tekst", "wallet-missing": "Mungon portofoli", cod: "Pagese ne dorezim", "crypto-note": "Dergo pagesen kripto dhe me pas hash-in TX me kodin e porosise.", "no-online-payment": "Ne kete faze nuk kerkohet pagese online.", "confirming-order": "Porosia po konfirmohet", "order-not-saved": "Porosia nuk u ruajt.", "order-confirmed": "Porosia u konfirmua", "order-confirmed-note": "Porosia {code} u konfirmua. Totali {total}.", "order-save-failed": "Nuk arritem ta ruajme porosine.", "discount-applied": "Kodi i zbritjes u vendos. Do ta verifikojme kur te konfirmohet porosia.", "discount-empty": "Vendosni nje kod zbritjeje para se ta aplikoni.",
   "tryon-close": "Mbyll proven", "tryon-product": "Provo produktin", "tryon-product-name": "Provo {product}", "tryon-description": "Ngarkoni nje foto perballe per te krijuar pamjen paraprake.", "tryon-upload": "Ngarko foto", "tryon-result-empty": "Rezultati do te shfaqet ketu.", "tryon-consent": "Autorizoj ruajtjen private te fotos dhe pamjes paraprake per 30 dite, qe asistenca t'i rikuperoje.", "tryon-generate": "Gjenero proven me AI", "tryon-progress": "Ecuria e proves me AI", "tryon-upload-preview": "Ngarkoni foton tuaj per te pare pamjen paraprake.", "tryon-loaded-alt": "Foto e ngarkuar per prove", "tryon-loaded": "Fotoja u ngarkua. Zgjidhni Gjenero proven me AI.", "tryon-image-missing": "Imazhi i produktit nuk eshte i disponueshem.", "tryon-upload-first": "Ngarkoni fillimisht foton tuaj.", "tryon-preparing": "Po pergatitet veshja reale", "tryon-preparing-ai": "Po pergatitet pamja paraprake me AI...", "tryon-inputs-ready": "Fotoja e klientit dhe veshja e katalogut jane gati", "tryon-sending": "Fotoja po dergohet ne server...", "tryon-ready": "Pamja paraprake eshte gati", "tryon-ready-saved": "Pamja paraprake eshte gati dhe u arkivua per 30 dite.", "tryon-generation-failed": "Gjenerimi deshtoi", "tryon-result-failed": "Nuk arritem te gjenerojme pamjen paraprake.", "tryon-unavailable": "Prova nuk eshte e disponueshme.",
-  "bundle-tryon-kicker": "Prove me AI", "bundle-tryon-title": "Provo deri ne 2 produkte", "bundle-tryon-description": "Prova funksionon me veshje, canta dhe aksesore. Kepucet perjashtohen.", "bundle-tryon-limit": "Gjithcka pervec kepuceve · maksimumi 2 produkte", "bundle-tryon-upload": "Ngarko foton tuaj", "bundle-tryon-result-empty": "Rezultati i proves do te shfaqet ketu.", "bundle-tryon-generate": "Gjenero proven", "bundle-tryon-progress": "Ecuria e proves me AI", "bundle-tryon-empty": "Shtoni te pakten nje produkt qe nuk eshte kepuce. Prova pranon maksimumi 2 produkte.", "bundle-tryon-loaded": "Fotoja u ngarkua. Produktet jane gati.", "bundle-tryon-preparing": "Po pergatiten produktet e zgjedhura", "bundle-tryon-inputs-ready": "Fotoja e klientit dhe produktet e zgjedhura jane gati", "bundle-tryon-ready": "Prova eshte gati",
+  "bundle-tryon-kicker": "Prove me AI", "bundle-tryon-title": "Provo deri ne 2 produkte", "bundle-tryon-description": "Prova funksionon me te gjitha produktet, duke perfshire kepucet.", "bundle-tryon-limit": "Te gjitha produktet · maksimumi 2 produkte", "bundle-tryon-upload": "Ngarko foton tuaj", "bundle-tryon-result-empty": "Rezultati i proves do te shfaqet ketu.", "bundle-tryon-generate": "Gjenero proven", "bundle-tryon-progress": "Ecuria e proves me AI", "bundle-tryon-empty": "Shtoni te pakten nje produkt. Prova pranon maksimumi 2 produkte.", "bundle-tryon-loaded": "Fotoja u ngarkua. Produktet jane gati.", "bundle-tryon-preparing": "Po pergatiten produktet e zgjedhura", "bundle-tryon-inputs-ready": "Fotoja e klientit dhe produktet e zgjedhura jane gati", "bundle-tryon-ready": "Prova eshte gati",
   "last-stock-nav": "Te fundit ne dispozicion", "last-stock-warning": "I fundit ne dispozicion", "catalog-choose-category": "Zgjidhni nje kategori", "catalog-choose-brand": "Zgjidhni nje marke", "catalog-all-brands": "Te gjitha markat", "catalog-all-products": "Te gjitha modelet", "catalog-viewing": "Po shikoni", "catalog-search-title": "Kerko ne katalog", "catalog-search-placeholder": "Modeli, kategoria ose marka", "catalog-search-empty": "Nuk u gjet asnje model.", "catalog-search-results": "Rezultatet e kerkimit", "catalog-close": "Mbyll", "catalog-last-title": "Te fundit ne dispozicion", "catalog-last-description": "Artikujt me vetem nje cope te mbetur, te organizuar sipas kategorise dhe markes.", "catalog-last-empty": "Nuk ka artikuj te fundit per t'u shfaqur.", "catalog-last-choose": "Zgjidhni repartin", "catalog-back": "Kthehu te perzgjedhja", "remove-cart-item": "Hiq nga shporta", "product-back": "Kthehu te katalogu", "product-details": "Detajet e produktit", "product-description": "Perzgjedhur nga Haller Boutique per cilesi, stil dhe kujdes ndaj detajeve.", "product-not-found": "Produkti nuk u gjet.", "gallery-previous": "Fotoja e meparshme", "gallery-next": "Fotoja tjeter", "open-product": "Hap faqen e produktit", "zoom-open": "Zmadho imazhin", "zoom-close": "Mbyll imazhin", "zoom-in": "Afro", "zoom-out": "Largo", "zoom-reset": "Rivendos zmadhimin"
 };
 
@@ -199,7 +199,7 @@ translations.ro = {
   "location-help-apple": "Daca nu apare solicitarea, activeaza Localizarea pentru browser in setarile Apple si atinge pentru a reincerca.", "location-help-browser": "Daca nu apare solicitarea, activeaza Locatia in setarile browserului si atinge pentru a reincerca.", "location-https": "Deschide site-ul prin HTTPS pentru a permite locatia.", "location-unsupported": "Acest browser nu accepta locatia. Deschide site-ul in Safari sau Chrome.", "location-authorize": "Permite locatia in solicitarea browserului.", "location-unavailable": "Locatia nu este disponibila. Incearca din nou in curand.", "location-active": "Locatia este activa. Timpii de livrare in timp real sunt disponibili{accuracy}.", "location-denied": "Permisiunea pentru locatie a fost refuzata. Deschide lacatul site-ului si seteaza Locatia pe Permite.", "location-gps": "Locatia nu este disponibila. Activeaza GPS-ul dispozitivului si incearca din nou.", "location-error": "Eroare de locatie. Atinge pentru a reincerca.", "location-retry": "Locatia nu este disponibila. Atinge pentru a reincerca.",
   "checkout-to-confirm": "De confirmat", "checkout-to-fill": "De completat", copied: "Copiat", "copy-this-text": "Copiaza acest text", "wallet-missing": "Portofel lipsa", cod: "Plata la livrare", "crypto-note": "Trimite plata crypto, apoi hash-ul TX impreuna cu codul comenzii.", "no-online-payment": "Nu este necesara nicio plata online in aceasta etapa.", "confirming-order": "Se confirma comanda", "order-not-saved": "Comanda nu a fost salvata.", "order-confirmed": "Comanda confirmata", "order-confirmed-note": "Comanda {code} a fost confirmata. Total {total}.", "order-save-failed": "Nu am putut salva comanda.", "discount-applied": "Codul de reducere a fost introdus. Il vom verifica la confirmarea comenzii.", "discount-empty": "Introdu un cod de reducere inainte de aplicare.",
   "tryon-close": "Inchide proba", "tryon-product": "Probeaza produsul", "tryon-product-name": "Probeaza {product}", "tryon-description": "Incarca o fotografie din fata pentru a genera previzualizarea.", "tryon-upload": "Incarca fotografia", "tryon-result-empty": "Rezultatul va aparea aici.", "tryon-consent": "Autorizez stocarea privata a fotografiei si previzualizarii timp de 30 de zile, pentru a putea fi recuperate de asistenta.", "tryon-generate": "Genereaza proba AI", "tryon-progress": "Progresul probei AI", "tryon-upload-preview": "Incarca fotografia pentru a vedea previzualizarea.", "tryon-loaded-alt": "Fotografie incarcata pentru proba", "tryon-loaded": "Fotografia a fost incarcata. Selecteaza Genereaza proba AI.", "tryon-image-missing": "Imaginea produsului nu este disponibila.", "tryon-upload-first": "Incarca mai intai fotografia ta.", "tryon-preparing": "Se pregateste articolul real", "tryon-preparing-ai": "Se pregateste previzualizarea AI...", "tryon-inputs-ready": "Fotografia clientului si articolul din catalog sunt gata", "tryon-sending": "Fotografia este trimisa la server...", "tryon-ready": "Previzualizarea este gata", "tryon-ready-saved": "Previzualizarea este gata si arhivata pentru 30 de zile.", "tryon-generation-failed": "Generarea a esuat", "tryon-result-failed": "Nu am putut genera previzualizarea.", "tryon-unavailable": "Proba nu este disponibila.",
-  "bundle-tryon-kicker": "Proba cu AI", "bundle-tryon-title": "Probeaza pana la 2 produse", "bundle-tryon-description": "Proba functioneaza cu haine, genti si accesorii. Pantofii sunt exclusi.", "bundle-tryon-limit": "Totul in afara de pantofi · maximum 2 produse", "bundle-tryon-upload": "Incarca fotografia ta", "bundle-tryon-result-empty": "Rezultatul probei va aparea aici.", "bundle-tryon-generate": "Genereaza proba", "bundle-tryon-progress": "Progresul probei cu AI", "bundle-tryon-empty": "Adauga cel putin un produs care nu este incaltaminte. Proba accepta maximum 2 produse.", "bundle-tryon-loaded": "Fotografia a fost incarcata. Produsele sunt gata.", "bundle-tryon-preparing": "Se pregatesc produsele selectate", "bundle-tryon-inputs-ready": "Fotografia clientului si produsele selectate sunt gata", "bundle-tryon-ready": "Proba este gata",
+  "bundle-tryon-kicker": "Proba cu AI", "bundle-tryon-title": "Probeaza pana la 2 produse", "bundle-tryon-description": "Proba functioneaza cu toate produsele, inclusiv pantofii.", "bundle-tryon-limit": "Toate produsele · maximum 2 produse", "bundle-tryon-upload": "Incarca fotografia ta", "bundle-tryon-result-empty": "Rezultatul probei va aparea aici.", "bundle-tryon-generate": "Genereaza proba", "bundle-tryon-progress": "Progresul probei cu AI", "bundle-tryon-empty": "Adauga cel putin un produs. Proba accepta maximum 2 produse.", "bundle-tryon-loaded": "Fotografia a fost incarcata. Produsele sunt gata.", "bundle-tryon-preparing": "Se pregatesc produsele selectate", "bundle-tryon-inputs-ready": "Fotografia clientului si produsele selectate sunt gata", "bundle-tryon-ready": "Proba este gata",
   "last-stock-nav": "Ultimele disponibile", "last-stock-warning": "Ultimul disponibil", "catalog-choose-category": "Alege o categorie", "catalog-choose-brand": "Alege o marca", "catalog-all-brands": "Toate marcile", "catalog-all-products": "Toate modelele", "catalog-viewing": "Vizualizezi", "catalog-search-title": "Cauta in catalog", "catalog-search-placeholder": "Model, categorie sau marca", "catalog-search-empty": "Nu a fost gasit niciun model.", "catalog-search-results": "Rezultatele cautarii", "catalog-close": "Inchide", "catalog-last-title": "Ultimele disponibile", "catalog-last-description": "Articolele cu o singura bucata ramasa, organizate dupa categorie si marca.", "catalog-last-empty": "Nu exista ultime articole de afisat.", "catalog-last-choose": "Alege departamentul", "catalog-back": "Inapoi la selectie", "remove-cart-item": "Elimina din cos", "product-back": "Inapoi la catalog", "product-details": "Detalii produs", "product-description": "Selectat de Haller Boutique pentru calitate, stil si atentie la detalii.", "product-not-found": "Produsul nu a fost gasit.", "gallery-previous": "Fotografia anterioara", "gallery-next": "Fotografia urmatoare", "open-product": "Deschide pagina produsului", "zoom-open": "Mareste imaginea", "zoom-close": "Inchide imaginea", "zoom-in": "Mareste", "zoom-out": "Micsoreaza", "zoom-reset": "Reseteaza zoomul"
 };
 
@@ -1537,20 +1537,7 @@ function productPrimaryTryOnImage(product) {
   return originals[0] || productPrimaryImage(product);
 }
 
-const tryOnShoeSizeTypes = new Set(["sneakers", "shoes", "shoe", "footwear"]);
-const tryOnShoeCategoryPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i;
-const tryOnShoeNameFallbackPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|slipper|slippers)\b/i;
-
-function isTryOnShoeProduct(product) {
-  const sizeType = String(product?.sizeType || "").toLowerCase().trim();
-  if (tryOnShoeSizeTypes.has(sizeType)) return true;
-  const category = String(product?.category || "").trim();
-  if (tryOnShoeCategoryPattern.test(category)) return true;
-  return !category && tryOnShoeNameFallbackPattern.test(String(product?.name || ""));
-}
-
 function createTryOnMarkup(product) {
-  if (isTryOnShoeProduct(product)) return "";
   return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
@@ -2841,7 +2828,7 @@ function closeTryOnModal() {
 
 function openTryOnModal(productId) {
   const product = findProductById(productId);
-  if (!product || isTryOnShoeProduct(product)) return;
+  if (!product) return;
   tryOnProduct = product;
   const modal = ensureTryOnModal();
   modal.hidden = false;
@@ -2887,14 +2874,16 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const originalProductImage = await loadOriginalBundleProductImage({
+    const originalProductImage = await loadOptionalTryOnProductImage({
       name: tryOnProduct.name,
       image: productPrimaryImage(tryOnProduct),
       tryOnImage: productPrimaryTryOnImage(tryOnProduct),
     }, 0);
     const formData = new FormData();
     formData.append("userImage", file, file.name || "try-on-customer.jpg");
-    formData.append("productImage", originalProductImage.blob, originalProductImage.filename);
+    if (originalProductImage) {
+      formData.append("productImage", originalProductImage.blob, originalProductImage.filename);
+    }
     formData.append("mode", "single");
     if (saveConsent?.checked) {
       formData.append("saveTryOn", "yes");
@@ -2948,7 +2937,6 @@ function getBundleTryOnItems() {
         tryOnImage: product ? productPrimaryTryOnImage(product) : item.tryOnImage || item.image || "",
       };
     })
-    .filter((item) => !isTryOnShoeProduct(item))
     .filter((item) => {
       const key = item.id || item.name;
       if (!item.name || seen.has(key)) return false;
@@ -3062,6 +3050,14 @@ async function loadOriginalBundleProductImage(item, index) {
   };
 }
 
+async function loadOptionalTryOnProductImage(item, index) {
+  try {
+    return await loadOriginalBundleProductImage(item, index);
+  } catch {
+    return null;
+  }
+}
+
 function previewBundleTryOnUserImage(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -3098,8 +3094,16 @@ async function generateBundleTryOn() {
   setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const originalProductImages = await Promise.all(bundleTryOnItems.map(loadOriginalBundleProductImage));
-    const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }) => ({ id, name, category, sizeType }));
+    const loadedProductImages = await Promise.all(bundleTryOnItems.map(loadOptionalTryOnProductImage));
+    let nextReferenceImageIndex = 2;
+    const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }, index) => ({
+      id,
+      name,
+      category,
+      sizeType,
+      referenceImageIndex: loadedProductImages[index] ? nextReferenceImageIndex++ : 0,
+    }));
+    const originalProductImages = loadedProductImages.filter(Boolean);
     const formData = new FormData();
     formData.append("userImage", file, file.name || "bundle-customer.jpg");
     originalProductImages.forEach((image) => formData.append("productImage", image.blob, image.filename));
