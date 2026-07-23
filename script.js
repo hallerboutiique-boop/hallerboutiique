@@ -203,6 +203,46 @@ translations.ro = {
   "last-stock-nav": "Ultimele disponibile", "last-stock-warning": "Ultimul disponibil", "catalog-choose-category": "Alege o categorie", "catalog-choose-brand": "Alege o marca", "catalog-all-brands": "Toate marcile", "catalog-all-products": "Toate modelele", "catalog-viewing": "Vizualizezi", "catalog-search-title": "Cauta in catalog", "catalog-search-placeholder": "Model, categorie sau marca", "catalog-search-empty": "Nu a fost gasit niciun model.", "catalog-search-results": "Rezultatele cautarii", "catalog-close": "Inchide", "catalog-last-title": "Ultimele disponibile", "catalog-last-description": "Articolele cu o singura bucata ramasa, organizate dupa categorie si marca.", "catalog-last-empty": "Nu exista ultime articole de afisat.", "catalog-last-choose": "Alege departamentul", "catalog-back": "Inapoi la selectie", "remove-cart-item": "Elimina din cos", "product-back": "Inapoi la catalog", "product-details": "Detalii produs", "product-description": "Selectat de Haller Boutique pentru calitate, stil si atentie la detalii.", "product-not-found": "Produsul nu a fost gasit.", "gallery-previous": "Fotografia anterioara", "gallery-next": "Fotografia urmatoare", "open-product": "Deschide pagina produsului", "zoom-open": "Mareste imaginea", "zoom-close": "Inchide imaginea", "zoom-in": "Mareste", "zoom-out": "Micsoreaza", "zoom-reset": "Reseteaza zoomul"
 };
 
+const tryOnHeroTranslations = {
+  it: {
+    "tryon-hero-title": "INDOSSA",
+    "tryon-hero-description": "Per indossare i vestiti<br>come fossi in negozio.",
+    "tryon-hero-action": "Indossa ora",
+  },
+  en: {
+    "tryon-hero-title": "TRY IT ON",
+    "tryon-hero-description": "Try on clothes<br>just as if you were in store.",
+    "tryon-hero-action": "Try it on",
+  },
+  fr: {
+    "tryon-hero-title": "ESSAYEZ",
+    "tryon-hero-description": "Essayez les vetements<br>comme si vous etiez en boutique.",
+    "tryon-hero-action": "Essayer",
+  },
+  de: {
+    "tryon-hero-title": "ANPROBIEREN",
+    "tryon-hero-description": "Kleidung anprobieren<br>wie direkt im Geschaft.",
+    "tryon-hero-action": "Jetzt anprobieren",
+  },
+  es: {
+    "tryon-hero-title": "PRUEBATELO",
+    "tryon-hero-description": "Pruebate la ropa<br>como si estuvieras en la tienda.",
+    "tryon-hero-action": "Probar ahora",
+  },
+  sq: {
+    "tryon-hero-title": "PROVOJE",
+    "tryon-hero-description": "Provoni rrobat<br>sikur te ishit ne dyqan.",
+    "tryon-hero-action": "Provoje tani",
+  },
+  ro: {
+    "tryon-hero-title": "PROBEAZA",
+    "tryon-hero-description": "Probeaza hainele<br>ca si cum ai fi in magazin.",
+    "tryon-hero-action": "Probeaza acum",
+  },
+};
+
+Object.entries(tryOnHeroTranslations).forEach(([language, values]) => Object.assign(translations[language], values));
+
 const checkoutAddressTranslations = {
   it: {
     "checkout-address-label": "Via e numero civico",
@@ -1532,17 +1572,9 @@ function productPrimaryImage(product) {
   return gallery[0] || "";
 }
 
-function productTryOnImages(product) {
-  const gallery = getProductGallery(product);
-  const originals = Array.isArray(product?.originalImages) ? product.originalImages : [];
-  const count = Math.max(gallery.length, originals.length);
-  const sources = Array.from({ length: count }, (_, index) => originals[index] || gallery[index] || "")
-    .filter(Boolean);
-  return [...new Set(sources)];
-}
-
 function productPrimaryTryOnImage(product) {
-  return productTryOnImages(product)[0] || productPrimaryImage(product);
+  const originals = Array.isArray(product.originalImages) ? product.originalImages : [];
+  return originals[0] || productPrimaryImage(product);
 }
 
 function createTryOnMarkup(product) {
@@ -2882,15 +2914,16 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const originalProductImages = await loadAllTryOnProductImages({
+    const originalProductImage = await loadOptionalTryOnProductImage({
       name: tryOnProduct.name,
       image: productPrimaryImage(tryOnProduct),
       tryOnImage: productPrimaryTryOnImage(tryOnProduct),
-      tryOnImages: productTryOnImages(tryOnProduct),
-    });
+    }, 0);
     const formData = new FormData();
     formData.append("userImage", file, file.name || "try-on-customer.jpg");
-    originalProductImages.forEach((image) => formData.append("productImage", image.blob, image.filename));
+    if (originalProductImage) {
+      formData.append("productImage", originalProductImage.blob, originalProductImage.filename);
+    }
     formData.append("mode", "single");
     if (saveConsent?.checked) {
       formData.append("saveTryOn", "yes");
@@ -2942,9 +2975,6 @@ function getBundleTryOnItems() {
         sizeType: product?.sizeType || item.sizeType || "none",
         image: product ? productPrimaryImage(product) : item.image || "",
         tryOnImage: product ? productPrimaryTryOnImage(product) : item.tryOnImage || item.image || "",
-        tryOnImages: product
-          ? productTryOnImages(product)
-          : [item.tryOnImage || item.image || ""].filter(Boolean),
       };
     })
     .filter((item) => {
@@ -3068,18 +3098,6 @@ async function loadOptionalTryOnProductImage(item, index) {
   }
 }
 
-async function loadAllTryOnProductImages(item, itemIndex = 0) {
-  const sources = Array.isArray(item?.tryOnImages) && item.tryOnImages.length
-    ? [...new Set(item.tryOnImages.filter(Boolean))]
-    : [item?.tryOnImage || item?.image || ""].filter(Boolean);
-  const loaded = await Promise.all(sources.map((source, imageIndex) => loadOptionalTryOnProductImage({
-    ...item,
-    image: source,
-    tryOnImage: source,
-  }, itemIndex * 100 + imageIndex)));
-  return loaded.filter(Boolean);
-}
-
 function previewBundleTryOnUserImage(event) {
   const file = event.target.files?.[0];
   if (!file) return;
@@ -3116,16 +3134,16 @@ async function generateBundleTryOn() {
   setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const loadedProductImageGroups = await Promise.all(bundleTryOnItems.map(loadAllTryOnProductImages));
+    const loadedProductImages = await Promise.all(bundleTryOnItems.map(loadOptionalTryOnProductImage));
     let nextReferenceImageIndex = 2;
     const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }, index) => ({
       id,
       name,
       category,
       sizeType,
-      referenceImageIndices: loadedProductImageGroups[index].map(() => nextReferenceImageIndex++),
+      referenceImageIndex: loadedProductImages[index] ? nextReferenceImageIndex++ : 0,
     }));
-    const originalProductImages = loadedProductImageGroups.flat();
+    const originalProductImages = loadedProductImages.filter(Boolean);
     const formData = new FormData();
     formData.append("userImage", file, file.name || "bundle-customer.jpg");
     originalProductImages.forEach((image) => formData.append("productImage", image.blob, image.filename));

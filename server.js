@@ -27,11 +27,7 @@ import {
   transitionOrder,
 } from "./mobile-admin.js";
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
-import {
-  createTryOnReferenceSheet,
-  normalizeTryOnCustomerImage,
-  normalizeTryOnProductImage,
-} from "./try-on-image.mjs";
+import { normalizeTryOnCustomerImage, normalizeTryOnProductImage } from "./try-on-image.mjs";
 import { normalizePhotonSuggestions, validateCheckoutOrder } from "./checkout-address.mjs";
 
 sharp.cache(false);
@@ -57,7 +53,6 @@ const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
 const openaiTimeoutMs = 45000;
-const openaiTryOnMaximumInputImages = 16;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const tryOnJobRetentionMs = 15 * 60 * 1000;
@@ -174,12 +169,14 @@ const versionedPublicFiles = new Map([
   ["/assets-v/mobile-logo-all-pages-2/styles.css", "/styles.css"],
   ["/assets-v/mobile-logo-all-pages-3/styles.css", "/styles.css"],
   ["/assets-v/header-logo-stable-1/styles.css", "/styles.css"],
+  ["/assets-v/hero-tryon-copy-1/styles.css", "/styles.css"],
   ["/assets-v/checkout-open-images-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-full-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-gallery-1/script.js", "/script.js"],
   ["/assets-v/tryon-all-non-shoes-2/script.js", "/script.js"],
   ["/assets-v/tryon-all-products-1/script.js", "/script.js"],
   ["/assets-v/tryon-all-photos-1/script.js", "/script.js"],
+  ["/assets-v/tryon-primary-photo-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1782,14 +1779,7 @@ function appendImageFormData(form, field, image) {
   form.append(field, new Blob([image.data], { type: image.mime }), image.filename);
 }
 
-function buildTryOnForm({
-  userImage,
-  productImages = [],
-  productName,
-  category,
-  bundleItems = [],
-  productReferencesAreSheets = false,
-}) {
+function buildTryOnForm({ userImage, productImages = [], productName, category, bundleItems = [] }) {
   const form = new FormData();
   const hasSeparateProductImages = productImages.length > 0;
   if (hasSeparateProductImages) {
@@ -1814,16 +1804,15 @@ function buildTryOnForm({
     ? [
         "Edit input image 1 to create one photorealistic virtual try-on preview for an ecommerce fashion checkout.",
         identityLock,
-        `Product instructions in checkout order: ${bundleItems.map((item, index) => item.referenceImageIndices?.length > 0
-          ? `input images ${item.referenceImageIndices.join(", ")} = all available original catalog views${item.referenceImagesAreSheets ? " arranged in high-resolution multi-view reference sheets" : ""} of item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`
+        `Product instructions in checkout order: ${bundleItems.map((item, index) => item.referenceImageIndices?.[0] > 0
+          ? `input image ${item.referenceImageIndices[0]} = item ${index + 1}, ${item.name} (${item.category || item.sizeType || "fashion"})`
           : `item ${index + 1} = ${item.name} (${item.category || item.sizeType || "fashion"}), with no catalog photo available; use the product name and category as the reference`).join("; ")}.`,
         "Checkout product rule — highest priority after PERSON LOCK: the referenced products may be clothing, footwear, bags or accessories, with a strict maximum of two products.",
         "Allowed change: replace only the pixels in each referenced product's natural wearing or carrying area. Keep every other pixel and visual attribute from input image 1 unchanged.",
         "For a footwear product, replace the customer's existing footwear with a realistic matching pair of the referenced model on both feet. Preserve the exact feet position, leg pose and visible socks unless the referenced footwear naturally covers them.",
         "Use every referenced product exactly once. Do not omit, replace, redesign, duplicate or invent any product.",
         "Layer garments naturally on the body; fit footwear naturally to both feet; carry bags naturally in the hand, over the shoulder or across the body; place accessories in their natural position.",
-        "Jointly inspect every supplied original catalog view for each item. Treat all views of the same item as complementary authoritative references, using front, back, side, material, logo and construction details together.",
-        "Use each original product photo as an authoritative visual reference. Preserve the exact product type, color, logo, print, material, cut, proportions, shape and visible details.",
+        "Use each selected product's first original catalog photo as the authoritative visual reference. Preserve the exact product type, color, logo, print, material, cut, proportions, shape and visible details.",
         "Catalog photos may also show boxes, packaging, cards, mannequins, stands, background props or products that were not referenced. Ignore every unreferenced item and background prop completely.",
         "Preserve the original framing, including the full body and both feet when visible. Never reframe, rescale or extend the image, and never alter the head, face, body proportions or pose.",
         "Return one premium, photorealistic fashion try-on preview. Do not return a collage, split screen, labels or product panels.",
@@ -1832,13 +1821,10 @@ function buildTryOnForm({
       ? [
           "Edit input image 1 to create a photorealistic virtual try-on preview for an ecommerce fashion site.",
           identityLock,
-          productReferencesAreSheets
-            ? `Input images 2 through ${productImages.length + 1} are high-resolution multi-view reference sheets containing every available original catalog photo of the same product.`
-            : `Input images 2 through ${productImages.length + 1} are all available original catalog photos of the same product.`,
-          "Jointly inspect every supplied view and combine their complementary front, back, side, material, logo and construction details into one accurate product representation.",
+          "Input image 2 is the authoritative first original catalog photo of the product.",
           `Product name: ${productName || "Haller Boutique product"}. Category: ${category || "fashion"}.`,
-          `Allowed change: replace only the product's natural wearing or carrying area needed to put the product shown across input images 2 through ${productImages.length + 1} on the existing person. Keep everything else the same.`,
-          "Preserve the product's exact type, color, logo, print, material, cut, proportions, shape and visible details. Ignore packaging, cards, stands, mannequins and background props in the product photos.",
+          "Allowed change: replace only the product's natural wearing or carrying area needed to put the product from input image 2 on the existing person. Keep everything else the same.",
+          "Preserve the product's exact type, color, logo, print, material, cut, proportions, shape and visible details. Ignore packaging, cards, stands, mannequins and background props in the product photo.",
           "Fit the product naturally to the customer's existing pose and body geometry with realistic material behavior, lighting, shadows and color temperature.",
           "If the referenced product is footwear, replace the customer's current footwear with a realistic matching pair on both feet while preserving exact foot placement, leg pose and visible socks. Otherwise preserve the customer's existing footwear.",
           "Do not change the background, camera angle, framing, image quality or any part of the face. Do not add unrelated accessories, text, logos or watermarks.",
@@ -1892,57 +1878,8 @@ async function requestTryOnEdit(form) {
   }
 }
 
-async function prepareTryOnReferences(input) {
-  const productImages = Array.isArray(input.productImages) ? input.productImages : [];
-  const maximumProductReferences = openaiTryOnMaximumInputImages - 1;
-  if (productImages.length <= maximumProductReferences) return input;
-
-  const bundleItems = Array.isArray(input.bundleItems) ? input.bundleItems : [];
-  const imageGroups = bundleItems.length > 0
-    ? bundleItems.map((item) => (item.referenceImageIndices || [])
-      .map((referenceIndex) => productImages[referenceIndex - 2])
-      .filter(Boolean))
-    : [productImages];
-  let imagesPerSheet = 2;
-  const sheetCount = () => imageGroups.reduce(
-    (count, images) => count + Math.ceil(images.length / imagesPerSheet),
-    0,
-  );
-  while (sheetCount() > maximumProductReferences) imagesPerSheet += 1;
-
-  const preparedImages = [];
-  const preparedItems = [];
-  for (let itemIndex = 0; itemIndex < imageGroups.length; itemIndex += 1) {
-    const referenceImageIndices = [];
-    const images = imageGroups[itemIndex];
-    for (let start = 0; start < images.length; start += imagesPerSheet) {
-      const sheet = await createTryOnReferenceSheet(
-        images.slice(start, start + imagesPerSheet),
-        preparedImages.length,
-      );
-      preparedImages.push(sheet);
-      referenceImageIndices.push(preparedImages.length + 1);
-    }
-    if (bundleItems[itemIndex]) {
-      preparedItems.push({
-        ...bundleItems[itemIndex],
-        referenceImageIndices,
-        referenceImagesAreSheets: true,
-      });
-    }
-  }
-
-  return {
-    ...input,
-    productImages: preparedImages,
-    bundleItems: bundleItems.length > 0 ? preparedItems : bundleItems,
-    productReferencesAreSheets: bundleItems.length === 0,
-  };
-}
-
 async function generateTryOnImage(input) {
-  const prepared = await prepareTryOnReferences(input);
-  return requestTryOnEdit(buildTryOnForm(prepared));
+  return requestTryOnEdit(buildTryOnForm(input));
 }
 
 function signPayload(payload) {
@@ -2584,7 +2521,7 @@ function cleanTryOnBundleItems(value) {
           ? [...new Set(item.referenceImageIndices
             .map((value) => Number(value))
             .filter((value) => Number.isInteger(value) && value >= 2))]
-            .slice(0, 100)
+            .slice(0, 1)
           : item?.referenceImageIndex === 0
             ? []
           : Number.isInteger(Number(item?.referenceImageIndex))
@@ -3041,6 +2978,9 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
         && referenceIndices.every((value, index) => value === index + 2);
       if (!validIndices) return badRequest(res, copy.bundleImages);
     }
+  }
+  if (mode === "single" && uploadedProductImages.length > 1) {
+    return badRequest(res, copy.bundleImages);
   }
   let productImages = uploadedProductImages;
   if (uploadedProductImages.length > 0) {

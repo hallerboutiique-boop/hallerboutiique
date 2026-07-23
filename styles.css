@@ -2925,6 +2925,10 @@ body.motion-enabled .hero-slide.is-active .promo-copy {
   text-shadow: 0 3px 24px rgba(0, 0, 0, 0.95);
 }
 
+.hero-slide-woman .promo-copy p {
+  color: #fff;
+}
+
 .promo-copy a {
   display: inline-grid;
   min-width: clamp(210px, 23vw, 360px);
