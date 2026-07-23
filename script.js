@@ -41,7 +41,7 @@ const translations = {
 
 const interfaceTranslations = {
   it: {
-    "sizes-available": "Taglie disponibili", added: "Aggiunto",
+    "sizes-available": "Taglie disponibili", "select-size": "Seleziona una taglia", "size-sold-out": "Esaurita", "product-sold-out": "Prodotto esaurito", added: "Aggiunto",
     "cookie-label": "Preferenze cookie", "cookie-kicker": "Privacy Haller Boutique", "cookie-title": "Cookie, sessione e posizione",
     "cookie-description": "Usiamo cookie tecnici per far funzionare il sito. Con il tuo consenso possiamo raccogliere metriche, replay sessione e posizione precisa del dispositivo per sicurezza, ordini e analisi visite. Password, pagamenti e valori dei campi non vengono registrati.",
     "cookie-required": "Necessari", "cookie-required-description": "Carrello, checkout, login e preferenza consenso.",
@@ -60,7 +60,7 @@ const interfaceTranslations = {
     "tryon-close": "Chiudi try-on", "tryon-product": "Prova il prodotto", "tryon-product-name": "Prova {product}", "tryon-description": "Carica una tua foto frontale per generare l'anteprima.", "tryon-upload": "Carica foto", "tryon-result-empty": "Il risultato comparira qui.", "tryon-consent": "Autorizzo il salvataggio privato della foto e dell'anteprima per 30 giorni, per poterle recuperare dall'assistenza.", "tryon-generate": "Genera prova AI", "tryon-progress": "Avanzamento try-on AI", "tryon-upload-preview": "Carica una tua foto per vedere l'anteprima.", "tryon-loaded-alt": "Foto caricata per try-on", "tryon-loaded": "Foto caricata. Premi Genera prova AI.", "tryon-image-missing": "Immagine del prodotto non disponibile.", "tryon-upload-first": "Carica prima una tua foto.", "tryon-preparing": "Preparazione del capo reale", "tryon-preparing-ai": "Sto preparando l'anteprima AI...", "tryon-inputs-ready": "Foto cliente e capo del catalogo pronti", "tryon-sending": "Invio foto al server...", "tryon-ready": "Anteprima pronta", "tryon-ready-saved": "Anteprima pronta e archiviata per 30 giorni.", "tryon-generation-failed": "Generazione non riuscita", "tryon-result-failed": "Non siamo riusciti a generare l'anteprima.", "tryon-unavailable": "Try-on non disponibile."
   },
   en: {
-    "sizes-available": "Available sizes", added: "Added",
+    "sizes-available": "Available sizes", "select-size": "Select a size", "size-sold-out": "Sold out", "product-sold-out": "Product sold out", added: "Added",
     "cookie-label": "Cookie preferences", "cookie-kicker": "Haller Boutique privacy", "cookie-title": "Cookies, sessions and location",
     "cookie-description": "We use essential cookies to operate the site. With your consent, we can collect analytics, session replays and precise device location for security, orders and visit analysis. Passwords, payments and form values are never recorded.",
     "cookie-required": "Essential", "cookie-required-description": "Cart, checkout, sign-in and consent preference.",
@@ -79,7 +79,7 @@ const interfaceTranslations = {
     "tryon-close": "Close try-on", "tryon-product": "Try on the product", "tryon-product-name": "Try on {product}", "tryon-description": "Upload a front-facing photo to generate the preview.", "tryon-upload": "Upload photo", "tryon-result-empty": "The result will appear here.", "tryon-consent": "I authorize private storage of the photo and preview for 30 days so support can retrieve them.", "tryon-generate": "Generate AI try-on", "tryon-progress": "AI try-on progress", "tryon-upload-preview": "Upload your photo to see the preview.", "tryon-loaded-alt": "Photo uploaded for try-on", "tryon-loaded": "Photo uploaded. Select Generate AI try-on.", "tryon-image-missing": "The product image is unavailable.", "tryon-upload-first": "Upload your photo first.", "tryon-preparing": "Preparing the real garment", "tryon-preparing-ai": "Preparing the AI preview...", "tryon-inputs-ready": "Customer photo and catalog garment are ready", "tryon-sending": "Sending the photo to the server...", "tryon-ready": "Preview ready", "tryon-ready-saved": "Preview ready and archived for 30 days.", "tryon-generation-failed": "Generation failed", "tryon-result-failed": "We could not generate the preview.", "tryon-unavailable": "Try-on is unavailable."
   },
   fr: {
-    "sizes-available": "Tailles disponibles", added: "Ajoute",
+    "sizes-available": "Tailles disponibles", "select-size": "Selectionnez une taille", "size-sold-out": "Epuisee", "product-sold-out": "Produit epuise", added: "Ajoute",
     "cookie-label": "Preferences de cookies", "cookie-kicker": "Confidentialite Haller Boutique", "cookie-title": "Cookies, sessions et localisation",
     "cookie-description": "Nous utilisons des cookies essentiels au fonctionnement du site. Avec votre accord, nous pouvons recueillir des statistiques, des relectures de session et la position precise de l'appareil pour la securite, les commandes et l'analyse des visites. Les mots de passe, paiements et valeurs des champs ne sont jamais enregistres.",
     "cookie-required": "Essentiels", "cookie-required-description": "Panier, paiement, connexion et preference de consentement.",
@@ -98,7 +98,7 @@ const interfaceTranslations = {
     "tryon-close": "Fermer l'essayage", "tryon-product": "Essayer le produit", "tryon-product-name": "Essayer {product}", "tryon-description": "Importez une photo de face pour generer l'aperçu.", "tryon-upload": "Importer une photo", "tryon-result-empty": "Le resultat apparaitra ici.", "tryon-consent": "J'autorise la conservation privee de la photo et de l'aperçu pendant 30 jours afin que l'assistance puisse les recuperer.", "tryon-generate": "Generer l'essayage IA", "tryon-progress": "Progression de l'essayage IA", "tryon-upload-preview": "Importez votre photo pour voir l'aperçu.", "tryon-loaded-alt": "Photo importee pour l'essayage", "tryon-loaded": "Photo importee. Selectionnez Generer l'essayage IA.", "tryon-image-missing": "L'image du produit est indisponible.", "tryon-upload-first": "Importez d'abord votre photo.", "tryon-preparing": "Preparation du vetement reel", "tryon-preparing-ai": "Preparation de l'aperçu IA...", "tryon-inputs-ready": "Photo client et vetement du catalogue prets", "tryon-sending": "Envoi de la photo au serveur...", "tryon-ready": "Aperçu pret", "tryon-ready-saved": "Aperçu pret et archive pendant 30 jours.", "tryon-generation-failed": "Echec de la generation", "tryon-result-failed": "Impossible de generer l'aperçu.", "tryon-unavailable": "L'essayage est indisponible."
   },
   de: {
-    "sizes-available": "Verfugbare Grossen", added: "Hinzugefugt",
+    "sizes-available": "Verfugbare Grossen", "select-size": "Grosse auswahlen", "size-sold-out": "Ausverkauft", "product-sold-out": "Produkt ausverkauft", added: "Hinzugefugt",
     "cookie-label": "Cookie-Einstellungen", "cookie-kicker": "Datenschutz bei Haller Boutique", "cookie-title": "Cookies, Sitzungen und Standort",
     "cookie-description": "Wir verwenden notwendige Cookies fur den Betrieb der Website. Mit Ihrer Einwilligung konnen wir Statistiken, Sitzungswiedergaben und den genauen Geratestandort fur Sicherheit, Bestellungen und Besuchsanalysen erfassen. Passworter, Zahlungen und Formulareingaben werden nie aufgezeichnet.",
     "cookie-required": "Notwendig", "cookie-required-description": "Warenkorb, Kasse, Anmeldung und Einwilligungseinstellung.",
@@ -117,7 +117,7 @@ const interfaceTranslations = {
     "tryon-close": "Anprobe schliessen", "tryon-product": "Produkt anprobieren", "tryon-product-name": "{product} anprobieren", "tryon-description": "Laden Sie ein frontales Foto hoch, um die Vorschau zu erstellen.", "tryon-upload": "Foto hochladen", "tryon-result-empty": "Das Ergebnis erscheint hier.", "tryon-consent": "Ich erlaube die private Speicherung von Foto und Vorschau fur 30 Tage, damit der Support sie abrufen kann.", "tryon-generate": "KI-Anprobe erstellen", "tryon-progress": "Fortschritt der KI-Anprobe", "tryon-upload-preview": "Laden Sie Ihr Foto fur die Vorschau hoch.", "tryon-loaded-alt": "Foto fur die Anprobe hochgeladen", "tryon-loaded": "Foto hochgeladen. Wahlen Sie KI-Anprobe erstellen.", "tryon-image-missing": "Das Produktbild ist nicht verfugbar.", "tryon-upload-first": "Laden Sie zuerst Ihr Foto hoch.", "tryon-preparing": "Reales Kleidungsstuck wird vorbereitet", "tryon-preparing-ai": "KI-Vorschau wird vorbereitet...", "tryon-inputs-ready": "Kundenfoto und Katalogartikel sind bereit", "tryon-sending": "Foto wird an den Server gesendet...", "tryon-ready": "Vorschau bereit", "tryon-ready-saved": "Vorschau bereit und 30 Tage archiviert.", "tryon-generation-failed": "Generierung fehlgeschlagen", "tryon-result-failed": "Die Vorschau konnte nicht erstellt werden.", "tryon-unavailable": "Die Anprobe ist nicht verfugbar."
   },
   es: {
-    "sizes-available": "Tallas disponibles", added: "Anadido",
+    "sizes-available": "Tallas disponibles", "select-size": "Selecciona una talla", "size-sold-out": "Agotada", "product-sold-out": "Producto agotado", added: "Anadido",
     "cookie-label": "Preferencias de cookies", "cookie-kicker": "Privacidad de Haller Boutique", "cookie-title": "Cookies, sesiones y ubicacion",
     "cookie-description": "Usamos cookies esenciales para que el sitio funcione. Con tu consentimiento podemos recopilar metricas, repeticiones de sesion y la ubicacion precisa del dispositivo para seguridad, pedidos y analisis de visitas. Nunca se registran contrasenas, pagos ni valores de formularios.",
     "cookie-required": "Esenciales", "cookie-required-description": "Carrito, pago, inicio de sesion y preferencia de consentimiento.",
@@ -181,7 +181,7 @@ Object.entries(productZoomTranslations).forEach(([language, values]) => Object.a
 
 translations.sq = {
   "meta-description": "Haller Boutique: luks, cilesi dhe stil.", search: "Kerko", "go-checkout": "Shko te pagesa", "change-language": "Ndrysho gjuhen", "main-menu": "Menuja kryesore", home: "Kreu", "new-arrivals": "Te rejat", men: "Meshkuj", women: "Femra", "hero-title": "LUKS<br>CILESI<br>STIL", "hero-description": "Zbuloni risite me te fundit<br>nga markat me te mira.", "discover-now": "Zbulo tani", "payment-title": "Pagese ne dorezim dhe kripto", "payment-description": "Pagese ne dorezim ose kripto<br>ne menyre te sigurt", "support-title": "Asistence 24/7", "support-description": "Jemi gjithmone<br>ne dispozicion", "location-banner": "Lejo vendndodhjen per te pare afatet e dorezimit ne kohe reale.", selection: "Perzgjedhja", info: "Informacion", "whatsapp-support": "Asistence ne WhatsApp", shipping: "Dergesa", terms: "Kushtet e pergjithshme", "follow-social": "Na ndiqni ne rrjetet sociale", copyright: "Copyright 2017 Haller Boutique. Te gjitha te drejtat e rezervuara.", sizes: "Masat", price: "Cmimi", "add-cart": "Shto ne shporte", "buy-now": "Bli tani", "try-on": "Provoje", "image-placeholder": "Imazhi vjen se shpejti",
-  "sizes-available": "Masat e disponueshme", added: "U shtua",
+  "sizes-available": "Masat e disponueshme", "select-size": "Zgjidh nje mase", "size-sold-out": "E mbaruar", "product-sold-out": "Produkti ka mbaruar", added: "U shtua",
   "cookie-label": "Preferencat e cookies", "cookie-kicker": "Privatesia Haller Boutique", "cookie-title": "Cookies, sesioni dhe vendndodhja", "cookie-description": "Perdorim cookies thelbesore per funksionimin e faqes. Me pelqimin tuaj mund te mbledhim statistika, rishikime te sesionit dhe vendndodhjen e sakte te pajisjes per sigurine, porosite dhe analizen e vizitave. Fjalekalimet, pagesat dhe vlerat e formularit nuk regjistrohen kurre.", "cookie-required": "Te domosdoshme", "cookie-required-description": "Shporta, pagesa, hyrja dhe preferenca e pelqimit.", "cookie-analytics": "Statistikat e faqes", "cookie-analytics-description": "Vizitat, pajisja, shfletuesi, faqet dhe konvertimi.", "cookie-replay": "Rishikimi i sesionit", "cookie-replay-description": "Levizjet, klikimet dhe rrjedhja me fushat e maskuara.", "cookie-location": "Vendndodhja e sakte", "cookie-location-description": "Koordinatat GPS, saktesia dhe ora, vetem pasi ta lejoni ne shfletues.", "cookie-necessary-only": "Vetem te domosdoshmet", "cookie-metrics-only": "Vetem statistikat", "cookie-customize": "Personalizo", "cookie-save": "Ruaj preferencat", "cookie-accept-all": "Prano te gjitha",
   "chat-label": "Asistentja virtuale Haller Boutique", "chat-open": "Hap asistente virtuale", "chat-close": "Mbyll asistente virtuale", "chat-avatar-alt": "Portreti i Aurora, asistente virtuale", "chat-online": "Online", "chat-status": "Asistentja online", "chat-intro": "Para se te fillojme, me lini te dhenat tuaja qe t'ju ndihmoj me mire.", "first-name": "Emri", "last-name": "Mbiemri", email: "Email", phone: "Telefoni", optional: "opsional", "chat-privacy": "Te dhenat perdoren vetem per t'ju ndihmuar ne kete bisede.", "chat-start": "Fillo biseden", "chat-sizes": "Masat", "chat-track-order": "Gjurmo porosine", "chat-prompt-sizes": "A mund te me ndihmosh te zgjedh masen e duhur?", "chat-prompt-order": "Dua te di ku ndodhet porosia ime. Kodi im eshte HB-", "chat-placeholder": "Shkruani ketu...", "chat-send": "Dergo mesazhin", "chat-greeting": "Pershendetje {name}, jam Aurora, asistentja virtuale e Haller Boutique. Si mund t'ju ndihmoj?", "chat-thinking": "Nje moment, po kontrolloj.", "chat-error": "Nuk mund te pergjigjem tani.",
   "location-help-apple": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen per shfletuesin te cilësimet Apple dhe prekni per te provuar perseri.", "location-help-browser": "Nese njoftimi nuk shfaqet, aktivizoni Vendndodhjen te cilësimet e shfletuesit dhe prekni per te provuar perseri.", "location-https": "Hapeni faqen me HTTPS per te lejuar vendndodhjen.", "location-unsupported": "Ky shfletues nuk mbeshtet vendndodhjen. Hapeni faqen ne Safari ose Chrome.", "location-authorize": "Lejoni vendndodhjen ne njoftimin e shfletuesit.", "location-unavailable": "Vendndodhja nuk eshte e disponueshme. Provoni perseri pas pak.", "location-active": "Vendndodhja eshte aktive. Afatet e dorezimit ne kohe reale jane te disponueshme{accuracy}.", "location-denied": "Leja e vendndodhjes u refuzua. Hapni drynin e faqes dhe vendosni Vendndodhjen ne Lejo.", "location-gps": "Vendndodhja nuk eshte e disponueshme. Aktivizoni GPS-in dhe provoni perseri.", "location-error": "Gabim vendndodhjeje. Prekni per te provuar perseri.", "location-retry": "Vendndodhja nuk eshte e disponueshme. Prekni per te provuar perseri.",
@@ -193,7 +193,7 @@ translations.sq = {
 
 translations.ro = {
   "meta-description": "Haller Boutique: lux, calitate si stil.", search: "Cauta", "go-checkout": "Mergi la finalizare", "change-language": "Schimba limba", "main-menu": "Meniu principal", home: "Acasa", "new-arrivals": "Noutati", men: "Barbati", women: "Femei", "hero-title": "LUX<br>CALITATE<br>STIL", "hero-description": "Descopera cele mai noi produse<br>de la cele mai bune marci.", "discover-now": "Descopera acum", "payment-title": "Plata la livrare si crypto", "payment-description": "Plata la livrare sau crypto<br>in siguranta", "support-title": "Asistenta 24/7", "support-description": "Suntem mereu<br>disponibili", "location-banner": "Permite locatia pentru a vedea timpii de livrare in timp real.", selection: "Selectie", info: "Informatii", "whatsapp-support": "Asistenta WhatsApp", shipping: "Livrare", terms: "Termeni si conditii", "follow-social": "Urmareste-ne pe retelele sociale", copyright: "Copyright 2017 Haller Boutique. Toate drepturile rezervate.", sizes: "Marimi", price: "Pret", "add-cart": "Adauga in cos", "buy-now": "Cumpara acum", "try-on": "Probeaza", "image-placeholder": "Imagine disponibila in curand",
-  "sizes-available": "Marimi disponibile", added: "Adaugat",
+  "sizes-available": "Marimi disponibile", "select-size": "Selecteaza o marime", "size-sold-out": "Stoc epuizat", "product-sold-out": "Produs epuizat", added: "Adaugat",
   "cookie-label": "Preferinte cookie", "cookie-kicker": "Confidentialitate Haller Boutique", "cookie-title": "Cookie-uri, sesiune si locatie", "cookie-description": "Folosim cookie-uri esentiale pentru functionarea site-ului. Cu acordul tau putem colecta statistici, reluari ale sesiunii si locatia exacta a dispozitivului pentru securitate, comenzi si analiza vizitelor. Parolele, platile si valorile formularelor nu sunt inregistrate niciodata.", "cookie-required": "Esentiale", "cookie-required-description": "Cos, finalizare, autentificare si preferinta de consimtamant.", "cookie-analytics": "Statistici site", "cookie-analytics-description": "Vizite, dispozitiv, browser, pagini si conversie.", "cookie-replay": "Reluarea sesiunii", "cookie-replay-description": "Miscari, clicuri si derulare cu campurile mascate.", "cookie-location": "Locatie exacta", "cookie-location-description": "Coordonate GPS, precizie si ora, numai dupa aprobarea din browser.", "cookie-necessary-only": "Doar esentiale", "cookie-metrics-only": "Doar statistici", "cookie-customize": "Personalizeaza", "cookie-save": "Salveaza preferintele", "cookie-accept-all": "Accepta tot",
   "chat-label": "Asistenta virtuala Haller Boutique", "chat-open": "Deschide asistenta virtuala", "chat-close": "Inchide asistenta virtuala", "chat-avatar-alt": "Portretul Aurorei, asistenta virtuala", "chat-online": "Online", "chat-status": "Asistenta online", "chat-intro": "Inainte sa incepem, lasa-mi datele tale pentru a te ajuta mai bine.", "first-name": "Prenume", "last-name": "Nume", email: "E-mail", phone: "Telefon", optional: "optional", "chat-privacy": "Datele sunt folosite doar pentru a te ajuta in aceasta conversatie.", "chat-start": "Incepe conversatia", "chat-sizes": "Marimi", "chat-track-order": "Urmareste comanda", "chat-prompt-sizes": "Ma poti ajuta sa aleg marimea potrivita?", "chat-prompt-order": "As dori sa stiu unde este comanda mea. Codul meu este HB-", "chat-placeholder": "Scrie aici...", "chat-send": "Trimite mesajul", "chat-greeting": "Buna {name}, sunt Aurora, asistenta virtuala Haller Boutique. Cum te pot ajuta?", "chat-thinking": "Un moment, verific.", "chat-error": "Nu pot raspunde acum.",
   "location-help-apple": "Daca nu apare solicitarea, activeaza Localizarea pentru browser in setarile Apple si atinge pentru a reincerca.", "location-help-browser": "Daca nu apare solicitarea, activeaza Locatia in setarile browserului si atinge pentru a reincerca.", "location-https": "Deschide site-ul prin HTTPS pentru a permite locatia.", "location-unsupported": "Acest browser nu accepta locatia. Deschide site-ul in Safari sau Chrome.", "location-authorize": "Permite locatia in solicitarea browserului.", "location-unavailable": "Locatia nu este disponibila. Incearca din nou in curand.", "location-active": "Locatia este activa. Timpii de livrare in timp real sunt disponibili{accuracy}.", "location-denied": "Permisiunea pentru locatie a fost refuzata. Deschide lacatul site-ului si seteaza Locatia pe Permite.", "location-gps": "Locatia nu este disponibila. Activeaza GPS-ul dispozitivului si incearca din nou.", "location-error": "Eroare de locatie. Atinge pentru a reincerca.", "location-retry": "Locatia nu este disponibila. Atinge pentru a reincerca.",
@@ -1278,10 +1278,19 @@ function createSizesMarkup(product) {
     return "";
   }
 
+  const inventoryTrackedBySize = Boolean(product?.inventoryTrackedBySize);
+  const availableSizes = new Set(
+    (Array.isArray(product?.availableSizes) ? product.availableSizes : [])
+      .map((size) => String(size).toLocaleLowerCase("it"))
+  );
+
   return `
     <div class="product-sizes" aria-label="${translate("sizes-available")}">
       <span>${translate("sizes")}</span>
-      <div>${sizes.map((size) => `<button type="button" data-size-option data-product-size="${escapeHtml(size)}">${escapeHtml(size)}</button>`).join("")}</div>
+      <div>${sizes.map((size) => {
+        const soldOut = inventoryTrackedBySize && !availableSizes.has(String(size).toLocaleLowerCase("it"));
+        return `<button type="button" data-size-option data-product-size="${escapeHtml(size)}"${soldOut ? ` class="is-sold-out" disabled aria-disabled="true" title="${translate("size-sold-out")}"` : ""}>${escapeHtml(size)}</button>`;
+      }).join("")}</div>
     </div>
   `;
 }
@@ -1426,6 +1435,9 @@ function applyProductOverride(product) {
     discount: override.discount || product.discount,
     sizeType: override.sizeType || product.sizeType,
     sizes: Array.isArray(override.sizes) ? override.sizes : product.sizes || [],
+    inventoryTrackedBySize: Boolean(override.inventoryTrackedBySize),
+    availableSizes: Array.isArray(override.availableSizes) ? override.availableSizes : [],
+    isSoldOut: Boolean(override.isSoldOut),
     isLastAvailable: Boolean(override.isLastAvailable),
     images: Array.isArray(override.images) ? override.images : product.images || [],
     originalImages: Array.isArray(override.originalImages)
@@ -1456,6 +1468,9 @@ function normalizeCustomProduct(product) {
     discount: product.discount || "",
     sizeType,
     sizes: Array.isArray(product.sizes) ? product.sizes : [],
+    inventoryTrackedBySize: Boolean(product.inventoryTrackedBySize),
+    availableSizes: Array.isArray(product.availableSizes) ? product.availableSizes : [],
+    isSoldOut: Boolean(product.isSoldOut),
     isLastAvailable: Boolean(product.isLastAvailable),
     images: Array.isArray(product.images) ? product.images : [],
     originalImages: Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
@@ -2682,8 +2697,31 @@ function updateCartCount(count = readCartCount()) {
 
 function addToCart(button) {
   const productId = button?.dataset.productId || "";
+  const product = productId ? findProductById(productId) : null;
   const productName = button ? button.dataset.addToCart || button.dataset.buyNow : "";
-  const size = button?.closest("[data-product-card]")?.querySelector("[data-size-option].is-selected")?.dataset.productSize || "";
+  const productCard = button?.closest("[data-product-card]");
+  const sizeGroup = productCard?.querySelector(".product-sizes");
+  const size = sizeGroup?.querySelector("[data-size-option].is-selected")?.dataset.productSize || "";
+
+  if (product?.isSoldOut) {
+    if (button) {
+      const originalText = button.textContent;
+      button.textContent = translate("product-sold-out");
+      window.setTimeout(() => {
+        button.textContent = originalText;
+      }, 1200);
+    }
+    return false;
+  }
+
+  if (product && getSizes(product).length && !size) {
+    sizeGroup?.classList.add("is-required");
+    const label = sizeGroup?.querySelector(":scope > span");
+    if (label) label.textContent = translate("select-size");
+    sizeGroup?.querySelector("[data-size-option]:not(:disabled)")?.focus();
+    return false;
+  }
+
   const cartItems = productId ? addCheckoutItem(productId, size) : [];
   const count = cartItems.length > 0 ? cartItems.length : readCartCount() + 1;
   window.localStorage.setItem(cartKey, String(count));
@@ -2700,7 +2738,7 @@ function addToCart(button) {
   }
 
   if (!button) {
-    return;
+    return true;
   }
 
   const originalText = button.textContent;
@@ -2708,6 +2746,7 @@ function addToCart(button) {
   window.setTimeout(() => {
     button.textContent = originalText;
   }, 1200);
+  return true;
 }
 
 function ensureTryOnModal() {
@@ -4047,6 +4086,9 @@ document.addEventListener("click", (event) => {
     const group = sizeOption.closest(".product-sizes");
     group?.querySelectorAll("[data-size-option]").forEach((option) => option.classList.remove("is-selected"));
     sizeOption.classList.add("is-selected");
+    group?.classList.remove("is-required");
+    const label = group?.querySelector(":scope > span");
+    if (label) label.textContent = translate("sizes");
   }
 
   if (tryOnButton) {
@@ -4058,8 +4100,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (buyButton) {
-    addToCart(buyButton);
-    window.location.href = "checkout.html";
+    if (addToCart(buyButton)) window.location.href = "checkout.html";
     return;
   }
 

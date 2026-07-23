@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/legal-logo-standard-1/styles.css">
+    <link rel="stylesheet" href="/assets-v/size-inventory-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -258,10 +258,22 @@
                     <span>Taglie disponibili</span>
                     <input name="sizes" placeholder="S, M, L oppure 37, 38, 39">
                   </label>
-                  <label>
-                    <span>Inventario privato</span>
+                  <label data-product-total-inventory>
+                    <span>Inventario totale</span>
                     <input name="inventory" type="number" min="0" step="1" inputmode="numeric" placeholder="Lascia vuoto finche non definito">
+                    <small data-product-total-inventory-help>Usato per prodotti senza taglie.</small>
                   </label>
+                  <input name="inventoryBySize" type="hidden" value="{}">
+                  <section class="product-size-inventory" data-product-size-inventory hidden>
+                    <header class="product-size-inventory-header">
+                      <div>
+                        <strong>Inventario per taglia</strong>
+                        <small>Indica quanti pezzi sono disponibili per ogni taglia.</small>
+                      </div>
+                      <span data-product-size-inventory-total>Totale: 0</span>
+                    </header>
+                    <div class="product-size-inventory-grid" data-product-size-inventory-grid></div>
+                  </section>
                   <textarea name="images" hidden></textarea>
                   <div class="product-upload-box">
                     <input class="product-upload-input" type="file" accept="image/png,image/jpeg,image/webp" multiple data-product-image-upload>
@@ -414,6 +426,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="admin.js?v=zoom-hires-crop-2"></script>
+    <script src="/assets-v/size-inventory-1/admin.js"></script>
   </body>
 </html>

@@ -29,6 +29,13 @@ import {
 import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
 import { normalizeTryOnCustomerImage, normalizeTryOnProductImage } from "./try-on-image.mjs";
 import { normalizePhotonSuggestions, validateCheckoutOrder } from "./checkout-address.mjs";
+import {
+  adjustProductInventory,
+  availableInventorySizes,
+  inventoryBySizeTotal,
+  normalizeInventoryBySize,
+  productInventoryTotal,
+} from "./product-inventory.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -181,6 +188,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/inventory-last-stock-1/script.js", "/script.js"],
   ["/assets-v/home-tryon-callout-1/styles.css", "/styles.css"],
   ["/assets-v/legal-logo-standard-1/styles.css", "/styles.css"],
+  ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
+  ["/assets-v/size-inventory-1/script.js", "/script.js"],
+  ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1492,6 +1502,12 @@ function cleanProductSizes(sizes) {
   return [...new Set(source.map((size) => cleanTrackingString(size, 12)).filter(Boolean))].slice(0, 20);
 }
 
+const defaultProductSizes = {
+  clothing: ["S", "M", "L", "XL", "XXL"],
+  sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  none: [],
+};
+
 function cleanProductInventory(inventory) {
   if (inventory === "" || inventory === null || inventory === undefined) return null;
   const value = Number(inventory);
@@ -1502,6 +1518,10 @@ function cleanProductPatch(body) {
   const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
   const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
   const images = cleanProductImages(body.images);
+  const sizes = cleanProductSizes(body.sizes);
+  const inventorySizes = sizes.length ? sizes : defaultProductSizes[sizeType];
+  const inventoryBySize = normalizeInventoryBySize(body.inventoryBySize, inventorySizes);
+  const sizeInventoryTotal = inventoryBySizeTotal(inventoryBySize);
   return {
     name: cleanTrackingString(body.name, 180) || "Prodotto",
     brand: cleanTrackingString(body.brand, 100),
@@ -1512,8 +1532,9 @@ function cleanProductPatch(body) {
     collection: cleanTrackingString(body.collection, 80),
     category: cleanTrackingString(body.category, 80),
     sizeType,
-    sizes: cleanProductSizes(body.sizes),
-    inventory: cleanProductInventory(body.inventory),
+    sizes,
+    inventory: sizeInventoryTotal === null ? cleanProductInventory(body.inventory) : sizeInventoryTotal,
+    inventoryBySize,
     images,
     originalImages: cleanProductImages(body.originalImages),
     zoomImages: cleanProductImages(body.zoomImages).length
@@ -2368,11 +2389,19 @@ async function handleMobilePushToken(req, res) {
 async function handleProducts(req, res) {
   const data = await readProductOverrides();
   const toPublicProduct = (product) => {
-    const { inventory, ...publicProduct } = product || {};
+    const { inventory, inventoryBySize, ...publicProduct } = product || {};
+    const normalizedInventoryBySize = normalizeInventoryBySize(inventoryBySize);
+    const inventoryTrackedBySize = Object.keys(normalizedInventoryBySize).length > 0;
+    const inventoryTotal = productInventoryTotal({ inventory, inventoryBySize: normalizedInventoryBySize });
     return {
       ...publicProduct,
       zoomImages: cleanProductImages(publicProduct.zoomImages).map(productZoomDeliveryPath),
-      isLastAvailable: Number(inventory) === 1,
+      inventoryTrackedBySize,
+      availableSizes: inventoryTrackedBySize
+        ? availableInventorySizes({ inventoryBySize: normalizedInventoryBySize })
+        : [],
+      isSoldOut: inventoryTotal === 0,
+      isLastAvailable: inventoryTotal === 1,
     };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
@@ -3303,12 +3332,15 @@ async function reduceProductInventory(products) {
     if (!ordered.id) continue;
     const customIndex = overrides.custom.findIndex((product) => product.id === ordered.id);
     const product = customIndex === -1 ? overrides.items[ordered.id] : overrides.custom[customIndex];
-    if (!product || !Number.isInteger(product.inventory) || product.inventory < 0) continue;
-    product.inventory = Math.max(0, product.inventory - ordered.quantity);
+    if (!product || productInventoryTotal(product) === null) continue;
+    if (!adjustProductInventory(product, ordered, -1)) {
+      return { ok: false, product: ordered };
+    }
     changed = true;
   }
 
   if (changed) await writeProductOverrides(overrides);
+  return { ok: true };
 }
 
 async function restoreProductInventory(products) {
@@ -3319,9 +3351,7 @@ async function restoreProductInventory(products) {
     if (!ordered.id) continue;
     const customIndex = overrides.custom.findIndex((product) => product.id === ordered.id);
     const product = customIndex === -1 ? overrides.items[ordered.id] : overrides.custom[customIndex];
-    if (!product || !Number.isInteger(product.inventory) || product.inventory < 0) continue;
-    product.inventory += Math.max(1, Number.parseInt(ordered.quantity || 1, 10) || 1);
-    changed = true;
+    if (adjustProductInventory(product, ordered, 1)) changed = true;
   }
 
   if (changed) await writeProductOverrides(overrides);
@@ -3490,12 +3520,26 @@ async function handleCreateOrder(req, res) {
     },
   };
 
-  await enqueueOrderMutation(async () => {
-    const orders = await readOrders();
-    orders.push(order);
-    await writeOrders(orders.slice(-2000));
-  });
-  await reduceProductInventory(products);
+  const inventoryReservation = await enqueueProductMutation(() => reduceProductInventory(products));
+  if (!inventoryReservation.ok) {
+    const unavailable = inventoryReservation.product;
+    const size = unavailable?.size ? `, taglia ${unavailable.size}` : "";
+    return json(res, 409, {
+      ok: false,
+      message: `${unavailable?.name || "Il prodotto"}${size} non è più disponibile nella quantità richiesta.`,
+    });
+  }
+
+  try {
+    await enqueueOrderMutation(async () => {
+      const orders = await readOrders();
+      orders.push(order);
+      await writeOrders(orders.slice(-2000));
+    });
+  } catch (error) {
+    await enqueueProductMutation(() => restoreProductInventory(products));
+    throw error;
+  }
 
   await mutateAnalytics(async (analytics) => {
     const session = analytics.sessions[sessionId];

@@ -13,6 +13,10 @@ const productSearch = document.querySelector("[data-product-search]");
 const newProductButton = document.querySelector("[data-product-new]");
 const productEditorTitle = document.querySelector("[data-product-editor-title]");
 const productMessage = document.querySelector("[data-product-message]");
+const productSizeInventory = document.querySelector("[data-product-size-inventory]");
+const productSizeInventoryGrid = document.querySelector("[data-product-size-inventory-grid]");
+const productSizeInventoryTotal = document.querySelector("[data-product-size-inventory-total]");
+const productTotalInventoryHelp = document.querySelector("[data-product-total-inventory-help]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
 const productUploadCancel = document.querySelector("[data-product-upload-cancel]");
@@ -60,6 +64,11 @@ const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
 const aiProductResultsStorageKey = "haller-admin-ai-product-results";
+const defaultAdminProductSizes = {
+  clothing: ["S", "M", "L", "XL", "XXL"],
+  sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  none: [],
+};
 
 function storedAiProductResultIds() {
   try {
@@ -774,6 +783,7 @@ async function analyzeAndSaveAiProductFile(file) {
     sizeType: suggestion.sizeType || "none",
     sizes: Array.isArray(suggestion.sizes) ? suggestion.sizes : [],
     inventory: "",
+    inventoryBySize: {},
     images,
     originalImages: Array.isArray(suggestion.originalImages) && suggestion.originalImages.length
       ? suggestion.originalImages
@@ -1293,6 +1303,93 @@ function renderTopProducts(products) {
     .join("");
 }
 
+function parseAdminInventoryBySize(value) {
+  let source = value;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch {
+      source = {};
+    }
+  }
+  if (!source || typeof source !== "object" || Array.isArray(source)) return {};
+  return Object.fromEntries(
+    Object.entries(source)
+      .map(([size, quantity]) => [String(size).trim(), Number(quantity)])
+      .filter(([size, quantity]) => size && Number.isInteger(quantity) && quantity >= 0)
+  );
+}
+
+function adminProductSizes() {
+  const explicitSizes = String(productForm?.elements.sizes?.value || "")
+    .split(/[\n,;]+/)
+    .map((size) => size.trim())
+    .filter(Boolean);
+  if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
+  const sizeType = productForm?.elements.sizeType?.value || "none";
+  return defaultAdminProductSizes[sizeType] || [];
+}
+
+function readProductSizeInventoryEditor() {
+  if (!productSizeInventoryGrid) return {};
+  return Object.fromEntries(
+    [...productSizeInventoryGrid.querySelectorAll("[data-product-size-inventory-input]")]
+      .map((input) => [input.dataset.productSizeInventoryInput || "", input.value])
+      .filter(([size, value]) => size && value !== "")
+      .map(([size, value]) => [size, Math.max(0, Number.parseInt(value, 10) || 0)])
+  );
+}
+
+function syncProductSizeInventory() {
+  if (!productForm) return {};
+  const inventoryBySize = readProductSizeInventoryEditor();
+  const entries = Object.entries(inventoryBySize);
+  const totalInput = productForm.elements.inventory;
+  productForm.elements.inventoryBySize.value = JSON.stringify(inventoryBySize);
+
+  if (productSizeInventoryTotal) {
+    const total = entries.reduce((sum, [, quantity]) => sum + quantity, 0);
+    productSizeInventoryTotal.textContent = entries.length ? `Totale: ${total}` : "Totale non definito";
+    if (entries.length && totalInput) totalInput.value = String(total);
+  }
+  if (totalInput) totalInput.readOnly = entries.length > 0;
+  if (productTotalInventoryHelp) {
+    productTotalInventoryHelp.textContent = entries.length
+      ? "Calcolato automaticamente dalla disponibilità delle taglie."
+      : "Usato per prodotti senza taglie o finché le quantità per taglia non sono definite.";
+  }
+  return inventoryBySize;
+}
+
+function renderProductSizeInventory(value = null) {
+  if (!productForm || !productSizeInventory || !productSizeInventoryGrid) return;
+  const sizes = adminProductSizes();
+  const inventoryBySize = value === null
+    ? readProductSizeInventoryEditor()
+    : parseAdminInventoryBySize(value);
+  productSizeInventory.hidden = sizes.length === 0;
+  productSizeInventoryGrid.innerHTML = sizes.map((size) => {
+    const quantity = Number.isInteger(inventoryBySize[size]) ? String(inventoryBySize[size]) : "";
+    return `
+      <label class="product-size-inventory-field">
+        <span>${escapeHtml(size)}</span>
+        <input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(quantity)}" data-product-size-inventory-input="${escapeHtml(size)}" aria-label="Inventario taglia ${escapeHtml(size)}" placeholder="0">
+      </label>
+    `;
+  }).join("");
+  syncProductSizeInventory();
+}
+
+function adminInventorySummary(product) {
+  const inventoryBySize = parseAdminInventoryBySize(product?.inventoryBySize);
+  const entries = Object.entries(inventoryBySize);
+  if (entries.length) {
+    const total = entries.reduce((sum, [, quantity]) => sum + quantity, 0);
+    return `${total} totali · ${entries.map(([size, quantity]) => `${size}: ${quantity}`).join(" · ")}`;
+  }
+  return Number.isInteger(product?.inventory) ? `${product.inventory} in inventario` : "inventario da definire";
+}
+
 function fillProductForm(product) {
   if (!productForm || !product) return;
   if (productEditorTitle) productEditorTitle.textContent = "Modifica prodotto";
@@ -1309,6 +1406,8 @@ function fillProductForm(product) {
   productForm.elements.sizeType.value = product.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
+  productForm.elements.inventoryBySize.value = JSON.stringify(parseAdminInventoryBySize(product.inventoryBySize));
+  renderProductSizeInventory(product.inventoryBySize);
   setProductImageEntries(
     product.images || [],
     product.originalImages || product.images || [],
@@ -1336,6 +1435,8 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.sizeType.value = suggestion.sizeType || "none";
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
   productForm.elements.inventory.value = "";
+  productForm.elements.inventoryBySize.value = "{}";
+  renderProductSizeInventory({});
   setProductImageEntries(
     suggestion.images || [],
     suggestion.originalImages || suggestion.images || [],
@@ -1356,6 +1457,8 @@ function startNewProduct() {
   productForm.elements.zoomImages.value = "";
   productForm.elements.imageVariant.value = "original";
   productForm.elements.sizeType.value = "none";
+  productForm.elements.inventoryBySize.value = "{}";
+  renderProductSizeInventory({});
   setProductImageEntries([], [], [], "original", {});
   if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
   setProductMessage("Compila tutti i dati: marca, collezione e categoria possono essere nuove.");
@@ -1413,7 +1516,7 @@ function renderAdminProducts() {
           <span class="admin-product-text">
             <strong>${escapeHtml(product.name)}</strong>
             <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${Number.isInteger(product.inventory) ? `${product.inventory} in inventario` : "inventario da definire"}${product.custom ? " · custom" : ""}</small>
+            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
           </span>
         </button>
       `;
@@ -1977,6 +2080,7 @@ productForm?.addEventListener("submit", async (event) => {
   setProductMessage("Salvataggio in corso...");
   let productId = productForm.elements.id.value;
   try {
+    syncProductSizeInventory();
     const pendingImages = productImageEntries.some((entry) => entry.pendingImage);
     if (pendingImages && !productId) {
       const initialPayload = Object.fromEntries(new FormData(productForm));
@@ -1997,6 +2101,7 @@ productForm?.addEventListener("submit", async (event) => {
       await uploadPendingProductImages(productId);
     }
     syncProductImageFields();
+    syncProductSizeInventory();
     const payload = Object.fromEntries(new FormData(productForm));
     payload.images = productImageEntries.map((entry) => entry.image).filter(Boolean);
     payload.originalImages = productImageEntries
@@ -2027,6 +2132,10 @@ productForm?.addEventListener("submit", async (event) => {
     resetProductUploadState();
   }
 });
+
+productForm?.elements.sizes?.addEventListener("input", () => renderProductSizeInventory());
+productForm?.elements.sizeType?.addEventListener("change", () => renderProductSizeInventory());
+productSizeInventoryGrid?.addEventListener("input", syncProductSizeInventory);
 
 newProductButton?.addEventListener("click", startNewProduct);
 

@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/inventory-last-stock-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/size-inventory-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -97,19 +97,19 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/inventory-last-stock-1\/script\.js/);
+  assert.match(index, /\/assets-v\/size-inventory-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
   assert.match(womanSlide, /data-i18n-html="hero-title">LUSSO<br>QUALITÀ<br>STILE/);
   assert.match(womanSlide, /data-i18n-html="hero-description">Scopri le ultime novit/);
-  assert.match(index, /class="tryon-home-callout"/);
-  assert.match(index, /class="tryon-home-callout"[\s\S]*?data-i18n-html="tryon-hero-title">INDOSSA/);
-  assert.match(index, /class="tryon-home-callout"[\s\S]*?data-i18n-html="tryon-hero-description">Per indossare i vestiti<br>come fossi in negozio\./);
+  assert.doesNotMatch(index, /class="tryon-home-callout"/);
+  assert.doesNotMatch(index, /data-i18n-html="tryon-hero-title">INDOSSA/);
+  assert.match(index, /class="benefit-tryon"[\s\S]*?data-i18n-html="tryon-hero-description">Per indossare i vestiti<br>come fossi in negozio\./);
   assert.match(script, /"tryon-hero-title": "INDOSSA"/);
   assert.match(script, /"tryon-hero-description": "Per indossare i vestiti<br>come fossi in negozio\."/);
-  assert.match(styles, /\.tryon-home-callout h2\s*\{[\s\S]*?font-size:\s*clamp\(58px, 8vw, 118px\)/);
-  assert.match(styles, /\.tryon-home-callout p\s*\{[\s\S]*?color:\s*#fff/);
+  assert.match(styles, /\.benefits-main\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, 1fr\)/);
+  assert.match(styles, /\.benefit-tryon-link\s*\{/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -122,11 +122,20 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(script.slice(lastStockStart, lastStockEnd), /getGenderProducts\(lastStockGender\)\.filter\(\(product\) => product\.isLastAvailable\)/);
   assert.match(admin, /name="sizes"/);
   assert.match(admin, /name="inventory"/);
+  assert.match(admin, /name="inventoryBySize"/);
+  assert.match(admin, /data-product-size-inventory-grid/);
+  assert.match(script, /inventoryTrackedBySize/);
+  assert.match(script, /availableSizes/);
+  assert.match(script, /translate\("select-size"\)/);
+  assert.match(script, /data-size-option\]:not\(:disabled\)/);
   assert.match(server, /function cleanProductInventory/);
-  assert.match(server, /const \{ inventory, \.\.\.publicProduct \}/);
-  assert.match(server, /isLastAvailable:\s*Number\(inventory\) === 1/);
+  assert.match(server, /const \{ inventory, inventoryBySize, \.\.\.publicProduct \}/);
+  assert.match(server, /inventoryTrackedBySize/);
+  assert.match(server, /availableInventorySizes/);
+  assert.match(server, /isLastAvailable:\s*inventoryTotal === 1/);
   assert.match(server, /"Cache-Control": "private, no-store"/);
   assert.match(server, /async function reduceProductInventory/);
+  assert.match(server, /enqueueProductMutation\(\(\) => reduceProductInventory\(products\)\)/);
 });
 
 test("catalog categories, product pages and galleries follow the storefront flow", async () => {
@@ -283,7 +292,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/legal-logo-standard-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/size-inventory-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -301,7 +310,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/legal-logo-standard-1\/styles\.css/, pageNames[index]);
+    assert.match(html, /\/assets-v\/size-inventory-1\/styles\.css/, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -326,14 +335,15 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/inventory-last-stock-1\/script\.js/));
-  assert.match(index, /\/assets-v\/inventory-last-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/inventory-last-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/legal-logo-standard-1\/styles\.css/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/size-inventory-1\/script\.js/));
+  assert.match(index, /\/assets-v\/size-inventory-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/size-inventory-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/size-inventory-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/inventory-last-stock-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/size-inventory-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/size-inventory-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/legal-logo-standard-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/size-inventory-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
@@ -416,7 +426,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /admin\.js\?v=zoom-hires-crop-2/);
+  assert.match(adminHtml, /\/assets-v\/size-inventory-1\/admin\.js/);
 });
 
 test("checkout renders product images from the cart", async () => {
