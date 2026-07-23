@@ -1780,11 +1780,10 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
   const form = new FormData();
   const hasSeparateProductImages = productImages.length > 0;
   if (hasSeparateProductImages) {
-    // OpenAI's multipart schema names the array field `image`; repeated parts
-    // form the array. `image[]` is not a recognized field and causes a 400
-    // image-validation error even when the bytes are valid JPEGs.
-    appendImageFormData(form, "image", userImage);
-    productImages.forEach((image) => appendImageFormData(form, "image", image));
+    // Multiple inputs must use OpenAI's multipart array syntax. Repeating the
+    // scalar `image` field is rejected as a duplicate parameter.
+    appendImageFormData(form, "image[]", userImage);
+    productImages.forEach((image) => appendImageFormData(form, "image[]", image));
   } else {
     appendImageFormData(form, "image", userImage);
   }

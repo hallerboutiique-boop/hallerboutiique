@@ -221,8 +221,9 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(server, /with no catalog photo available; use the product name and category as the reference/);
   assert.match(server, /const legacyBundle = bundleItems\.every/);
   assert.doesNotMatch(script, /bundle-try-on-reference\.png/);
-  assert.match(server, /appendImageFormData\(form, "image", userImage\)/);
-  assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image", image\)\)/);
+  assert.match(server, /appendImageFormData\(form, "image\[\]", userImage\)/);
+  assert.match(server, /productImages\.forEach\(\(image\) => appendImageFormData\(form, "image\[\]", image\)\)/);
+  assert.match(server, /else \{\s*appendImageFormData\(form, "image", userImage\)/);
   assert.match(server, /normalizeTryOnProductImage\(productImage, index\)/);
   assert.match(server, /input image 1 is the immutable identity and scene reference/);
   assert.match(server, /Use each original product photo as the authoritative visual reference/);
