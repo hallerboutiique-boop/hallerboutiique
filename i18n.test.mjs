@@ -283,7 +283,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/home-tryon-callout-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/legal-logo-standard-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -301,7 +301,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/home-tryon-callout-1\/styles\.css/, pageNames[index]);
+    assert.match(html, /\/assets-v\/legal-logo-standard-1\/styles\.css/, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -311,6 +311,9 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   assert.match(styles, /\.utility-site-header:not\(\.checkout-site-header\) \.logo\s*\{[\s\S]*?grid-column:\s*2/);
   assert.match(styles, /\.site-header:not\(\.utility-site-header\) \.logo img\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
   assert.match(styles, /\.utility-site-header \.logo\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
+  assert.match(styles, /\.legal-header\s*\{[\s\S]*?grid-template-columns:\s*minmax\(170px, 1fr\) auto minmax\(170px, 1fr\)/);
+  assert.match(styles, /\.legal-brand img\s*\{[\s\S]*?width:\s*clamp\(390px, 33\.9vw, 520px\)/);
+  assert.match(styles, /@media \(max-width: 980px\)\s*\{[\s\S]*?\.legal-brand img\s*\{[\s\S]*?width:\s*min\(58vw, 330px\)/);
   assert.match(styles, /\.legal-brand img\s*\{[\s\S]*?width:\s*min\(52vw, 260px\)/);
   assert.match(styles, /\.legal-header\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 36px/);
 });
@@ -326,11 +329,11 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   pages.forEach((html) => assert.match(html, /\/assets-v\/inventory-last-stock-1\/script\.js/));
   assert.match(index, /\/assets-v\/inventory-last-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/inventory-last-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/home-tryon-callout-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/legal-logo-standard-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/inventory-last-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/home-tryon-callout-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/legal-logo-standard-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {

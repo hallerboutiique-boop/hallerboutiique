@@ -180,6 +180,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/home-hide-last-stock-mobile-1/script.js", "/script.js"],
   ["/assets-v/inventory-last-stock-1/script.js", "/script.js"],
   ["/assets-v/home-tryon-callout-1/styles.css", "/styles.css"],
+  ["/assets-v/legal-logo-standard-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
