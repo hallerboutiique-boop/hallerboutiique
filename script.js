@@ -317,6 +317,7 @@ const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 let productOverrides = {};
 let customProducts = [];
+let productCatalogDataReady = false;
 let catalogState = { gender: "", category: "", brand: "", productIds: [] };
 let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
@@ -1466,17 +1467,16 @@ function normalizeCustomProduct(product) {
 async function loadProductOverrides() {
   try {
     const response = await fetch(`/api/products?v=${encodeURIComponent(productImageVersion)}`, { cache: "no-store" });
-    if (!response.ok) return;
+    if (!response.ok) throw new Error(`Product catalog unavailable: ${response.status}`);
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
-    renderCatalog();
-    renderProductDetail();
-    renderBundleTryOn();
-    renderCheckoutProductSummary();
   } catch {
     productOverrides = {};
     customProducts = [];
+  } finally {
+    productCatalogDataReady = true;
+    renderCatalog();
     renderProductDetail();
     renderBundleTryOn();
     renderCheckoutProductSummary();
@@ -1861,6 +1861,13 @@ function renderCatalog() {
   renderLastStockCatalog();
   const catalogRoot = document.querySelector("[data-catalog]");
   if (!catalogRoot) return;
+
+  if (!productCatalogDataReady) {
+    catalogRoot.setAttribute("aria-busy", "true");
+    catalogRoot.replaceChildren();
+    return;
+  }
+  catalogRoot.removeAttribute("aria-busy");
 
   if (!catalogState.gender && catalogState.productIds.length === 0) {
     catalogRoot.innerHTML = `<section class="catalog-featured"><div class="product-grid product-grid-featured">${getHomeFeaturedProducts().map(createProductCard).join("")}</div></section>`;

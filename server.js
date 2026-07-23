@@ -177,6 +177,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/tryon-all-products-1/script.js", "/script.js"],
   ["/assets-v/tryon-all-photos-1/script.js", "/script.js"],
   ["/assets-v/tryon-primary-photo-1/script.js", "/script.js"],
+  ["/assets-v/home-hide-last-stock-mobile-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
