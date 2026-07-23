@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/tryon-all-non-shoes-2\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -97,7 +97,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
+  assert.match(index, /\/assets-v\/tryon-all-non-shoes-2\/script\.js/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -177,10 +177,14 @@ test("catalog categories, product pages and galleries follow the storefront flow
 test("try-on supports non-footwear products and excludes shoes", async () => {
   const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.match(script, /function isTryOnShoeProduct/);
+  assert.match(script, /if \(tryOnShoeCategoryPattern\.test\(category\)\) return true/);
+  assert.match(script, /return !category && tryOnShoeNameFallbackPattern\.test/);
   assert.match(script, /if \(isTryOnShoeProduct\(product\)\) return ""/);
   assert.match(script, /\.filter\(\(item\) => !isTryOnShoeProduct\(item\)\)/);
   assert.match(script, /image: productPrimaryImage\(product\)/);
   assert.match(server, /function isTryOnShoeItem/);
+  assert.match(server, /if \(tryOnShoeCategoryPattern\.test\(category\)\) return true/);
+  assert.match(server, /return !category && tryOnShoeNameFallbackPattern\.test/);
   assert.match(server, /normalizeTryOnCustomerImage/);
   assert.match(server, /customer image normalization failed/);
   assert.match(server, /mode === "single" && isTryOnShoeItem/);
@@ -292,12 +296,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/checkout-images-gallery-1\/script\.js/));
-  assert.match(index, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/checkout-images-gallery-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-all-non-shoes-2\/script\.js/));
+  assert.match(index, /\/assets-v\/tryon-all-non-shoes-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/tryon-all-non-shoes-2\/script\.js/);
   assert.match(checkout, /\/assets-v\/header-logo-stable-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/checkout-images-gallery-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/tryon-all-non-shoes-2\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/header-logo-stable-1\/styles\.css", "\/styles\.css"/);
 });

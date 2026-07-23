@@ -172,6 +172,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/checkout-open-images-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-full-1/script.js", "/script.js"],
   ["/assets-v/checkout-images-gallery-1/script.js", "/script.js"],
+  ["/assets-v/tryon-all-non-shoes-2/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -2518,11 +2519,16 @@ function cleanTryOnBundleItems(value) {
   }
 }
 
+const tryOnShoeSizeTypes = new Set(["sneakers", "shoes", "shoe", "footwear"]);
+const tryOnShoeCategoryPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i;
+const tryOnShoeNameFallbackPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|slipper|slippers)\b/i;
+
 function isTryOnShoeItem(item) {
   const sizeType = String(item?.sizeType || "").toLowerCase().trim();
-  if (["sneakers", "shoes", "shoe", "footwear"].includes(sizeType)) return true;
-  const label = `${item?.name || ""} ${item?.category || ""}`;
-  return /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i.test(label);
+  if (tryOnShoeSizeTypes.has(sizeType)) return true;
+  const category = String(item?.category || "").trim();
+  if (tryOnShoeCategoryPattern.test(category)) return true;
+  return !category && tryOnShoeNameFallbackPattern.test(String(item?.name || ""));
 }
 
 function cleanChatCatalog(catalog) {

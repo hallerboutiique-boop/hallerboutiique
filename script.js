@@ -1537,11 +1537,16 @@ function productPrimaryTryOnImage(product) {
   return originals[0] || productPrimaryImage(product);
 }
 
+const tryOnShoeSizeTypes = new Set(["sneakers", "shoes", "shoe", "footwear"]);
+const tryOnShoeCategoryPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i;
+const tryOnShoeNameFallbackPattern = /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|slipper|slippers)\b/i;
+
 function isTryOnShoeProduct(product) {
   const sizeType = String(product?.sizeType || "").toLowerCase().trim();
-  if (["sneakers", "shoes", "shoe", "footwear"].includes(sizeType)) return true;
-  const label = `${product?.name || ""} ${product?.category || ""}`;
-  return /\b(?:scarpa|scarpe|calzatura|calzature|sneaker|sneakers|shoe|shoes|footwear|boot|boots|stivale|stivali|stivaletto|stivaletti|sandalo|sandali|ciabatta|ciabatte|infradito|mocassino|mocassini|loafer|loafers|heel|heels|tacco|tacchi|decollete|pump|pumps|flat|flats|slipper|slippers|trainer|trainers)\b/i.test(label);
+  if (tryOnShoeSizeTypes.has(sizeType)) return true;
+  const category = String(product?.category || "").trim();
+  if (tryOnShoeCategoryPattern.test(category)) return true;
+  return !category && tryOnShoeNameFallbackPattern.test(String(product?.name || ""));
 }
 
 function createTryOnMarkup(product) {
