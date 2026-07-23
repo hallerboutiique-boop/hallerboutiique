@@ -327,6 +327,30 @@ function formatAdminProductPrice(value) {
   return String(value || "").replace("€", "").trim();
 }
 
+function parseAdminProductPrice(value) {
+  const raw = String(value || "").replace(/[^\d,.-]/g, "").trim();
+  if (!raw) return null;
+  const normalized = raw.includes(",") ? raw.replace(/\./g, "").replace(",", ".") : raw;
+  const price = Number(normalized);
+  return Number.isFinite(price) && price >= 0 ? price : null;
+}
+
+function parseAdminDiscountPercentage(value) {
+  const match = String(value || "").replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+  const percentage = Math.abs(Number(match[0]));
+  return Number.isFinite(percentage) && percentage >= 0 && percentage <= 100 ? percentage : null;
+}
+
+function syncFinalPriceFromDiscount() {
+  if (!productForm) return;
+  const originalPrice = parseAdminProductPrice(productForm.elements.original?.value);
+  const percentage = parseAdminDiscountPercentage(productForm.elements.discount?.value);
+  if (originalPrice === null || percentage === null) return;
+  const finalPrice = Math.max(0, originalPrice * (1 - percentage / 100));
+  productForm.elements.finalPrice.value = finalPrice.toFixed(2).replace(".", ",");
+}
+
 function productImageUrl(src) {
   const value = String(src || "").trim();
   if (!value) return "";
@@ -2197,6 +2221,8 @@ productForm?.elements.category?.addEventListener("input", () => {
   syncAdminProductSizeTypeFromDetails();
   renderProductSizeInventory();
 });
+productForm?.elements.original?.addEventListener("input", syncFinalPriceFromDiscount);
+productForm?.elements.discount?.addEventListener("input", syncFinalPriceFromDiscount);
 productSizeInventoryGrid?.addEventListener("input", syncProductSizeInventory);
 productSizeInventoryGrid?.addEventListener("click", (event) => {
   const control = event.target.closest("[data-product-size-inventory-step]");
