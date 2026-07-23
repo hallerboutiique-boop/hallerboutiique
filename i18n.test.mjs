@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/admin-sizes-search-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/admin-sizes-search-1\/script\.js/);
+  assert.match(index, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -306,7 +306,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/admin-sizes-search-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -324,7 +324,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/admin-sizes-search-1\/styles\.css/, pageNames[index]);
+    assert.match(html, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -349,15 +349,15 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/admin-sizes-search-1\/script\.js/));
-  assert.match(index, /\/assets-v\/admin-sizes-search-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-sizes-search-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-sizes-search-1\/styles\.css/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/));
+  assert.match(index, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/admin-sizes-search-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-sizes-search-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-sizes-search-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
@@ -440,7 +440,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/admin-sizes-search-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-mobile-size-grid-1\/admin\.js/);
 });
 
 test("checkout renders product images from the cart", async () => {
