@@ -342,13 +342,13 @@ function parseAdminDiscountPercentage(value) {
   return Number.isFinite(percentage) && percentage >= 0 && percentage <= 100 ? percentage : null;
 }
 
-function syncFinalPriceFromDiscount() {
+function syncOriginalPriceFromDiscount() {
   if (!productForm) return;
-  const originalPrice = parseAdminProductPrice(productForm.elements.original?.value);
+  const finalPrice = parseAdminProductPrice(productForm.elements.finalPrice?.value);
   const percentage = parseAdminDiscountPercentage(productForm.elements.discount?.value);
-  if (originalPrice === null || percentage === null) return;
-  const finalPrice = Math.max(0, originalPrice * (1 - percentage / 100));
-  productForm.elements.finalPrice.value = finalPrice.toFixed(2).replace(".", ",");
+  if (finalPrice === null || percentage === null || percentage >= 100) return;
+  const originalPrice = Math.max(0, finalPrice / (1 - percentage / 100));
+  productForm.elements.original.value = originalPrice.toFixed(2).replace(".", ",");
 }
 
 function productImageUrl(src) {
@@ -2221,8 +2221,8 @@ productForm?.elements.category?.addEventListener("input", () => {
   syncAdminProductSizeTypeFromDetails();
   renderProductSizeInventory();
 });
-productForm?.elements.original?.addEventListener("input", syncFinalPriceFromDiscount);
-productForm?.elements.discount?.addEventListener("input", syncFinalPriceFromDiscount);
+productForm?.elements.finalPrice?.addEventListener("input", syncOriginalPriceFromDiscount);
+productForm?.elements.discount?.addEventListener("input", syncOriginalPriceFromDiscount);
 productSizeInventoryGrid?.addEventListener("input", syncProductSizeInventory);
 productSizeInventoryGrid?.addEventListener("click", (event) => {
   const control = event.target.closest("[data-product-size-inventory-step]");

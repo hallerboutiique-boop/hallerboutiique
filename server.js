@@ -194,9 +194,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
   ["/assets-v/size-inventory-1/script.js", "/script.js"],
   ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
-  ["/assets-v/admin-auto-discount-4/styles.css", "/styles.css"],
-  ["/assets-v/admin-auto-discount-4/script.js", "/script.js"],
-  ["/assets-v/admin-auto-discount-4/admin.js", "/admin.js"],
+  ["/assets-v/admin-original-price-5/styles.css", "/styles.css"],
+  ["/assets-v/admin-original-price-5/script.js", "/script.js"],
+  ["/assets-v/admin-original-price-5/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
