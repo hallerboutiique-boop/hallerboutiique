@@ -61,7 +61,8 @@ let productImageDrag = null;
 let suppressProductImageClickUntil = 0;
 let productImagePositionTimer = 0;
 let aiBatchResults = [];
-const maximumProductImages = 100;
+const maximumProductImages = 15;
+const maximumAiProductImages = 100;
 const productUploadBatchSize = 10;
 const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
@@ -92,7 +93,7 @@ function syncAdminProductSizeTypeFromDetails() {
 function storedAiProductResultIds() {
   try {
     const ids = JSON.parse(sessionStorage.getItem(aiProductResultsStorageKey) || "[]");
-    return Array.isArray(ids) ? ids.filter((id) => typeof id === "string").slice(0, maximumProductImages) : [];
+    return Array.isArray(ids) ? ids.filter((id) => typeof id === "string").slice(0, maximumAiProductImages) : [];
   } catch {
     return [];
   }
@@ -823,8 +824,8 @@ async function analyzeAndSaveAiProductFile(file) {
 async function createAiProductFromFiles(files) {
   const selectedFiles = Array.from(files || []);
   if (!selectedFiles.length) return;
-  if (selectedFiles.length > maximumProductImages) {
-    throw new Error(`Puoi creare fino a ${maximumProductImages} prodotti alla volta.`);
+  if (selectedFiles.length > maximumAiProductImages) {
+    throw new Error(`Puoi creare fino a ${maximumAiProductImages} prodotti alla volta.`);
   }
   if (selectedFiles.some((file) => !file.type.startsWith("image/") || !file.size || file.size > maximumProductImageBytes)) {
     throw new Error("Usa immagini JPG, PNG o WebP fino a 20 MB ciascuna.");
@@ -1502,7 +1503,7 @@ function startNewProduct() {
   setProductImageEntries([], [], [], "original", {});
   if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
   setProductMessage("Compila tutti i dati: marca, collezione e categoria possono essere nuove.");
-  setProductUploadStatus("Puoi selezionare fino a 100 foto: vengono caricate in gruppi di massimo 10.");
+  setProductUploadStatus("Puoi selezionare fino a 15 foto: vengono caricate in gruppi di massimo 10.");
   renderAdminProducts();
   productForm.elements.name.focus();
   productForm.scrollIntoView({ behavior: "smooth", block: "start" });

@@ -75,6 +75,7 @@ const minimumStorageReserveBytes = 64 * 1024 * 1024;
 const orphanUploadGraceMs = 10 * 60 * 1000;
 const productImageRenditionWidths = [480, 720, 1080, 1440];
 const productImageSourceLimitBytes = 40 * 1024 * 1024;
+const maximumStoredProductImages = 15;
 const productImageBucketName = String(process.env.BUCKET_NAME || "").trim();
 const productImageStorageEndpoint = String(process.env.AWS_ENDPOINT_URL_S3 || "https://t3.storage.dev").trim();
 const productImageStorageRegion = String(process.env.AWS_REGION || "auto").trim();
@@ -193,9 +194,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
   ["/assets-v/size-inventory-1/script.js", "/script.js"],
   ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
-  ["/assets-v/admin-mobile-size-grid-1/styles.css", "/styles.css"],
-  ["/assets-v/admin-mobile-size-grid-1/script.js", "/script.js"],
-  ["/assets-v/admin-mobile-size-grid-1/admin.js", "/admin.js"],
+  ["/assets-v/admin-mobile-gallery-2/styles.css", "/styles.css"],
+  ["/assets-v/admin-mobile-gallery-2/script.js", "/script.js"],
+  ["/assets-v/admin-mobile-gallery-2/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1478,7 +1479,7 @@ function cleanProductImages(images) {
     .map((image) => cleanTrackingString(image, 260))
     .filter(Boolean)
     .filter((image) => image.startsWith("assets/") || image.startsWith("/") || /^https?:\/\//i.test(image))
-    .slice(0, 100);
+    .slice(0, maximumStoredProductImages);
 }
 
 function cleanProductImageRenditions(value, images = []) {
@@ -2830,13 +2831,13 @@ async function handleAdminProductImages(req, res) {
   });
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
-    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, 100);
+    return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, maximumStoredProductImages);
   };
   const mergeZoomImages = (currentImages, currentZoomImages) => {
     const current = cleanProductImages(currentImages);
     const zoom = cleanProductImages(currentZoomImages);
     const aligned = current.map((image, index) => zoom[index] || image);
-    return (makePrimary ? [...zoomSaved, ...aligned] : [...aligned, ...zoomSaved]).slice(0, 100);
+    return (makePrimary ? [...zoomSaved, ...aligned] : [...aligned, ...zoomSaved]).slice(0, maximumStoredProductImages);
   };
 
   let product;

@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-gallery-2\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
+  assert.match(index, /\/assets-v\/admin-mobile-gallery-2\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -306,7 +306,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-gallery-2\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -324,7 +324,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/, pageNames[index]);
+    assert.match(html, /\/assets-v\/admin-mobile-gallery-2\/styles\.css/, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -349,15 +349,15 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/));
-  assert.match(index, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-mobile-size-grid-1\/styles\.css/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/admin-mobile-gallery-2\/script\.js/));
+  assert.match(index, /\/assets-v\/admin-mobile-gallery-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-gallery-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/admin-mobile-gallery-2\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-gallery-2\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-gallery-2\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-mobile-size-grid-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/admin-mobile-gallery-2\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
@@ -384,9 +384,14 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(styles, /\.product-crop-stage\s*\{[\s\S]*?aspect-ratio:\s*10 \/ 11/);
   assert.match(adminHtml, /Carica pi&ugrave; foto dal Finder/);
   assert.match(adminHtml, /data-product-image-count/);
-  assert.match(adminHtml, /fino a 100 foto: vengono caricate in gruppi di massimo 10/);
-  assert.match(admin, /const maximumProductImages = 100/);
+  assert.match(adminHtml, /fino a 15 foto: vengono caricate in gruppi di massimo 10/);
+  assert.match(adminHtml, /data-product-image-count>0 \/ 15/);
+  assert.match(admin, /const maximumProductImages = 15/);
+  assert.match(admin, /const maximumAiProductImages = 100/);
   assert.match(admin, /const productUploadBatchSize = 10/);
+  assert.match(styles, /\.product-editor-form \.product-gallery-editor-header\s*\{[\s\S]*?order:\s*-3/);
+  assert.match(styles, /\.product-editor-form \.product-preview-grid\s*\{[\s\S]*?display:\s*flex[\s\S]*?order:\s*-2/);
+  assert.match(styles, /\.product-size-inventory-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(admin, /function addProductImageFiles\(files\)/);
   assert.match(admin, /async function editProductImageEntry\(entry\)/);
   assert.match(admin, /async function uploadPendingProductImages\(productId\)/);
@@ -418,7 +423,8 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("imageVariants", JSON\.stringify\(imageVariants\)\)/);
   assert.match(admin, /formData\.append\("originalImageIndexes", JSON\.stringify\(originalImageIndexes\)\)/);
   assert.match(server, /readRequestBuffer\(req, 80 \* 1024 \* 1024\)/);
-  assert.match(server, /\.slice\(0, 100\)/);
+  assert.match(server, /const maximumStoredProductImages = 15/);
+  assert.match(server, /\.slice\(0, maximumStoredProductImages\)/);
   assert.match(server, /const originalSavedByIndex = new Map\(/);
   assert.match(server, /const uploadedImages = await mapWithConcurrency\(imageParts, 2/);
   assert.match(server, /const uploadedOriginals = await Promise\.all/);
@@ -440,7 +446,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/admin-mobile-size-grid-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-mobile-gallery-2\/admin\.js/);
 });
 
 test("checkout renders product images from the cart", async () => {
