@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/tryon-all-products-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/tryon-all-photos-1\/script\.js/);
   assert.match(script, /function loadOriginalBundleProductImage/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", file/);
@@ -97,7 +97,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/tryon-all-products-1\/script\.js/);
+  assert.match(index, /\/assets-v\/tryon-all-photos-1\/script\.js/);
   const catalogStart = script.indexOf("function renderCatalog()");
   const catalogEnd = script.indexOf("function renderLastStockCatalog", catalogStart);
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
@@ -191,23 +191,25 @@ test("try-on supports every catalog product including shoes", async () => {
   assert.match(server, /Footwear products are supported/);
 });
 
-test("single try-on keeps the original customer photo separate and locks facial identity", async () => {
+test("single try-on uses every original product photo and locks facial identity", async () => {
   const [script, server] = await Promise.all([readFile("script.js", "utf8"), readFile("server.js", "utf8")]);
   assert.doesNotMatch(script, /function createTryOnReference/);
-  assert.match(script, /const originalProductImage = await loadOptionalTryOnProductImage/);
+  assert.match(script, /function productTryOnImages\(product\)/);
+  assert.match(script, /const originalProductImages = await loadAllTryOnProductImages/);
   assert.match(script, /formData\.append\("userImage", file/);
-  assert.match(script, /if \(originalProductImage\)/);
-  assert.match(script, /formData\.append\("productImage", originalProductImage\.blob, originalProductImage\.filename\)/);
+  assert.match(script, /originalProductImages\.forEach\(\(image\) => formData\.append\("productImage", image\.blob, image\.filename\)\)/);
   assert.match(script, /formData\.append\("mode", "single"\)/);
   assert.match(server, /process\.env\.OPENAI_TRYON_MODEL \|\| "gpt-image-2"/);
   assert.match(server, /form\.append\("quality", "high"\)/);
+  assert.match(server, /all available original catalog photos of the same product/);
+  assert.match(server, /prepareTryOnReferences\(input\)/);
   assert.match(server, /PERSON LOCK — highest priority/);
   assert.match(server, /Do not modify, redraw, regenerate, retouch, beautify/);
   assert.match(server, /replace only the product's natural wearing or carrying area/);
   assert.match(server, /matching pair on both feet/);
 });
 
-test("bundle try-on keeps the customer original and normalizes separate product images", async () => {
+test("bundle try-on uses all photos for every selected product", async () => {
   const [checkout, script, server] = await Promise.all([
     readFile("checkout.html", "utf8"),
     readFile("script.js", "utf8"),
@@ -216,8 +218,9 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(checkout, /data-i18n="bundle-tryon-limit">Tutti i prodotti · massimo 2 prodotti/);
   assert.doesNotMatch(script, /isTryOnShoeProduct/);
   assert.match(script, /\.slice\(0, 2\)/);
-  assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadOptionalTryOnProductImage\)\)/);
-  assert.match(script, /referenceImageIndex: loadedProductImages\[index\] \? nextReferenceImageIndex\+\+ : 0/);
+  assert.match(script, /Promise\.all\(bundleTryOnItems\.map\(loadAllTryOnProductImages\)\)/);
+  assert.match(script, /referenceImageIndices: loadedProductImageGroups\[index\]\.map\(\(\) => nextReferenceImageIndex\+\+\)/);
+  assert.match(script, /const originalProductImages = loadedProductImageGroups\.flat\(\)/);
   assert.match(server, /with no catalog photo available; use the product name and category as the reference/);
   assert.match(server, /const legacyBundle = bundleItems\.every/);
   assert.doesNotMatch(script, /bundle-try-on-reference\.png/);
@@ -226,7 +229,11 @@ test("bundle try-on keeps the customer original and normalizes separate product 
   assert.match(server, /else \{\s*appendImageFormData\(form, "image", userImage\)/);
   assert.match(server, /normalizeTryOnProductImage\(productImage, index\)/);
   assert.match(server, /input image 1 is the immutable identity and scene reference/);
-  assert.match(server, /Use each original product photo as the authoritative visual reference/);
+  assert.match(server, /Jointly inspect every supplied original catalog view/);
+  assert.match(server, /Use each original product photo as an authoritative visual reference/);
+  assert.match(server, /const openaiTryOnMaximumInputImages = 16/);
+  assert.match(server, /createTryOnReferenceSheet,/);
+  assert.match(server, /referenceImagesAreSheets: true/);
   assert.match(server, /bundleItems\.length > 0 \|\| hasSeparateProductImages \? "1024x1536" : "1024x1024"/);
   assert.match(server, /strict maximum of two products/);
   assert.match(server, /referenced products may be clothing, footwear, bags or accessories/);
@@ -299,12 +306,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-all-products-1\/script\.js/));
-  assert.match(index, /\/assets-v\/tryon-all-products-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/tryon-all-products-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-all-photos-1\/script\.js/));
+  assert.match(index, /\/assets-v\/tryon-all-photos-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/tryon-all-photos-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/header-logo-stable-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/tryon-all-products-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/tryon-all-photos-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/header-logo-stable-1\/styles\.css", "\/styles\.css"/);
 });

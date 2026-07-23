@@ -1,7 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import sharp from "sharp";
-import { normalizeTryOnCustomerImage, normalizeTryOnProductImage } from "./try-on-image.mjs";
+import {
+  createTryOnReferenceSheet,
+  normalizeTryOnCustomerImage,
+  normalizeTryOnProductImage,
+} from "./try-on-image.mjs";
 
 test("try-on product images are normalized to a compatible high-quality JPEG", async () => {
   const source = await sharp({
@@ -60,4 +64,27 @@ test("try-on customer images are normalized before the API call", async () => {
   assert.equal(metadata.channels, 3);
   assert.equal(metadata.width, 2048);
   assert.equal(metadata.height, 1152);
+});
+
+test("try-on reference sheets preserve every supplied catalog view within API limits", async () => {
+  const colors = [
+    { r: 220, g: 30, b: 30 },
+    { r: 30, g: 180, b: 70 },
+    { r: 30, g: 80, b: 220 },
+  ];
+  const images = await Promise.all(colors.map(async (background, index) => ({
+    data: await sharp({
+      create: { width: 1200, height: 900, channels: 3, background },
+    }).jpeg().toBuffer(),
+    mime: "image/jpeg",
+    filename: `view-${index + 1}.jpg`,
+  })));
+  const result = await createTryOnReferenceSheet(images, 2);
+  const metadata = await sharp(result.data).metadata();
+
+  assert.equal(result.mime, "image/jpeg");
+  assert.equal(result.filename, "product-reference-sheet-3.jpg");
+  assert.equal(metadata.format, "jpeg");
+  assert.equal(metadata.width, 2048);
+  assert.equal(metadata.height, 2048);
 });
