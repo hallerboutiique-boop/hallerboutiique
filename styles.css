@@ -934,7 +934,7 @@
 }
 
 .product-size-inventory-header strong,
-.product-size-inventory-header > span {
+.product-size-inventory-tools > span {
   color: var(--gold);
   font-size: 13px;
   font-weight: 800;
@@ -943,6 +943,58 @@
 .product-size-inventory-header small {
   color: var(--text);
   line-height: 1.35;
+}
+
+.product-size-inventory-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.product-size-inventory-tools label {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid var(--panel-line);
+  border-radius: 6px;
+}
+
+.product-size-inventory-tools label span {
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.product-size-inventory-tools input {
+  width: 68px;
+  min-height: 28px;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.product-size-inventory-tools button,
+.product-size-inventory-stepper button {
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.48);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.42);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.product-size-inventory-tools button:hover,
+.product-size-inventory-tools button:focus-visible,
+.product-size-inventory-stepper button:hover,
+.product-size-inventory-stepper button:focus-visible {
+  color: #050505;
+  background: var(--gold);
 }
 
 .product-size-inventory-grid {
@@ -961,6 +1013,25 @@
   text-align: center;
   font-size: 13px;
   font-weight: 800;
+}
+
+.product-size-inventory-stepper {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 30px;
+  gap: 5px;
+  align-items: center;
+}
+
+.product-size-inventory-stepper button {
+  min-height: 38px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.product-size-inventory-stepper input {
+  min-width: 0;
+  text-align: center;
 }
 
 .product-editor-form input[readonly] {

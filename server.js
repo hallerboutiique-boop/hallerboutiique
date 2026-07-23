@@ -191,6 +191,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
   ["/assets-v/size-inventory-1/script.js", "/script.js"],
   ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
+  ["/assets-v/size-inventory-eu-1/styles.css", "/styles.css"],
+  ["/assets-v/size-inventory-eu-1/script.js", "/script.js"],
+  ["/assets-v/size-inventory-eu-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1503,8 +1506,8 @@ function cleanProductSizes(sizes) {
 }
 
 const defaultProductSizes = {
-  clothing: ["S", "M", "L", "XL", "XXL"],
-  sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  clothing: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+  sneakers: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"],
   none: [],
 };
 

@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/size-inventory-1/styles.css">
+    <link rel="stylesheet" href="/assets-v/size-inventory-eu-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -249,14 +249,15 @@
                   <label>
                     <span>Taglie</span>
                     <select name="sizeType">
-                      <option value="clothing">Abbigliamento S-XXL</option>
-                      <option value="sneakers">Sneakers 36-45</option>
+                      <option value="clothing">Abbigliamento XXS-XXXL</option>
+                      <option value="sneakers">Scarpe EU 34-48</option>
                       <option value="none">Nessuna taglia</option>
                     </select>
                   </label>
                   <label>
-                    <span>Taglie disponibili</span>
-                    <input name="sizes" placeholder="S, M, L oppure 37, 38, 39">
+                    <span>Taglie personalizzate</span>
+                    <input name="sizes" placeholder="S, M, L oppure 39, 40, 41">
+                    <small>Sostituiscono il set standard quando le inserisci.</small>
                   </label>
                   <label data-product-total-inventory>
                     <span>Inventario totale</span>
@@ -268,9 +269,17 @@
                     <header class="product-size-inventory-header">
                       <div>
                         <strong>Inventario per taglia</strong>
-                        <small>Indica quanti pezzi sono disponibili per ogni taglia.</small>
+                        <small>Inserisci le quantità: le taglie a 0 saranno oscurate sul sito.</small>
                       </div>
-                      <span data-product-size-inventory-total>Totale: 0</span>
+                      <div class="product-size-inventory-tools">
+                        <span data-product-size-inventory-total>Totale: 0</span>
+                        <label>
+                          <span>Imposta tutte</span>
+                          <input type="number" min="0" step="1" inputmode="numeric" data-product-size-inventory-bulk placeholder="Quantità" aria-label="Imposta la quantità per tutte le taglie">
+                        </label>
+                        <button type="button" data-product-size-inventory-apply>Applica</button>
+                        <button type="button" data-product-size-inventory-clear>Azzera</button>
+                      </div>
                     </header>
                     <div class="product-size-inventory-grid" data-product-size-inventory-grid></div>
                   </section>
@@ -426,6 +435,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/size-inventory-1/admin.js"></script>
+    <script src="/assets-v/size-inventory-eu-1/admin.js"></script>
   </body>
 </html>

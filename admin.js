@@ -17,6 +17,9 @@ const productSizeInventory = document.querySelector("[data-product-size-inventor
 const productSizeInventoryGrid = document.querySelector("[data-product-size-inventory-grid]");
 const productSizeInventoryTotal = document.querySelector("[data-product-size-inventory-total]");
 const productTotalInventoryHelp = document.querySelector("[data-product-total-inventory-help]");
+const productSizeInventoryBulk = document.querySelector("[data-product-size-inventory-bulk]");
+const productSizeInventoryApply = document.querySelector("[data-product-size-inventory-apply]");
+const productSizeInventoryClear = document.querySelector("[data-product-size-inventory-clear]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
 const productUploadCancel = document.querySelector("[data-product-upload-cancel]");
@@ -65,8 +68,8 @@ const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
 const aiProductResultsStorageKey = "haller-admin-ai-product-results";
 const defaultAdminProductSizes = {
-  clothing: ["S", "M", "L", "XL", "XXL"],
-  sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  clothing: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+  sneakers: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"],
   none: [],
 };
 
@@ -1361,6 +1364,20 @@ function syncProductSizeInventory() {
   return inventoryBySize;
 }
 
+function productSizeInventoryInputs() {
+  return productSizeInventoryGrid
+    ? [...productSizeInventoryGrid.querySelectorAll("[data-product-size-inventory-input]")]
+    : [];
+}
+
+function setAllProductSizeInventory(quantity) {
+  const normalized = Math.max(0, Number.parseInt(quantity, 10) || 0);
+  productSizeInventoryInputs().forEach((input) => {
+    input.value = String(normalized);
+  });
+  syncProductSizeInventory();
+}
+
 function renderProductSizeInventory(value = null) {
   if (!productForm || !productSizeInventory || !productSizeInventoryGrid) return;
   const sizes = adminProductSizes();
@@ -1371,10 +1388,14 @@ function renderProductSizeInventory(value = null) {
   productSizeInventoryGrid.innerHTML = sizes.map((size) => {
     const quantity = Number.isInteger(inventoryBySize[size]) ? String(inventoryBySize[size]) : "";
     return `
-      <label class="product-size-inventory-field">
+      <div class="product-size-inventory-field">
         <span>${escapeHtml(size)}</span>
-        <input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(quantity)}" data-product-size-inventory-input="${escapeHtml(size)}" aria-label="Inventario taglia ${escapeHtml(size)}" placeholder="0">
-      </label>
+        <div class="product-size-inventory-stepper">
+          <button type="button" data-product-size-inventory-step="-1" data-product-size-inventory-size="${escapeHtml(size)}" aria-label="Diminuisci quantità taglia ${escapeHtml(size)}">−</button>
+          <input type="number" min="0" step="1" inputmode="numeric" value="${escapeHtml(quantity)}" data-product-size-inventory-input="${escapeHtml(size)}" aria-label="Inventario taglia ${escapeHtml(size)}" placeholder="0">
+          <button type="button" data-product-size-inventory-step="1" data-product-size-inventory-size="${escapeHtml(size)}" aria-label="Aumenta quantità taglia ${escapeHtml(size)}">+</button>
+        </div>
+      </div>
     `;
   }).join("");
   syncProductSizeInventory();
@@ -2136,6 +2157,28 @@ productForm?.addEventListener("submit", async (event) => {
 productForm?.elements.sizes?.addEventListener("input", () => renderProductSizeInventory());
 productForm?.elements.sizeType?.addEventListener("change", () => renderProductSizeInventory());
 productSizeInventoryGrid?.addEventListener("input", syncProductSizeInventory);
+productSizeInventoryGrid?.addEventListener("click", (event) => {
+  const control = event.target.closest("[data-product-size-inventory-step]");
+  if (!control) return;
+  const size = control.dataset.productSizeInventorySize || "";
+  const input = productSizeInventoryInputs().find((entry) => entry.dataset.productSizeInventoryInput === size);
+  if (!input) return;
+  const step = Number.parseInt(control.dataset.productSizeInventoryStep || "0", 10) || 0;
+  input.value = String(Math.max(0, (Number.parseInt(input.value, 10) || 0) + step));
+  syncProductSizeInventory();
+});
+productSizeInventoryApply?.addEventListener("click", () => {
+  const quantity = Number.parseInt(productSizeInventoryBulk?.value || "", 10);
+  if (!Number.isInteger(quantity) || quantity < 0) {
+    productSizeInventoryBulk?.focus();
+    return;
+  }
+  setAllProductSizeInventory(quantity);
+});
+productSizeInventoryClear?.addEventListener("click", () => {
+  setAllProductSizeInventory(0);
+  if (productSizeInventoryBulk) productSizeInventoryBulk.value = "";
+});
 
 newProductButton?.addEventListener("click", startNewProduct);
 
