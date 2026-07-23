@@ -35,6 +35,8 @@ import {
   inventoryBySizeTotal,
   normalizeInventoryBySize,
   productInventoryTotal,
+  defaultProductSizes,
+  resolveProductSizeType,
 } from "./product-inventory.mjs";
 
 sharp.cache(false);
@@ -191,9 +193,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/size-inventory-1/styles.css", "/styles.css"],
   ["/assets-v/size-inventory-1/script.js", "/script.js"],
   ["/assets-v/size-inventory-1/admin.js", "/admin.js"],
-  ["/assets-v/size-inventory-eu-1/styles.css", "/styles.css"],
-  ["/assets-v/size-inventory-eu-1/script.js", "/script.js"],
-  ["/assets-v/size-inventory-eu-1/admin.js", "/admin.js"],
+  ["/assets-v/size-by-category-1/styles.css", "/styles.css"],
+  ["/assets-v/size-by-category-1/script.js", "/script.js"],
+  ["/assets-v/size-by-category-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1444,12 +1446,21 @@ async function readDefaultProducts() {
 function mergeProduct(product, overrides) {
   const override = overrides[product.id] || {};
   const images = Array.isArray(override.images) ? override.images : product.images;
+  const collection = override.collection || product.collection;
+  const category = override.category || product.category;
   return {
     ...product,
     ...override,
     id: product.id,
     baseName: product.name,
     custom: false,
+    collection,
+    category,
+    sizeType: resolveProductSizeType({
+      collection,
+      category,
+      sizeType: override.sizeType || product.sizeType,
+    }),
     images,
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
@@ -1505,12 +1516,6 @@ function cleanProductSizes(sizes) {
   return [...new Set(source.map((size) => cleanTrackingString(size, 12)).filter(Boolean))].slice(0, 20);
 }
 
-const defaultProductSizes = {
-  clothing: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
-  sneakers: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"],
-  none: [],
-};
-
 function cleanProductInventory(inventory) {
   if (inventory === "" || inventory === null || inventory === undefined) return null;
   const value = Number(inventory);
@@ -1518,7 +1523,13 @@ function cleanProductInventory(inventory) {
 }
 
 function cleanProductPatch(body) {
-  const sizeType = ["clothing", "sneakers", "none"].includes(body.sizeType) ? body.sizeType : "none";
+  const collection = cleanTrackingString(body.collection, 80);
+  const category = cleanTrackingString(body.category, 80);
+  const sizeType = resolveProductSizeType({
+    collection,
+    category,
+    sizeType: body.sizeType,
+  });
   const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
   const images = cleanProductImages(body.images);
   const sizes = cleanProductSizes(body.sizes);
@@ -1532,8 +1543,8 @@ function cleanProductPatch(body) {
     original: cleanTrackingString(body.original, 40),
     finalPrice: cleanTrackingString(body.finalPrice, 40),
     discount: cleanTrackingString(body.discount, 20),
-    collection: cleanTrackingString(body.collection, 80),
-    category: cleanTrackingString(body.category, 80),
+    collection,
+    category,
     sizeType,
     sizes,
     inventory: sizeInventoryTotal === null ? cleanProductInventory(body.inventory) : sizeInventoryTotal,

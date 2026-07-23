@@ -315,6 +315,16 @@ function translatePage() {
 
 const clothingSizes = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"];
 const sneakerSizes = ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"];
+
+function resolveCatalogProductSizeType(productOrSizeType) {
+  if (!productOrSizeType || typeof productOrSizeType !== "object") {
+    return ["clothing", "sneakers", "none"].includes(productOrSizeType) ? productOrSizeType : "clothing";
+  }
+  const label = `${productOrSizeType.collection || ""} ${productOrSizeType.category || ""}`.toLocaleLowerCase("it");
+  if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  return "clothing";
+}
 let productOverrides = {};
 let customProducts = [];
 let productCatalogDataReady = false;
@@ -1261,7 +1271,7 @@ function getSizes(productOrSizeType) {
   if (productOrSizeType && typeof productOrSizeType === "object" && Array.isArray(productOrSizeType.sizes) && productOrSizeType.sizes.length) {
     return productOrSizeType.sizes;
   }
-  const sizeType = typeof productOrSizeType === "object" ? productOrSizeType.sizeType : productOrSizeType;
+  const sizeType = resolveCatalogProductSizeType(productOrSizeType);
   if (sizeType === "clothing") {
     return clothingSizes;
   }
@@ -1424,16 +1434,23 @@ function normalizeCatalogCategory(value) {
 
 function applyProductOverride(product) {
   const override = productOverrides[product.id] || {};
+  const collection = override.collection || product.collection;
+  const category = normalizeCatalogCategory(override.category || product.category);
   return {
     ...product,
     ...override,
     id: product.id,
     baseName: product.baseName || product.name,
-    category: normalizeCatalogCategory(override.category || product.category),
+    collection,
+    category,
     original: normalizeProductPrice(override.original || product.original),
     finalPrice: normalizeProductPrice(override.finalPrice || product.finalPrice),
     discount: override.discount || product.discount,
-    sizeType: override.sizeType || product.sizeType,
+    sizeType: resolveCatalogProductSizeType({
+      collection,
+      category,
+      sizeType: override.sizeType || product.sizeType,
+    }),
     sizes: Array.isArray(override.sizes) ? override.sizes : product.sizes || [],
     inventoryTrackedBySize: Boolean(override.inventoryTrackedBySize),
     availableSizes: Array.isArray(override.availableSizes) ? override.availableSizes : [],
@@ -1454,15 +1471,17 @@ function applyProductOverride(product) {
 }
 
 function normalizeCustomProduct(product) {
-  const sizeType = ["clothing", "sneakers", "none"].includes(product.sizeType) ? product.sizeType : "none";
+  const collection = product.collection || "Selezione Haller Boutique";
+  const category = normalizeCatalogCategory(product.category || "Nuovi arrivi");
+  const sizeType = resolveCatalogProductSizeType({ collection, category, sizeType: product.sizeType });
   return {
     id: product.id || slugifyProduct(product.name),
     custom: true,
     baseName: product.baseName || product.name,
     name: product.name || "Prodotto",
     description: product.description || "",
-    collection: product.collection || "Selezione Haller Boutique",
-    category: normalizeCatalogCategory(product.category || "Nuovi arrivi"),
+    collection,
+    category,
     original: normalizeOptionalProductPrice(product.original),
     finalPrice: normalizeOptionalProductPrice(product.finalPrice),
     discount: product.discount || "",

@@ -8,6 +8,19 @@ function cleanQuantity(value) {
   return Number.isInteger(quantity) && quantity >= 0 ? quantity : null;
 }
 
+export const defaultProductSizes = {
+  clothing: ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"],
+  sneakers: ["34", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48"],
+  none: [],
+};
+
+export function resolveProductSizeType({ collection = "", category = "", sizeType = "" } = {}) {
+  const label = `${collection} ${category}`.toLocaleLowerCase("it");
+  if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  return "clothing";
+}
+
 export function normalizeInventoryBySize(value, sizes = []) {
   let source = value;
   if (typeof source === "string") {

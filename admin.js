@@ -73,6 +73,22 @@ const defaultAdminProductSizes = {
   none: [],
 };
 
+function resolveAdminProductSizeType({ collection = "", category = "" } = {}) {
+  const label = `${collection} ${category}`.toLocaleLowerCase("it");
+  if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  return "clothing";
+}
+
+function syncAdminProductSizeTypeFromDetails() {
+  if (!productForm?.elements.sizeType) return;
+  const sizeType = resolveAdminProductSizeType({
+    collection: productForm.elements.collection?.value,
+    category: productForm.elements.category?.value,
+  });
+  productForm.elements.sizeType.value = sizeType;
+}
+
 function storedAiProductResultIds() {
   try {
     const ids = JSON.parse(sessionStorage.getItem(aiProductResultsStorageKey) || "[]");
@@ -1329,7 +1345,10 @@ function adminProductSizes() {
     .map((size) => size.trim())
     .filter(Boolean);
   if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
-  const sizeType = productForm?.elements.sizeType?.value || "none";
+  const sizeType = resolveAdminProductSizeType({
+    collection: productForm?.elements.collection?.value,
+    category: productForm?.elements.category?.value,
+  });
   return defaultAdminProductSizes[sizeType] || [];
 }
 
@@ -1424,7 +1443,7 @@ function fillProductForm(product) {
   productForm.elements.original.value = formatAdminProductPrice(product.original);
   productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
   productForm.elements.discount.value = product.discount || "";
-  productForm.elements.sizeType.value = product.sizeType || "none";
+  syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.inventoryBySize.value = JSON.stringify(parseAdminInventoryBySize(product.inventoryBySize));
@@ -1453,7 +1472,7 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.original.value = "";
   productForm.elements.finalPrice.value = "";
   productForm.elements.discount.value = "";
-  productForm.elements.sizeType.value = suggestion.sizeType || "none";
+  syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
   productForm.elements.inventory.value = "";
   productForm.elements.inventoryBySize.value = "{}";
@@ -1477,7 +1496,7 @@ function startNewProduct() {
   productForm.elements.originalImages.value = "";
   productForm.elements.zoomImages.value = "";
   productForm.elements.imageVariant.value = "original";
-  productForm.elements.sizeType.value = "none";
+  productForm.elements.sizeType.value = "clothing";
   productForm.elements.inventoryBySize.value = "{}";
   renderProductSizeInventory({});
   setProductImageEntries([], [], [], "original", {});
@@ -2155,7 +2174,18 @@ productForm?.addEventListener("submit", async (event) => {
 });
 
 productForm?.elements.sizes?.addEventListener("input", () => renderProductSizeInventory());
-productForm?.elements.sizeType?.addEventListener("change", () => renderProductSizeInventory());
+productForm?.elements.sizeType?.addEventListener("change", () => {
+  syncAdminProductSizeTypeFromDetails();
+  renderProductSizeInventory();
+});
+productForm?.elements.collection?.addEventListener("input", () => {
+  syncAdminProductSizeTypeFromDetails();
+  renderProductSizeInventory();
+});
+productForm?.elements.category?.addEventListener("input", () => {
+  syncAdminProductSizeTypeFromDetails();
+  renderProductSizeInventory();
+});
 productSizeInventoryGrid?.addEventListener("input", syncProductSizeInventory);
 productSizeInventoryGrid?.addEventListener("click", (event) => {
   const control = event.target.closest("[data-product-size-inventory-step]");

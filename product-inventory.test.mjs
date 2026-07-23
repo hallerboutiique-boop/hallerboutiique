@@ -6,6 +6,7 @@ import {
   inventoryBySizeTotal,
   normalizeInventoryBySize,
   productInventoryTotal,
+  resolveProductSizeType,
 } from "./product-inventory.mjs";
 
 test("normalizes inventory for configured product sizes", () => {
@@ -21,6 +22,13 @@ test("keeps the complete configured European shoe range", () => {
     normalizeInventoryBySize({ 34: 1, 39: 2, 48: "3", 49: 4 }, europeanShoes),
     { 34: 1, 39: 2, 48: 3 }
   );
+});
+
+test("uses European sizes for footwear and clothing sizes for apparel", () => {
+  assert.equal(resolveProductSizeType({ collection: "Catalogo Donna", category: "Scarpe", sizeType: "none" }), "sneakers");
+  assert.equal(resolveProductSizeType({ collection: "Scarpe Uomo", category: "Nuovi arrivi", sizeType: "clothing" }), "sneakers");
+  assert.equal(resolveProductSizeType({ collection: "Catalogo Uomo", category: "T-Shirts", sizeType: "none" }), "clothing");
+  assert.equal(resolveProductSizeType({ collection: "Catalogo Donna", category: "Borse Donna", sizeType: "clothing" }), "none");
 });
 
 test("calculates total and available sizes from size inventory", () => {
