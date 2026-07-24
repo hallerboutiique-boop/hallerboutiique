@@ -99,12 +99,19 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/catalog-controls-1\/script\.js/);
+  assert.match(index, /\/assets-v\/hero-videos-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
   assert.match(womanSlide, /data-i18n-html="hero-title">LUSSO<br>QUALITÀ<br>STILE/);
   assert.match(womanSlide, /data-i18n-html="hero-description">Scopri le ultime novit/);
+  assert.match(index, /data-src="\/assets\/hero-videos\/man-turn-balenciaga\.mp4"/);
+  assert.match(index, /data-src="\/assets\/hero-videos\/woman-glasses-smile\.mp4"/);
+  assert.equal((index.match(/preload="none"/g) || []).length, 2);
+  assert.match(script, /function playHeroCharacterVideo\(slide\)/);
+  assert.match(script, /if \(!video\.hasAttribute\("src"\)\)/);
+  assert.match(script, /if \(!heroCharacterVideoPlaying && Date\.now\(\) >= heroRotationResumeAt\)/);
+  assert.match(styles, /\.hero-slide\.is-video-visible > \.hero-character-video/);
   assert.doesNotMatch(index, /class="tryon-home-callout"/);
   assert.doesNotMatch(index, /data-i18n-html="tryon-hero-title">INDOSSA/);
   assert.match(index, /class="benefit-tryon"[\s\S]*?data-i18n-html="tryon-hero-description">Per indossare i vestiti<br>come fossi in negozio\./);
@@ -331,7 +338,9 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   pages.forEach((html, index) => {
     const expectedStyles = pageNames[index] === "admin.html"
       ? /\/assets-v\/catalog-controls-1\/styles\.css/
-      : /\/assets-v\/admin-original-price-5\/styles\.css/;
+      : pageNames[index] === "index.html"
+        ? /\/assets-v\/hero-videos-1\/styles\.css/
+        : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
@@ -358,12 +367,15 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html) => assert.match(html, /\/assets-v\/catalog-controls-1\/script\.js/));
-  assert.match(index, /\/assets-v\/catalog-controls-1\/script\.js/);
+  assert.match(index, /\/assets-v\/hero-videos-1\/script\.js/);
+  assert.match(index, /\/assets-v\/hero-videos-1\/styles\.css/);
   assert.match(checkout, /\/assets-v\/catalog-controls-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/hero-videos-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/hero-videos-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });

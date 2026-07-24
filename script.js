@@ -11,6 +11,9 @@ let motionEventsBound = false;
 let motionScrollFrame = 0;
 let motionScrollDirection = "down";
 let lastMotionScrollY = window.scrollY;
+let activeHeroCharacterVideo = null;
+let heroCharacterVideoPlaying = false;
+let heroRotationResumeAt = 0;
 let siteLanguage = localStorage.getItem("haller-language") || "it";
 let productGallerySwipe = null;
 let productImageObserver = null;
@@ -1297,13 +1300,76 @@ function assignCatalogProductIds() {
 
 assignCatalogProductIds();
 
+function resetHeroCharacterVideo(slide) {
+  const video = slide?.querySelector("[data-hero-character-video]");
+  if (!video) return;
+  video.pause();
+  try {
+    video.currentTime = 0;
+  } catch {
+    // The source may not have loaded yet.
+  }
+  slide.classList.remove("is-video-loading", "is-video-visible", "is-video-ended");
+  if (activeHeroCharacterVideo === video) activeHeroCharacterVideo = null;
+  heroCharacterVideoPlaying = false;
+}
+
+function playHeroCharacterVideo(slide) {
+  const video = slide?.querySelector("[data-hero-character-video]");
+  if (!video || !slide.classList.contains("is-active")) return;
+
+  if (activeHeroCharacterVideo && activeHeroCharacterVideo !== video) {
+    resetHeroCharacterVideo(activeHeroCharacterVideo.closest("[data-hero-video-slide]"));
+  }
+
+  activeHeroCharacterVideo = video;
+  heroCharacterVideoPlaying = true;
+  heroRotationResumeAt = Number.POSITIVE_INFINITY;
+  slide.classList.remove("is-video-visible", "is-video-ended");
+  slide.classList.add("is-video-loading");
+
+  video.onplaying = () => {
+    slide.classList.remove("is-video-loading");
+    slide.classList.add("is-video-visible");
+  };
+  video.onended = () => {
+    heroCharacterVideoPlaying = false;
+    heroRotationResumeAt = Date.now() + 3000;
+    slide.classList.remove("is-video-loading");
+    slide.classList.add("is-video-visible", "is-video-ended");
+  };
+  video.onerror = () => {
+    heroCharacterVideoPlaying = false;
+    heroRotationResumeAt = Date.now();
+    slide.classList.remove("is-video-loading", "is-video-visible", "is-video-ended");
+  };
+
+  if (!video.hasAttribute("src")) {
+    video.src = video.dataset.src;
+    video.load();
+  }
+  try {
+    video.currentTime = 0;
+  } catch {
+    // Playback begins from the first frame once metadata is ready.
+  }
+  video.play().catch(() => {
+    heroCharacterVideoPlaying = false;
+    heroRotationResumeAt = Date.now();
+    slide.classList.remove("is-video-loading", "is-video-visible", "is-video-ended");
+  });
+}
+
 function showSlide(index) {
   if (slides.length === 0) {
     return;
   }
-  slides[active].classList.remove("is-active");
+  const previousSlide = slides[active];
+  const nextSlide = slides[index];
+  if (previousSlide !== nextSlide) resetHeroCharacterVideo(previousSlide);
+  previousSlide.classList.remove("is-active");
   active = index;
-  slides[active].classList.add("is-active");
+  nextSlide.classList.add("is-active");
   if (heroSlider) {
     heroSlider.classList.toggle("is-woman-active", slides[active].classList.contains("hero-slide-woman"));
   }
@@ -4107,7 +4173,9 @@ window.addEventListener("haller-language-change", (event) => applySiteLanguage(e
 
 if (slides.length > 0) {
   window.setInterval(() => {
-    showSlide((active + 1) % slides.length);
+    if (!heroCharacterVideoPlaying && Date.now() >= heroRotationResumeAt) {
+      showSlide((active + 1) % slides.length);
+    }
   }, 5200);
 }
 
@@ -4121,6 +4189,7 @@ document.addEventListener("touchend", finishProductImageZoomTouch);
 document.addEventListener("touchcancel", finishProductImageZoomTouch);
 
 document.addEventListener("click", (event) => {
+  const heroVideoSlide = event.target.closest("[data-hero-video-slide]");
   const searchButton = event.target.closest(".search-button");
   const searchClose = event.target.closest("[data-catalog-search-close]");
   const searchResult = event.target.closest("[data-catalog-search-result]");
@@ -4146,6 +4215,11 @@ document.addEventListener("click", (event) => {
   const zoomPrevious = event.target.closest("[data-product-zoom-previous]");
   const zoomNext = event.target.closest("[data-product-zoom-next]");
   const productCard = event.target.closest("[data-product-url]");
+
+  if (heroVideoSlide && !event.target.closest("a, button, input, select, textarea")) {
+    playHeroCharacterVideo(heroVideoSlide);
+    return;
+  }
 
   if (zoomOpen) {
     const gallery = zoomOpen.closest(".product-media, .product-detail-gallery");

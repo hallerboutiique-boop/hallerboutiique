@@ -167,6 +167,7 @@ const contentTypes = {
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
   ".webp": "image/webp",
+  ".mp4": "video/mp4",
 };
 const publicFiles = new Set([
   "/index.html",
@@ -241,8 +242,11 @@ const versionedPublicFiles = new Map([
   ["/assets-v/catalog-controls-1/script.js", "/script.js"],
   ["/assets-v/catalog-controls-1/admin.js", "/admin.js"],
   ["/assets-v/catalog-controls-1/styles.css", "/styles.css"],
+  ["/assets-v/hero-videos-1/script.js", "/script.js"],
+  ["/assets-v/hero-videos-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
+const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);
 
 const oauthProviders = {
   google: {
@@ -4446,7 +4450,7 @@ function safeStaticPath(urlPathname) {
     return filePath;
   }
   if (!publicFiles.has(pathname) && !pathname.startsWith("/assets/")) return null;
-  if (pathname.startsWith("/assets/") && !publicAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
+  if (pathname.startsWith("/assets/") && !staticAssetExtensions.has(path.extname(pathname).toLowerCase())) return null;
   const filePath = path.normalize(path.join(publicDir, pathname));
   if (!filePath.startsWith(publicDir)) return null;
   return filePath;
@@ -4490,7 +4494,7 @@ async function serveStatic(req, res, url) {
     const stat = await fs.stat(filePath);
     if (!stat.isFile()) return notFound(res);
     const ext = path.extname(filePath).toLowerCase();
-    const imageAsset = [".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico"].includes(ext);
+    const immutableAsset = [".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico", ".mp4"].includes(ext);
     res.writeHead(200, {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,
@@ -4498,7 +4502,7 @@ async function serveStatic(req, res, url) {
       "Permissions-Policy": "geolocation=(self)",
       "Cache-Control": ext === ".html"
         ? "no-cache"
-        : imageAsset ? "public, max-age=31536000, immutable" : "public, max-age=604800",
+        : immutableAsset ? "public, max-age=31536000, immutable" : "public, max-age=604800",
     });
     createReadStream(filePath).pipe(res);
   } catch {
