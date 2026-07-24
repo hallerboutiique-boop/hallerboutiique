@@ -336,6 +336,7 @@ function resolveCatalogProductSizeType(productOrSizeType) {
 }
 let productOverrides = {};
 let customProducts = [];
+let homeProductIds = null;
 let productCatalogDataReady = false;
 let productCatalogRetryDelay = 1500;
 let catalogState = { gender: "", category: "", brand: "", productIds: [] };
@@ -1561,11 +1562,13 @@ async function loadProductOverrides() {
     const data = await response.json();
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
+    homeProductIds = Array.isArray(data.homeProductIds) ? data.homeProductIds : null;
     productCatalogDataReady = true;
     productCatalogRetryDelay = 1500;
   } catch {
     productOverrides = {};
     customProducts = [];
+    homeProductIds = null;
     productCatalogDataReady = false;
     window.setTimeout(loadProductOverrides, productCatalogRetryDelay);
     productCatalogRetryDelay = Math.min(productCatalogRetryDelay * 2, 15000);
@@ -1759,6 +1762,14 @@ const homeFeaturedProductNames = [
 
 function getHomeFeaturedProducts() {
   const allProducts = getAllProducts();
+  if (Array.isArray(homeProductIds)) {
+    const productsById = new Map(allProducts.map((product) => [product.id, product]));
+    return homeProductIds
+      .map((id) => productsById.get(id))
+      .filter(Boolean)
+      .filter((product) => !product.isLastAvailable)
+      .filter((product) => getProductGallery(product).length > 0);
+  }
   const defaultFeatured = homeFeaturedProductNames
     .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
     .filter(Boolean);

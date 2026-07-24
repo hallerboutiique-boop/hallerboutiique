@@ -234,6 +234,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/tigris-direct-upload-1/admin.js", "/admin.js"],
   ["/assets-v/jeans-sizes-1/script.js", "/script.js"],
   ["/assets-v/jeans-sizes-1/admin.js", "/admin.js"],
+  ["/assets-v/home-products-1/script.js", "/script.js"],
+  ["/assets-v/home-products-1/admin.js", "/admin.js"],
+  ["/assets-v/home-products-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -327,15 +330,20 @@ async function readProductOverrides() {
   const data = await readJson(productsFile, { items: {}, custom: [] });
   data.items = data.items && typeof data.items === "object" ? data.items : {};
   data.custom = Array.isArray(data.custom) ? data.custom : [];
+  data.homeProductIds = Array.isArray(data.homeProductIds)
+    ? [...new Set(data.homeProductIds.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 200)
+    : null;
   return data;
 }
 
 async function writeProductOverrides(data) {
-  await writeJson(productsFile, {
+  const payload = {
     updatedAt: new Date().toISOString(),
     items: data.items && typeof data.items === "object" ? data.items : {},
     custom: Array.isArray(data.custom) ? data.custom : [],
-  });
+  };
+  if (Array.isArray(data.homeProductIds)) payload.homeProductIds = data.homeProductIds;
+  await writeJson(productsFile, payload);
 }
 
 function uploadFileName(value) {
@@ -673,11 +681,13 @@ async function createAndStoreProductZoomImage(productId, originalImage, publishe
 }
 
 async function persistProductImageOptimization(data) {
-  await writeJson(productsFile, {
+  const payload = {
     updatedAt: new Date().toISOString(),
     items: data.items,
     custom: data.custom,
-  });
+  };
+  if (Array.isArray(data.homeProductIds)) payload.homeProductIds = data.homeProductIds;
+  await writeJson(productsFile, payload);
 }
 
 async function productImageRenditionsExist(entries) {
@@ -2673,7 +2683,12 @@ async function handleProducts(req, res) {
     };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
-  json(res, 200, { ok: true, items, custom: data.custom.map(mergeCustomProduct).map(toPublicProduct) }, {
+  json(res, 200, {
+    ok: true,
+    items,
+    custom: data.custom.map(mergeCustomProduct).map(toPublicProduct),
+    homeProductIds: data.homeProductIds,
+  }, {
     "Cache-Control": "private, no-store",
   });
 }
@@ -2925,10 +2940,29 @@ async function handleAdminProducts(req, res) {
     const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
     return json(res, 200, {
       ok: true,
+      homeProductIds: overrides.homeProductIds,
       products: [
         ...overrides.custom.map(mergeCustomProduct),
         ...defaults.map((product) => mergeProduct(product, overrides.items)),
       ],
+    });
+  }
+
+  if (req.method === "PUT") {
+    const body = await parseBody(req);
+    return enqueueProductMutation(async () => {
+      const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+      const validIds = new Set([
+        ...defaults.map((product) => product.id),
+        ...overrides.custom.map((product) => product.id),
+      ]);
+      const requestedIds = Array.isArray(body.homeProductIds) ? body.homeProductIds : [];
+      overrides.homeProductIds = [...new Set(requestedIds
+        .map((id) => cleanTrackingString(id, 120))
+        .filter((id) => id && validIds.has(id)))]
+        .slice(0, 200);
+      await writeProductOverrides(overrides);
+      return json(res, 200, { ok: true, homeProductIds: overrides.homeProductIds });
     });
   }
 
@@ -2978,6 +3012,9 @@ async function handleAdminProducts(req, res) {
         delete overrides.items[id];
       } else {
         overrides.custom = overrides.custom.filter((product) => product.id !== id);
+      }
+      if (Array.isArray(overrides.homeProductIds)) {
+        overrides.homeProductIds = overrides.homeProductIds.filter((productId) => productId !== id);
       }
       await writeProductOverrides(overrides);
       return json(res, 200, { ok: true });

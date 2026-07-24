@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/jeans-sizes-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/home-products-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/jeans-sizes-1\/script\.js/);
+  assert.match(index, /\/assets-v\/home-products-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -329,7 +329,10 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     ...pageNames.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, index) => {
-    assert.match(html, /\/assets-v\/admin-original-price-5\/styles\.css/, pageNames[index]);
+    const expectedStyles = pageNames[index] === "admin.html"
+      ? /\/assets-v\/home-products-1\/styles\.css/
+      : /\/assets-v\/admin-original-price-5\/styles\.css/;
+    assert.match(html, expectedStyles, pageNames[index]);
   });
   assert.match(pages[1], /class="site-header utility-site-header account-site-header"/);
   assert.match(pages[1], /class="icon-button is-current account-current-action"/);
@@ -354,13 +357,13 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/jeans-sizes-1\/script\.js/));
-  assert.match(index, /\/assets-v\/jeans-sizes-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/jeans-sizes-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/home-products-1\/script\.js/));
+  assert.match(index, /\/assets-v\/home-products-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/home-products-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/jeans-sizes-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/jeans-sizes-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/home-products-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/home-products-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -490,7 +493,29 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("directUploads"/);
   assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/jeans-sizes-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/home-products-1\/admin\.js/);
+});
+
+test("admin can choose exactly which catalog products appear on the home page", async () => {
+  const [adminHtml, admin, script, server, styles] = await Promise.all([
+    readFile("admin.html", "utf8"),
+    readFile("admin.js", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+    readFile("styles.css", "utf8"),
+  ]);
+
+  assert.match(adminHtml, /data-admin-tab="home"/);
+  assert.match(adminHtml, /data-home-products-grid/);
+  assert.match(adminHtml, /data-home-products-save/);
+  assert.match(admin, /function renderHomeProducts\(\)/);
+  assert.match(admin, /body: JSON\.stringify\(\{ homeProductIds: orderedIds \}\)/);
+  assert.match(script, /if \(Array\.isArray\(homeProductIds\)\)/);
+  assert.match(script, /\.filter\(\(product\) => !product\.isLastAvailable\)/);
+  assert.match(server, /homeProductIds: overrides\.homeProductIds/);
+  assert.match(server, /overrides\.homeProductIds = \[\.\.\.new Set\(requestedIds/);
+  assert.match(styles, /\.home-products-grid/);
+  assert.match(adminHtml, /\/assets-v\/home-products-1\/styles\.css/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {

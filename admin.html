@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/admin-original-price-5/styles.css">
+    <link rel="stylesheet" href="/assets-v/home-products-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -74,6 +74,7 @@
           <div class="admin-tabs" role="tablist" aria-label="Sezioni dashboard">
             <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
             <button type="button" data-admin-tab="orders">Ordini</button>
+            <button type="button" data-admin-tab="home">Home</button>
             <button type="button" data-admin-tab="products">Prodotti</button>
             <button type="button" data-admin-tab="users">Utenti</button>
             <button type="button" data-admin-tab="replay">Video</button>
@@ -145,6 +146,35 @@
                 <tbody data-orders-table></tbody>
               </table>
             </div>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="home">
+            <div class="product-section-heading">
+              <div>
+                <span>Vetrina del sito</span>
+                <h2>Prodotti in home</h2>
+                <p>Scegli esattamente quali prodotti mostrare nella selezione principale della home. Le altre pagine del catalogo non vengono modificate.</p>
+              </div>
+              <button class="admin-new-product-button" type="button" data-home-products-save>
+                <i data-lucide="save"></i>
+                <span>Salva home</span>
+              </button>
+            </div>
+            <section class="dashboard-card dashboard-card-wide home-products-card">
+              <div class="home-products-toolbar">
+                <label class="product-admin-search">
+                  <span>Cerca prodotto</span>
+                  <input type="search" data-home-products-search placeholder="Nome, marca o categoria">
+                </label>
+                <div class="home-products-actions">
+                  <strong data-home-products-count>0 prodotti selezionati</strong>
+                  <button type="button" data-home-products-select-visible>Seleziona visibili</button>
+                  <button type="button" data-home-products-clear>Deseleziona tutti</button>
+                </div>
+              </div>
+              <div class="home-products-grid" data-home-products-grid></div>
+              <p class="auth-message home-products-message" data-home-products-message aria-live="polite"></p>
+            </section>
           </section>
 
           <section class="admin-tab-panel" data-admin-panel-tab="products">
@@ -447,6 +477,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/jeans-sizes-1/admin.js"></script>
+    <script src="/assets-v/home-products-1/admin.js"></script>
   </body>
 </html>

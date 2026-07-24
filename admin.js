@@ -8,6 +8,13 @@ const metricGrid = document.querySelector("[data-metric-grid]");
 const replaySessionsRoot = document.querySelector("[data-replay-sessions]");
 const replayPlayer = document.querySelector("[data-replay-player]");
 const adminProductsRoot = document.querySelector("[data-admin-products]");
+const homeProductsRoot = document.querySelector("[data-home-products-grid]");
+const homeProductsSearch = document.querySelector("[data-home-products-search]");
+const homeProductsCount = document.querySelector("[data-home-products-count]");
+const homeProductsMessage = document.querySelector("[data-home-products-message]");
+const homeProductsSave = document.querySelector("[data-home-products-save]");
+const homeProductsSelectVisible = document.querySelector("[data-home-products-select-visible]");
+const homeProductsClear = document.querySelector("[data-home-products-clear]");
 const productForm = document.querySelector("[data-product-form]");
 const productSearch = document.querySelector("[data-product-search]");
 const newProductButton = document.querySelector("[data-product-new]");
@@ -52,6 +59,7 @@ const productCropOriginal = document.querySelector("[data-product-crop-original]
 const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
 let adminProducts = [];
+let homeProductIds = new Set();
 let selectedProductId = "";
 let cropState = null;
 let cropDrag = null;
@@ -1820,6 +1828,88 @@ function filteredAdminProducts() {
     .sort((left, right) => score(left) - score(right) || String(left.name).localeCompare(String(right.name), "it"));
 }
 
+const legacyHomeProductNames = [
+  "Nike Air Force Louis Vuitton Red",
+  "Louis Vuitton Skate Beige/White",
+  "T-Shirt Balenciaga",
+  "T-Shirt Gucci",
+  "Polo Gucci",
+  "Tracksuit Nike Nocta",
+  "Jacket Stone Island",
+  "Crossbody Bag Louis Vuitton",
+  "Bag Louis Vuitton",
+  "Nike Air Force White/Pink",
+];
+
+function defaultHomeProductIds(products) {
+  const named = legacyHomeProductNames
+    .map((name) => products.find((product) => product.baseName === name || product.name === name))
+    .filter(Boolean);
+  const seen = new Set();
+  return [...products.filter((product) => product.custom), ...named, ...products]
+    .filter((product) => Array.isArray(product.images) && product.images.length > 0)
+    .filter((product) => {
+      if (!product.id || seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    })
+    .slice(0, 10)
+    .map((product) => product.id);
+}
+
+function filteredHomeProducts() {
+  const terms = normalizeSearchText(homeProductsSearch?.value || "").split(/\s+/).filter(Boolean);
+  if (!terms.length) return adminProducts;
+  return adminProducts.filter((product) => {
+    const searchable = normalizeSearchText([
+      product.name,
+      product.brand,
+      product.collection,
+      product.category,
+    ].filter(Boolean).join(" "));
+    return terms.every((term) => searchable.includes(term));
+  });
+}
+
+function setHomeProductsMessage(message, type = "") {
+  if (!homeProductsMessage) return;
+  homeProductsMessage.textContent = message || "";
+  homeProductsMessage.dataset.type = type;
+}
+
+function renderHomeProducts() {
+  if (!homeProductsRoot) return;
+  const products = filteredHomeProducts();
+  const selectedCount = homeProductIds.size;
+  if (homeProductsCount) {
+    homeProductsCount.textContent = `${selectedCount} ${selectedCount === 1 ? "prodotto selezionato" : "prodotti selezionati"}`;
+  }
+  if (!products.length) {
+    homeProductsRoot.innerHTML = emptyState("Nessun prodotto trovato.");
+    return;
+  }
+  homeProductsRoot.innerHTML = products.map((product) => {
+    const selected = homeProductIds.has(product.id);
+    const image = Array.isArray(product.images) ? product.images[0] : "";
+    return `
+      <label class="home-product-option${selected ? " is-selected" : ""}">
+        <input type="checkbox" value="${escapeHtml(product.id)}" data-home-product-id${selected ? " checked" : ""}>
+        <span class="home-product-check" aria-hidden="true"><i data-lucide="${selected ? "check" : "plus"}"></i></span>
+        <span class="home-product-image">
+          ${image
+            ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+            : `<i data-lucide="image"></i>`}
+        </span>
+        <span class="home-product-copy">
+          <strong>${escapeHtml(product.name)}</strong>
+          <small>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.category || product.collection || "Catalogo")}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
 function renderAdminProducts() {
   if (!adminProductsRoot) return;
   const query = (productSearch?.value || "").trim();
@@ -1860,6 +1950,11 @@ function renderAdminProducts() {
 async function loadProducts() {
   const data = await api("/api/admin/products");
   adminProducts = data.products || [];
+  homeProductIds = new Set(
+    Array.isArray(data.homeProductIds)
+      ? data.homeProductIds
+      : defaultHomeProductIds(adminProducts)
+  );
   if (!aiBatchResults.length) {
     aiBatchResults = storedAiProductResultIds()
       .map((id) => adminProducts.find((product) => product.id === id))
@@ -1873,6 +1968,7 @@ async function loadProducts() {
   }
   updateProductSuggestions();
   renderAdminProducts();
+  renderHomeProducts();
   renderAiProductResults();
   const selected = adminProducts.find((product) => product.id === selectedProductId);
   if (selected) {
@@ -2202,6 +2298,45 @@ document.addEventListener("click", (event) => {
 });
 
 productSearch?.addEventListener("input", renderAdminProducts);
+homeProductsSearch?.addEventListener("input", renderHomeProducts);
+homeProductsRoot?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-home-product-id]");
+  if (!input) return;
+  if (input.checked) homeProductIds.add(input.value);
+  else homeProductIds.delete(input.value);
+  setHomeProductsMessage("");
+  renderHomeProducts();
+});
+homeProductsSelectVisible?.addEventListener("click", () => {
+  filteredHomeProducts().forEach((product) => homeProductIds.add(product.id));
+  setHomeProductsMessage("");
+  renderHomeProducts();
+});
+homeProductsClear?.addEventListener("click", () => {
+  homeProductIds.clear();
+  setHomeProductsMessage("");
+  renderHomeProducts();
+});
+homeProductsSave?.addEventListener("click", async () => {
+  homeProductsSave.disabled = true;
+  setHomeProductsMessage("Salvataggio home in corso...");
+  try {
+    const orderedIds = adminProducts
+      .map((product) => product.id)
+      .filter((id) => homeProductIds.has(id));
+    const data = await api("/api/admin/products", {
+      method: "PUT",
+      body: JSON.stringify({ homeProductIds: orderedIds }),
+    });
+    homeProductIds = new Set(data.homeProductIds || []);
+    renderHomeProducts();
+    setHomeProductsMessage("Prodotti della home aggiornati.", "success");
+  } catch (error) {
+    setHomeProductsMessage(error.message, "error");
+  } finally {
+    homeProductsSave.disabled = false;
+  }
+});
 
 productPreviews?.addEventListener("click", async (event) => {
   if (Date.now() < suppressProductImageClickUntil && event.target.closest("[data-product-image-drag]")) {
