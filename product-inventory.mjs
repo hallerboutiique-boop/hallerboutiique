@@ -14,10 +14,16 @@ export const defaultProductSizes = {
   none: [],
 };
 
+export function isBagProduct({ name = "", collection = "", category = "" } = {}) {
+  const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
+  return /\b(?:bors[ae]|bags?|backpacks?|zain[oi])\b/u.test(label);
+}
+
 export function resolveProductSizeType({ name = "", collection = "", category = "", sizeType = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
-  if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  if (isBagProduct({ name, collection, category })) return "none";
+  if (/\b(?:wallet|portafogli[oa]?|card holder|cintur[ae]|accessori?)\b/u.test(label)) return "none";
   return "clothing";
 }
 

@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/bags-no-sizes-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/bags-normal-stock-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/bags-no-sizes-1\/script\.js/);
+  assert.match(index, /\/assets-v\/bags-normal-stock-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -146,7 +146,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(server, /const \{ inventory, inventoryBySize, \.\.\.publicProduct \}/);
   assert.match(server, /inventoryTrackedBySize/);
   assert.match(server, /availableInventorySizes/);
-  assert.match(server, /isLastAvailable:\s*inventoryTotal === 1/);
+  assert.match(server, /isLastAvailable:\s*!isBag && inventoryTotal === 1/);
   assert.match(server, /"Cache-Control": "private, no-store"/);
   assert.match(server, /async function reduceProductInventory/);
   assert.match(server, /enqueueProductMutation\(\(\) => reduceProductInventory\(products\)\)/);
@@ -352,12 +352,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/bags-no-sizes-1\/script\.js/));
-  assert.match(index, /\/assets-v\/bags-no-sizes-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/bags-no-sizes-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/bags-normal-stock-1\/script\.js/));
+  assert.match(index, /\/assets-v\/bags-normal-stock-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/bags-normal-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/bags-no-sizes-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/bags-normal-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/bags-no-sizes-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
@@ -558,6 +558,20 @@ test("bags never expose or persist product sizes", async () => {
   assert.match(server, /const sizes = sizeType === "none"\s*\?\s*\[\]/);
   assert.match(server, /const inventoryBySize = sizeType === "none"\s*\?\s*\{\}/);
   assert.match(server, /const sizes = sizeType === "none"\s*\?\s*\[\][\s\S]*?cleanProductSizes\(publicProduct\.sizes\)/);
+});
+
+test("bags with one unit remain in the normal catalog", async () => {
+  const [script, server, inventory] = await Promise.all([
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+    readFile("product-inventory.mjs", "utf8"),
+  ]);
+  assert.match(inventory, /export function isBagProduct/);
+  assert.match(server, /const isBag = isBagProduct\(publicProduct\)/);
+  assert.match(server, /isLastAvailable:\s*!isBag && inventoryTotal === 1/);
+  assert.match(script, /function isCatalogBagProduct/);
+  assert.match(script, /isLastAvailable:\s*!isBag && Boolean\(override\.isLastAvailable\)/);
+  assert.match(script, /isLastAvailable:\s*!isBag && Boolean\(product\.isLastAvailable\)/);
 });
 
 test("checkout renders product images from the cart", async () => {

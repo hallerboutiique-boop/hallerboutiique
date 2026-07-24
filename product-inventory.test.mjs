@@ -5,6 +5,7 @@ import {
   availableInventorySizes,
   defaultProductSizes,
   inventoryBySizeTotal,
+  isBagProduct,
   normalizeInventoryBySize,
   productInventoryTotal,
   resolveProductSizeType,
@@ -32,6 +33,13 @@ test("uses European sizes for footwear and clothing sizes for apparel", () => {
   assert.equal(resolveProductSizeType({ collection: "Catalogo Donna", category: "Borse Donna", sizeType: "clothing" }), "none");
   assert.equal(resolveProductSizeType({ name: "Mini Bag Hermès", collection: "Nuovi arrivi", category: "Novità", sizeType: "clothing" }), "none");
   assert.deepEqual(defaultProductSizes.clothing, ["S", "M", "L", "XL", "XXL"]);
+});
+
+test("recognizes bags independently from their catalog category", () => {
+  assert.equal(isBagProduct({ name: "BORSA PRADA", category: "Nuovi arrivi" }), true);
+  assert.equal(isBagProduct({ name: "Flap Bag Chanel", category: "Novità" }), true);
+  assert.equal(isBagProduct({ name: "Backpack Louis Vuitton", category: "Donna" }), true);
+  assert.equal(isBagProduct({ name: "T-Shirt Gucci", category: "T-Shirts Uomo" }), false);
 });
 
 test("calculates total and available sizes from size inventory", () => {

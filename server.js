@@ -42,6 +42,7 @@ import {
   normalizeInventoryBySize,
   productInventoryTotal,
   defaultProductSizes,
+  isBagProduct,
   resolveProductSizeType,
 } from "./product-inventory.mjs";
 
@@ -222,6 +223,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/zoom-selected-image-1/script.js", "/script.js"],
   ["/assets-v/bags-no-sizes-1/script.js", "/script.js"],
   ["/assets-v/bags-no-sizes-1/admin.js", "/admin.js"],
+  ["/assets-v/bags-normal-stock-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -2628,6 +2630,7 @@ async function handleProducts(req, res) {
   const data = await readProductOverrides();
   const toPublicProduct = (product) => {
     const { inventory, inventoryBySize, ...publicProduct } = product || {};
+    const isBag = isBagProduct(publicProduct);
     const sizeType = resolveProductSizeType(publicProduct);
     const sizes = sizeType === "none"
       ? []
@@ -2648,7 +2651,7 @@ async function handleProducts(req, res) {
         ? availableInventorySizes({ inventoryBySize: normalizedInventoryBySize })
         : [],
       isSoldOut: inventoryTotal === 0,
-      isLastAvailable: inventoryTotal === 1,
+      isLastAvailable: !isBag && inventoryTotal === 1,
     };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));
