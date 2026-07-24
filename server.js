@@ -30,6 +30,12 @@ import { createMatchingProductZoomImage } from "./product-image-zoom.mjs";
 import { normalizeTryOnCustomerImage, normalizeTryOnProductImage } from "./try-on-image.mjs";
 import { normalizePhotonSuggestions, validateCheckoutOrder } from "./checkout-address.mjs";
 import {
+  COURIER_ORIGIN,
+  fallbackDeliveryEstimate,
+  normalizeDeliveryCoordinate,
+  routeDurationToDeliveryMinutes,
+} from "./delivery-estimate.mjs";
+import {
   adjustProductInventory,
   availableInventorySizes,
   inventoryBySizeTotal,
@@ -72,6 +78,7 @@ const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
 const geoLookupTimeoutMs = 1800;
 const addressSuggestionTimeoutMs = 4500;
+const deliveryEstimateTimeoutMs = 6500;
 const minimumStorageReserveBytes = 64 * 1024 * 1024;
 const orphanUploadGraceMs = 10 * 60 * 1000;
 const productImageRenditionWidths = [480, 720, 1080, 1440];
@@ -118,6 +125,8 @@ let productZoomImageOptimizationStatus = {
 const geoCache = new Map();
 const addressSuggestionCache = new Map();
 const addressSuggestionRateLimits = new Map();
+const deliveryEstimateCache = new Map();
+const deliveryEstimateRateLimits = new Map();
 const tryOnJobs = new Map();
 const tryOnRequestJobs = new Map();
 
@@ -207,6 +216,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/admin-shoe-ranges-1/admin.js", "/admin.js"],
   ["/assets-v/tryon-speed-1/script.js", "/script.js"],
   ["/assets-v/delivery-minutes-1/script.js", "/script.js"],
+  ["/assets-v/delivery-estimate-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1325,6 +1335,115 @@ async function handleAddressSuggestions(req, res, url) {
       message: "I suggerimenti dell'indirizzo non sono disponibili. Riprova tra poco.",
     });
   }
+}
+
+function deliveryEstimateCacheKey(latitude, longitude) {
+  return `${latitude.toFixed(4)},${longitude.toFixed(4)}`;
+}
+
+function rememberDeliveryEstimate(key, estimate) {
+  if (deliveryEstimateCache.size >= 1000) {
+    deliveryEstimateCache.delete(deliveryEstimateCache.keys().next().value);
+  }
+  deliveryEstimateCache.set(key, {
+    estimate,
+    expiresAt: Date.now() + 10 * 60 * 1000,
+  });
+}
+
+function canRequestDeliveryEstimate(ip) {
+  const key = cleanIp(ip) || "unknown";
+  const now = Date.now();
+  const current = deliveryEstimateRateLimits.get(key);
+  if (!current || current.expiresAt <= now) {
+    deliveryEstimateRateLimits.set(key, { count: 1, expiresAt: now + 60 * 1000 });
+    if (deliveryEstimateRateLimits.size > 2000) {
+      deliveryEstimateRateLimits.delete(deliveryEstimateRateLimits.keys().next().value);
+    }
+    return true;
+  }
+  current.count += 1;
+  return current.count <= 20;
+}
+
+function publicDeliveryEstimate(estimate) {
+  return {
+    ok: true,
+    minutes: estimate.minutes,
+    distanceKm: estimate.distanceKm,
+    source: estimate.source,
+    origin: {
+      name: COURIER_ORIGIN.name,
+      address: COURIER_ORIGIN.address,
+    },
+  };
+}
+
+async function calculateDeliveryEstimate(destination) {
+  const endpoint = new URL(
+    `https://router.project-osrm.org/route/v1/driving/${COURIER_ORIGIN.longitude},${COURIER_ORIGIN.latitude};${destination.longitude},${destination.latitude}`
+  );
+  endpoint.searchParams.set("overview", "false");
+  endpoint.searchParams.set("alternatives", "false");
+  endpoint.searchParams.set("steps", "false");
+
+  try {
+    const response = await fetch(endpoint, {
+      signal: AbortSignal.timeout(deliveryEstimateTimeoutMs),
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "HallerBoutique/1.0 (https://www.hallerboutiique.com/)",
+      },
+    });
+    if (!response.ok) throw new Error(`Routing failed: ${response.status}`);
+    const data = await response.json();
+    const route = Array.isArray(data.routes) ? data.routes[0] : null;
+    const minutes = routeDurationToDeliveryMinutes(route?.duration);
+    const distanceKm = Number(route?.distance) / 1000;
+    if (data.code !== "Ok" || minutes === null || !Number.isFinite(distanceKm)) {
+      throw new Error("Routing response is incomplete");
+    }
+    return {
+      minutes,
+      distanceKm: Number(distanceKm.toFixed(1)),
+      source: "road-route",
+    };
+  } catch (error) {
+    console.error(`[delivery] Road estimate unavailable: ${error.message}`);
+    return fallbackDeliveryEstimate(destination);
+  }
+}
+
+async function handleDeliveryEstimate(req, res) {
+  let body;
+  try {
+    const payload = await readRequestBuffer(req, 4096);
+    body = payload.length ? JSON.parse(payload.toString("utf8")) : {};
+  } catch {
+    return badRequest(res, "Posizione non valida.");
+  }
+
+  const latitude = normalizeDeliveryCoordinate(body.latitude, -90, 90);
+  const longitude = normalizeDeliveryCoordinate(body.longitude, -180, 180);
+  if (latitude === null || longitude === null) {
+    return badRequest(res, "Posizione non valida.");
+  }
+
+  const cacheKey = deliveryEstimateCacheKey(latitude, longitude);
+  const cached = deliveryEstimateCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) {
+    return json(res, 200, publicDeliveryEstimate(cached.estimate));
+  }
+  if (!canRequestDeliveryEstimate(clientIp(req))) {
+    return json(res, 429, {
+      ok: false,
+      message: "Troppe richieste. Attendi qualche secondo e riprova.",
+    });
+  }
+
+  const estimate = await calculateDeliveryEstimate({ latitude, longitude });
+  rememberDeliveryEstimate(cacheKey, estimate);
+  return json(res, 200, publicDeliveryEstimate(estimate));
 }
 
 function cleanDeviceField(value, max = 120) {
@@ -3981,6 +4100,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/consent") return handleConsent(req, res);
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "GET" && url.pathname === "/api/address-suggestions") return handleAddressSuggestions(req, res, url);
+  if (req.method === "POST" && url.pathname === "/api/delivery-estimate") return handleDeliveryEstimate(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
   const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);
