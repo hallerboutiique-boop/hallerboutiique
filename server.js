@@ -238,6 +238,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/home-products-1/admin.js", "/admin.js"],
   ["/assets-v/home-products-1/styles.css", "/styles.css"],
   ["/assets-v/home-products-2/admin.js", "/admin.js"],
+  ["/assets-v/catalog-controls-1/script.js", "/script.js"],
+  ["/assets-v/catalog-controls-1/admin.js", "/admin.js"],
+  ["/assets-v/catalog-controls-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -331,9 +334,12 @@ async function readProductOverrides() {
   const data = await readJson(productsFile, { items: {}, custom: [] });
   data.items = data.items && typeof data.items === "object" ? data.items : {};
   data.custom = Array.isArray(data.custom) ? data.custom : [];
-  data.homeProductIds = Array.isArray(data.homeProductIds)
-    ? [...new Set(data.homeProductIds.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 200)
-    : null;
+  const normalizeProductIds = (value, fallback = null) => Array.isArray(value)
+    ? [...new Set(value.map((id) => String(id || "").trim()).filter(Boolean))].slice(0, 200)
+    : fallback;
+  data.homeProductIds = normalizeProductIds(data.homeProductIds);
+  data.newArrivalProductIds = normalizeProductIds(data.newArrivalProductIds);
+  data.deletedProductIds = normalizeProductIds(data.deletedProductIds, []);
   return data;
 }
 
@@ -344,6 +350,8 @@ async function writeProductOverrides(data) {
     custom: Array.isArray(data.custom) ? data.custom : [],
   };
   if (Array.isArray(data.homeProductIds)) payload.homeProductIds = data.homeProductIds;
+  if (Array.isArray(data.newArrivalProductIds)) payload.newArrivalProductIds = data.newArrivalProductIds;
+  if (Array.isArray(data.deletedProductIds)) payload.deletedProductIds = data.deletedProductIds;
   await writeJson(productsFile, payload);
 }
 
@@ -688,6 +696,8 @@ async function persistProductImageOptimization(data) {
     custom: data.custom,
   };
   if (Array.isArray(data.homeProductIds)) payload.homeProductIds = data.homeProductIds;
+  if (Array.isArray(data.newArrivalProductIds)) payload.newArrivalProductIds = data.newArrivalProductIds;
+  if (Array.isArray(data.deletedProductIds)) payload.deletedProductIds = data.deletedProductIds;
   await writeJson(productsFile, payload);
 }
 
@@ -2687,8 +2697,13 @@ async function handleProducts(req, res) {
   json(res, 200, {
     ok: true,
     items,
-    custom: data.custom.map(mergeCustomProduct).map(toPublicProduct),
+    custom: data.custom
+      .filter((product) => !data.deletedProductIds.includes(product.id))
+      .map(mergeCustomProduct)
+      .map(toPublicProduct),
     homeProductIds: data.homeProductIds,
+    newArrivalProductIds: data.newArrivalProductIds,
+    deletedProductIds: data.deletedProductIds,
   }, {
     "Cache-Control": "private, no-store",
   });
@@ -2942,9 +2957,14 @@ async function handleAdminProducts(req, res) {
     return json(res, 200, {
       ok: true,
       homeProductIds: overrides.homeProductIds,
+      newArrivalProductIds: overrides.newArrivalProductIds,
       products: [
-        ...overrides.custom.map(mergeCustomProduct),
-        ...defaults.map((product) => mergeProduct(product, overrides.items)),
+        ...overrides.custom
+          .filter((product) => !overrides.deletedProductIds.includes(product.id))
+          .map(mergeCustomProduct),
+        ...defaults
+          .filter((product) => !overrides.deletedProductIds.includes(product.id))
+          .map((product) => mergeProduct(product, overrides.items)),
       ],
     });
   }
@@ -2957,13 +2977,22 @@ async function handleAdminProducts(req, res) {
         ...defaults.map((product) => product.id),
         ...overrides.custom.map((product) => product.id),
       ]);
-      const requestedIds = Array.isArray(body.homeProductIds) ? body.homeProductIds : [];
-      overrides.homeProductIds = [...new Set(requestedIds
+      const cleanSelection = (ids) => [...new Set(ids
         .map((id) => cleanTrackingString(id, 120))
-        .filter((id) => id && validIds.has(id)))]
+        .filter((id) => id && validIds.has(id) && !overrides.deletedProductIds.includes(id)))]
         .slice(0, 200);
+      if (Array.isArray(body.homeProductIds)) {
+        overrides.homeProductIds = cleanSelection(body.homeProductIds);
+      }
+      if (Array.isArray(body.newArrivalProductIds)) {
+        overrides.newArrivalProductIds = cleanSelection(body.newArrivalProductIds);
+      }
       await writeProductOverrides(overrides);
-      return json(res, 200, { ok: true, homeProductIds: overrides.homeProductIds });
+      return json(res, 200, {
+        ok: true,
+        homeProductIds: overrides.homeProductIds,
+        newArrivalProductIds: overrides.newArrivalProductIds,
+      });
     });
   }
 
@@ -3009,7 +3038,15 @@ async function handleAdminProducts(req, res) {
     return enqueueProductMutation(async () => {
       const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
       const id = cleanTrackingString(body.id, 120);
-      if (defaults.some((product) => product.id === id)) {
+      const isDefault = defaults.some((product) => product.id === id);
+      const isCustom = overrides.custom.some((product) => product.id === id);
+      if (!id || (!isDefault && !isCustom)) {
+        return json(res, 404, { ok: false, message: "Prodotto non trovato." });
+      }
+      const mode = body.mode === "reset" ? "reset" : "delete";
+      if (mode === "delete") {
+        overrides.deletedProductIds = [...new Set([...overrides.deletedProductIds, id])].slice(0, 200);
+      } else if (isDefault) {
         delete overrides.items[id];
       } else {
         overrides.custom = overrides.custom.filter((product) => product.id !== id);
@@ -3017,8 +3054,11 @@ async function handleAdminProducts(req, res) {
       if (Array.isArray(overrides.homeProductIds)) {
         overrides.homeProductIds = overrides.homeProductIds.filter((productId) => productId !== id);
       }
+      if (Array.isArray(overrides.newArrivalProductIds)) {
+        overrides.newArrivalProductIds = overrides.newArrivalProductIds.filter((productId) => productId !== id);
+      }
       await writeProductOverrides(overrides);
-      return json(res, 200, { ok: true });
+      return json(res, 200, { ok: true, deleted: mode === "delete" });
     });
   }
 

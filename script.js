@@ -337,9 +337,11 @@ function resolveCatalogProductSizeType(productOrSizeType) {
 let productOverrides = {};
 let customProducts = [];
 let homeProductIds = null;
+let newArrivalProductIds = null;
+let deletedProductIds = new Set();
 let productCatalogDataReady = false;
 let productCatalogRetryDelay = 1500;
-let catalogState = { gender: "", category: "", brand: "", productIds: [] };
+let catalogState = { gender: "", category: "", brand: "", productIds: [], view: "" };
 let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
@@ -1219,7 +1221,6 @@ const catalogSections = [
         products: [
           item("Crossbody Bag Gucci", "171,41", "119,99", "-30%", "none"),
           item("Crossbody Bag Louis Vuitton", "185,70", "129,99", "-30%", "none"),
-          item("Dogon Wallet Herm\u00e8s", "185,70", "129,99", "-30%", "none"),
           item("Card Holder Herm\u00e8s", "157,13", "109,99", "-30%", "none"),
         ],
       },
@@ -1246,12 +1247,8 @@ const catalogSections = [
         products: [
           item("Bag Louis Vuitton", "357,13", "249,99", "-30%", "none"),
           item("Backpack Louis Vuitton", "471,41", "329,99", "-30%", "none"),
-          item("Mini Bag Herm\u00e8s", "157,13", "109,99", "-30%", "none"),
           item("Flap Bag Chanel", "214,27", "149,99", "-30%", "none"),
           item("Baguette Bag Fendi", "199,99", "139,99", "-30%", "none"),
-          item("Kelly Bag Herm\u00e8s", "271,41", "189,99", "-30%", "none"),
-          item("Wallet Bag Herm\u00e8s", "199,99", "139,99", "-30%", "none"),
-          item("Dogon Wallet Herm\u00e8s", "185,70", "129,99", "-30%", "none"),
         ],
       },
       {
@@ -1434,41 +1431,45 @@ const catalogMenuColumns = {
   ],
 };
 
+const catalogMenuHiddenCategories = {
+  uomo: new Set(["T-Shirts", "Completo"]),
+};
+
 const catalogCategoryTranslations = {
   it: {
     "T-Shirts": "T-Shirt", Polo: "Polo", "Jeans corti": "Jeans corti", "Jeans lunghi": "Jeans lunghi",
     Pantaloncini: "Pantaloncini", "Giacche leggere": "Giacca leggera", Tuta: "Tute", Completo: "Completi casual",
-    Scarpe: "Scarpe", "Borse Uomo": "Borse", "Borse Donna": "Borse", "Nuovi arrivi": "Nuovi arrivi",
+    Scarpe: "Scarpe", "Borse Uomo": "Pochette", "Borse Donna": "Borse", "Nuovi arrivi": "Nuovi arrivi",
   },
   en: {
     "T-Shirts": "T-Shirts", Polo: "Polo shirts", "Jeans corti": "Denim shorts", "Jeans lunghi": "Jeans",
     Pantaloncini: "Shorts", "Giacche leggere": "Light jackets", Tuta: "Tracksuits", Completo: "Casual sets",
-    Scarpe: "Shoes", "Borse Uomo": "Bags", "Borse Donna": "Bags", "Nuovi arrivi": "New arrivals",
+    Scarpe: "Shoes", "Borse Uomo": "Pouches", "Borse Donna": "Bags", "Nuovi arrivi": "New arrivals",
   },
   fr: {
     "T-Shirts": "T-shirts", Polo: "Polos", "Jeans corti": "Shorts en jean", "Jeans lunghi": "Jeans",
     Pantaloncini: "Shorts", "Giacche leggere": "Vestes legeres", Tuta: "Survetements", Completo: "Ensembles casual",
-    Scarpe: "Chaussures", "Borse Uomo": "Sacs", "Borse Donna": "Sacs", "Nuovi arrivi": "Nouveautes",
+    Scarpe: "Chaussures", "Borse Uomo": "Pochettes", "Borse Donna": "Sacs", "Nuovi arrivi": "Nouveautes",
   },
   de: {
     "T-Shirts": "T-Shirts", Polo: "Poloshirts", "Jeans corti": "Jeansshorts", "Jeans lunghi": "Jeans",
     Pantaloncini: "Shorts", "Giacche leggere": "Leichte Jacken", Tuta: "Trainingsanzuge", Completo: "Freizeitsets",
-    Scarpe: "Schuhe", "Borse Uomo": "Taschen", "Borse Donna": "Taschen", "Nuovi arrivi": "Neuheiten",
+    Scarpe: "Schuhe", "Borse Uomo": "Clutches", "Borse Donna": "Taschen", "Nuovi arrivi": "Neuheiten",
   },
   es: {
     "T-Shirts": "Camisetas", Polo: "Polos", "Jeans corti": "Shorts vaqueros", "Jeans lunghi": "Vaqueros",
     Pantaloncini: "Pantalones cortos", "Giacche leggere": "Chaquetas ligeras", Tuta: "Chandales", Completo: "Conjuntos casuales",
-    Scarpe: "Zapatos", "Borse Uomo": "Bolsos", "Borse Donna": "Bolsos", "Nuovi arrivi": "Novedades",
+    Scarpe: "Zapatos", "Borse Uomo": "Bolsos de mano", "Borse Donna": "Bolsos", "Nuovi arrivi": "Novedades",
   },
   sq: {
     "T-Shirts": "Bluza", Polo: "Bluza polo", "Jeans corti": "Pantallona xhins te shkurtra", "Jeans lunghi": "Xhinse",
     Pantaloncini: "Pantallona te shkurtra", "Giacche leggere": "Xhaketa te lehta", Tuta: "Komplete sportive", Completo: "Komplete casual",
-    Scarpe: "Kepuce", "Borse Uomo": "Canta", "Borse Donna": "Canta", "Nuovi arrivi": "Te rejat",
+    Scarpe: "Kepuce", "Borse Uomo": "Canta dore", "Borse Donna": "Canta", "Nuovi arrivi": "Te rejat",
   },
   ro: {
     "T-Shirts": "Tricouri", Polo: "Tricouri polo", "Jeans corti": "Pantaloni scurti din denim", "Jeans lunghi": "Blugi",
     Pantaloncini: "Pantaloni scurti", "Giacche leggere": "Jachete usoare", Tuta: "Treninguri", Completo: "Seturi casual",
-    Scarpe: "Pantofi", "Borse Uomo": "Genti", "Borse Donna": "Genti", "Nuovi arrivi": "Noutati",
+    Scarpe: "Pantofi", "Borse Uomo": "Posete", "Borse Donna": "Genti", "Nuovi arrivi": "Noutati",
   },
 };
 
@@ -1563,12 +1564,16 @@ async function loadProductOverrides() {
     productOverrides = data.items && typeof data.items === "object" ? data.items : {};
     customProducts = Array.isArray(data.custom) ? data.custom.map(normalizeCustomProduct) : [];
     homeProductIds = Array.isArray(data.homeProductIds) ? data.homeProductIds : null;
+    newArrivalProductIds = Array.isArray(data.newArrivalProductIds) ? data.newArrivalProductIds : null;
+    deletedProductIds = new Set(Array.isArray(data.deletedProductIds) ? data.deletedProductIds : []);
     productCatalogDataReady = true;
     productCatalogRetryDelay = 1500;
   } catch {
     productOverrides = {};
     customProducts = [];
     homeProductIds = null;
+    newArrivalProductIds = null;
+    deletedProductIds = new Set();
     productCatalogDataReady = false;
     window.setTimeout(loadProductOverrides, productCatalogRetryDelay);
     productCatalogRetryDelay = Math.min(productCatalogRetryDelay * 2, 15000);
@@ -1744,7 +1749,7 @@ function getAllProducts() {
   const defaults = catalogSections
     .flatMap((section) => section.categories.flatMap((category) => category.products))
     .map(applyProductOverride);
-  return [...customProducts, ...defaults];
+  return [...customProducts, ...defaults].filter((product) => !deletedProductIds.has(product.id));
 }
 
 const homeFeaturedProductNames = [
@@ -1783,6 +1788,16 @@ function getHomeFeaturedProducts() {
       return true;
     })
     .slice(0, 10);
+}
+
+function getNewArrivalProducts() {
+  if (!Array.isArray(newArrivalProductIds)) return getHomeFeaturedProducts();
+  const productsById = new Map(getAllProducts().map((product) => [product.id, product]));
+  return newArrivalProductIds
+    .map((id) => productsById.get(id))
+    .filter(Boolean)
+    .filter((product) => !product.isLastAvailable)
+    .filter((product) => getProductGallery(product).length > 0);
 }
 
 function findProduct(productName) {
@@ -1936,7 +1951,8 @@ function renderCatalogNavigation() {
   ["uomo", "donna"].forEach((gender) => {
     const panel = document.querySelector(`[data-catalog-nav-panel="${gender}"]`);
     if (!panel) return;
-    const categories = getCategoriesForGender(gender);
+    const hiddenCategories = catalogMenuHiddenCategories[gender] || new Set();
+    const categories = getCategoriesForGender(gender).filter((category) => !hiddenCategories.has(category));
     const configuredOrder = catalogMenuColumns[gender]?.flat() || [];
     const orderedCategories = [
       ...configuredOrder.filter((category) => categories.includes(category)),
@@ -1973,6 +1989,20 @@ function renderCatalog() {
     return;
   }
   catalogRoot.removeAttribute("aria-busy");
+
+  if (catalogState.view === "new-arrivals") {
+    const products = getNewArrivalProducts();
+    catalogRoot.innerHTML = `
+      <section class="catalog-browse">
+        <header class="catalog-browse-heading"><p>${escapeHtml(translate("selection"))}</p><h3>${escapeHtml(translate("new-arrivals"))}</h3></header>
+        <div class="product-grid product-grid-featured">${products.map(createProductCard).join("") || `<p class="catalog-empty">${translate("catalog-search-empty")}</p>`}</div>
+      </section>
+    `;
+    observeProductImages(catalogRoot);
+    refreshScrollReveals(catalogRoot);
+    if (window.lucide) window.lucide.createIcons();
+    return;
+  }
 
   if (!catalogState.gender && catalogState.productIds.length === 0) {
     catalogRoot.innerHTML = `<section class="catalog-featured"><div class="product-grid product-grid-featured">${getHomeFeaturedProducts().map(createProductCard).join("")}</div></section>`;
@@ -4065,8 +4095,12 @@ function applySiteLanguage(language) {
 applySiteLanguage(siteLanguage);
 ensureCatalogSearch();
 const initialCatalogGender = window.location.hash.replace("#", "");
+const initialCatalogView = new URLSearchParams(window.location.search).get("view");
 if (["uomo", "donna"].includes(initialCatalogGender)) {
-  catalogState = { gender: initialCatalogGender, category: "", brand: "", productIds: [] };
+  catalogState = { gender: initialCatalogGender, category: "", brand: "", productIds: [], view: "" };
+  renderCatalog();
+} else if (initialCatalogView === "new-arrivals") {
+  catalogState = { gender: "", category: "", brand: "", productIds: [], view: "new-arrivals" };
   renderCatalog();
 }
 window.addEventListener("haller-language-change", (event) => applySiteLanguage(event.detail));
@@ -4093,6 +4127,8 @@ document.addEventListener("click", (event) => {
   const navToggle = event.target.closest("[data-catalog-nav-toggle]");
   const catalogFilter = event.target.closest("[data-catalog-filter]");
   const catalogReset = event.target.closest("[data-catalog-reset]");
+  const newArrivalsLink = event.target.closest("[data-new-arrivals-link]");
+  const catalogHomeLink = event.target.closest("[data-catalog-home-link]");
   const sizeOption = event.target.closest("[data-size-option]");
   const tryOnButton = event.target.closest("[data-try-on]");
   const addButton = event.target.closest("[data-add-to-cart]");
@@ -4188,12 +4224,33 @@ document.addEventListener("click", (event) => {
     }
   }
 
+  if (newArrivalsLink) {
+    event.preventDefault();
+    catalogState = { gender: "", category: "", brand: "", productIds: [], view: "new-arrivals" };
+    closeCatalogNavPanels();
+    renderCatalog();
+    window.history.replaceState(null, "", "index.html?view=new-arrivals#selezione");
+    window.requestAnimationFrame(() => document.querySelector("#selezione")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    return;
+  }
+
+  if (catalogHomeLink) {
+    event.preventDefault();
+    catalogState = { gender: "", category: "", brand: "", productIds: [], view: "" };
+    closeCatalogNavPanels();
+    renderCatalog();
+    window.history.replaceState(null, "", "index.html");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    return;
+  }
+
   if (catalogFilter) {
     catalogState = {
       gender: catalogFilter.dataset.catalogGender || "",
       category: catalogFilter.dataset.catalogCategory || "",
       brand: catalogFilter.dataset.catalogBrand || "",
       productIds: [],
+      view: "",
     };
     closeCatalogNavPanels();
     renderCatalog();
@@ -4204,7 +4261,7 @@ document.addEventListener("click", (event) => {
   }
 
   if (catalogReset) {
-    catalogState = { gender: "", category: "", brand: "", productIds: [] };
+    catalogState = { gender: "", category: "", brand: "", productIds: [], view: "" };
     renderCatalog();
   }
 

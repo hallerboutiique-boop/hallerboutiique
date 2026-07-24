@@ -51,8 +51,8 @@
       </div>
 
       <nav class="main-nav" aria-label="Menu principale" data-i18n-aria-label="main-menu">
-        <a class="active" href="#" data-i18n="home">Home</a>
-        <a href="#selezione" data-i18n="new-arrivals">Nuovi arrivi</a>
+        <a class="active" href="index.html" data-catalog-home-link data-i18n="home">Home</a>
+        <a href="index.html?view=new-arrivals#selezione" data-new-arrivals-link data-i18n="new-arrivals">Nuovi arrivi</a>
         <div class="catalog-nav-menu">
           <button class="catalog-nav-toggle" type="button" data-catalog-nav-toggle="uomo" aria-expanded="false" aria-controls="catalog-nav-uomo"><span data-i18n="men">Uomo</span> <i data-lucide="chevron-down"></i></button>
           <div class="catalog-nav-panel" id="catalog-nav-uomo" data-catalog-nav-panel="uomo" hidden></div>
@@ -170,6 +170,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=restore-latest-ui-1"></script>
-    <script src="/assets-v/home-products-1/script.js"></script>
+    <script src="/assets-v/catalog-controls-1/script.js"></script>
   </body>
 </html>

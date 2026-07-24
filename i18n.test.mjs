@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/home-products-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/catalog-controls-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/home-products-1\/script\.js/);
+  assert.match(index, /\/assets-v\/catalog-controls-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -330,7 +330,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   ]);
   pages.forEach((html, index) => {
     const expectedStyles = pageNames[index] === "admin.html"
-      ? /\/assets-v\/home-products-1\/styles\.css/
+      ? /\/assets-v\/catalog-controls-1\/styles\.css/
       : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
@@ -357,13 +357,13 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/home-products-1\/script\.js/));
-  assert.match(index, /\/assets-v\/home-products-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/home-products-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/catalog-controls-1\/script\.js/));
+  assert.match(index, /\/assets-v\/catalog-controls-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/catalog-controls-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/home-products-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/home-products-2\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/catalog-controls-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -493,7 +493,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("directUploads"/);
   assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/home-products-2\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/catalog-controls-1\/admin\.js/);
 });
 
 test("admin can choose exactly which catalog products appear on the home page", async () => {
@@ -514,9 +514,48 @@ test("admin can choose exactly which catalog products appear on the home page", 
   assert.match(script, /if \(Array\.isArray\(homeProductIds\)\)/);
   assert.match(script, /\.filter\(\(product\) => !product\.isLastAvailable\)/);
   assert.match(server, /homeProductIds: overrides\.homeProductIds/);
-  assert.match(server, /overrides\.homeProductIds = \[\.\.\.new Set\(requestedIds/);
+  assert.match(server, /overrides\.homeProductIds = cleanSelection\(body\.homeProductIds\)/);
   assert.match(styles, /\.home-products-grid/);
-  assert.match(adminHtml, /\/assets-v\/home-products-1\/styles\.css/);
+  assert.match(adminHtml, /\/assets-v\/catalog-controls-1\/styles\.css/);
+});
+
+test("admin controls new arrivals and can remove products from the catalog", async () => {
+  const [index, productPage, adminHtml, admin, script, server, styles] = await Promise.all([
+    readFile("index.html", "utf8"),
+    readFile("product.html", "utf8"),
+    readFile("admin.html", "utf8"),
+    readFile("admin.js", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("server.js", "utf8"),
+    readFile("styles.css", "utf8"),
+  ]);
+
+  assert.match(adminHtml, /data-admin-tab="arrivals"/);
+  assert.match(adminHtml, /data-new-arrivals-grid/);
+  assert.match(adminHtml, /data-new-arrivals-save/);
+  assert.match(admin, /function renderNewArrivals\(\)/);
+  assert.match(admin, /body: JSON\.stringify\(\{ newArrivalProductIds: orderedIds \}\)/);
+  assert.match(server, /overrides\.newArrivalProductIds = cleanSelection\(body\.newArrivalProductIds\)/);
+  assert.match(script, /function getNewArrivalProducts\(\)/);
+  assert.match(script, /catalogState\.view === "new-arrivals"/);
+  assert.match(index, /index\.html\?view=new-arrivals#selezione/);
+  assert.match(productPage, /index\.html\?view=new-arrivals#selezione/);
+
+  assert.match(adminHtml, /data-product-delete/);
+  assert.match(admin, /body: JSON\.stringify\(\{ id, mode: "delete" \}\)/);
+  assert.match(server, /overrides\.deletedProductIds = \[\.\.\.new Set/);
+  assert.match(script, /\.filter\(\(product\) => !deletedProductIds\.has\(product\.id\)\)/);
+  assert.match(styles, /\.product-delete-button/);
+});
+
+test("requested Hermes products and unwanted men menu entries are absent", async () => {
+  const script = await readFile("script.js", "utf8");
+  for (const product of ["Mini Bag Hermès", "Kelly Bag Hermès", "Wallet Bag Hermès", "Dogon Wallet Hermès"]) {
+    assert.doesNotMatch(script, new RegExp(`item\\("${product}`));
+  }
+  assert.match(script, /uomo: new Set\(\["T-Shirts", "Completo"\]\)/);
+  assert.match(script, /"Borse Uomo": "Pochette"/);
+  assert.match(script, /getCategoriesForGender\(gender\)\.filter\(\(category\) => !hiddenCategories\.has\(category\)\)/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {

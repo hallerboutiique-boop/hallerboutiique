@@ -1621,6 +1621,23 @@
   background: rgba(0, 0, 0, 0.42);
 }
 
+.product-editor-actions .product-delete-button {
+  gap: 8px;
+  color: #fff;
+  border: 1px solid rgba(255, 92, 92, 0.72);
+  background: rgba(145, 24, 24, 0.72);
+}
+
+.product-editor-actions .product-delete-button:hover {
+  border-color: #ff7373;
+  background: #b92525;
+}
+
+.product-editor-actions .product-delete-button svg {
+  width: 17px;
+  height: 17px;
+}
+
 .product-crop-dialog {
   width: min(960px, calc(100vw - 32px));
   max-width: 960px;

@@ -15,6 +15,13 @@ const homeProductsMessage = document.querySelector("[data-home-products-message]
 const homeProductsSave = document.querySelector("[data-home-products-save]");
 const homeProductsSelectVisible = document.querySelector("[data-home-products-select-visible]");
 const homeProductsClear = document.querySelector("[data-home-products-clear]");
+const newArrivalsRoot = document.querySelector("[data-new-arrivals-grid]");
+const newArrivalsSearch = document.querySelector("[data-new-arrivals-search]");
+const newArrivalsCount = document.querySelector("[data-new-arrivals-count]");
+const newArrivalsMessage = document.querySelector("[data-new-arrivals-message]");
+const newArrivalsSave = document.querySelector("[data-new-arrivals-save]");
+const newArrivalsSelectVisible = document.querySelector("[data-new-arrivals-select-visible]");
+const newArrivalsClear = document.querySelector("[data-new-arrivals-clear]");
 const productForm = document.querySelector("[data-product-form]");
 const productSearch = document.querySelector("[data-product-search]");
 const newProductButton = document.querySelector("[data-product-new]");
@@ -60,6 +67,7 @@ const productCropConfirm = document.querySelector("[data-product-crop-confirm]")
 let replayTimers = [];
 let adminProducts = [];
 let homeProductIds = new Set();
+let newArrivalProductIds = new Set();
 let selectedProductId = "";
 let cropState = null;
 let cropDrag = null;
@@ -1865,10 +1873,12 @@ function filteredHomeProducts() {
   if (!terms.length) return adminProducts;
   return adminProducts.filter((product) => {
     const searchable = normalizeSearchText([
+      product.id,
       product.name,
       product.brand,
       product.collection,
       product.category,
+      product.description,
     ].filter(Boolean).join(" "));
     return terms.every((term) => searchable.includes(term));
   });
@@ -1897,6 +1907,61 @@ function renderHomeProducts() {
     return `
       <label class="home-product-option${selected ? " is-selected" : ""}">
         <input type="checkbox" value="${escapeHtml(product.id)}" data-home-product-id${selected ? " checked" : ""}>
+        <span class="home-product-check" aria-hidden="true"><i data-lucide="${selected ? "check" : "plus"}"></i></span>
+        <span class="home-product-image">
+          ${image
+            ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+            : `<i data-lucide="image"></i>`}
+        </span>
+        <span class="home-product-copy">
+          <strong>${escapeHtml(product.name)}</strong>
+          <small>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.category || product.collection || "Catalogo")}</small>
+        </span>
+      </label>
+    `;
+  }).join("");
+  if (window.lucide) window.lucide.createIcons();
+}
+
+function filteredNewArrivalProducts() {
+  const terms = normalizeSearchText(newArrivalsSearch?.value || "").split(/\s+/).filter(Boolean);
+  if (!terms.length) return adminProducts;
+  return adminProducts.filter((product) => {
+    const searchable = normalizeSearchText([
+      product.id,
+      product.name,
+      product.brand,
+      product.collection,
+      product.category,
+      product.description,
+    ].filter(Boolean).join(" "));
+    return terms.every((term) => searchable.includes(term));
+  });
+}
+
+function setNewArrivalsMessage(message, type = "") {
+  if (!newArrivalsMessage) return;
+  newArrivalsMessage.textContent = message || "";
+  newArrivalsMessage.dataset.type = type;
+}
+
+function renderNewArrivals() {
+  if (!newArrivalsRoot) return;
+  const products = filteredNewArrivalProducts();
+  const selectedCount = newArrivalProductIds.size;
+  if (newArrivalsCount) {
+    newArrivalsCount.textContent = `${selectedCount} ${selectedCount === 1 ? "prodotto selezionato" : "prodotti selezionati"}`;
+  }
+  if (!products.length) {
+    newArrivalsRoot.innerHTML = emptyState("Nessun prodotto trovato.");
+    return;
+  }
+  newArrivalsRoot.innerHTML = products.map((product) => {
+    const selected = newArrivalProductIds.has(product.id);
+    const image = Array.isArray(product.images) ? product.images[0] : "";
+    return `
+      <label class="home-product-option${selected ? " is-selected" : ""}">
+        <input type="checkbox" value="${escapeHtml(product.id)}" data-new-arrival-product-id${selected ? " checked" : ""}>
         <span class="home-product-check" aria-hidden="true"><i data-lucide="${selected ? "check" : "plus"}"></i></span>
         <span class="home-product-image">
           ${image
@@ -1958,6 +2023,11 @@ async function loadProducts() {
       ? data.homeProductIds
       : defaultHomeProductIds(adminProducts)
   );
+  newArrivalProductIds = new Set(
+    Array.isArray(data.newArrivalProductIds)
+      ? data.newArrivalProductIds
+      : defaultHomeProductIds(adminProducts)
+  );
   if (!aiBatchResults.length) {
     aiBatchResults = storedAiProductResultIds()
       .map((id) => adminProducts.find((product) => product.id === id))
@@ -1972,6 +2042,7 @@ async function loadProducts() {
   updateProductSuggestions();
   renderAdminProducts();
   renderHomeProducts();
+  renderNewArrivals();
   renderAiProductResults();
   const selected = adminProducts.find((product) => product.id === selectedProductId);
   if (selected) {
@@ -2340,6 +2411,45 @@ homeProductsSave?.addEventListener("click", async () => {
     homeProductsSave.disabled = false;
   }
 });
+newArrivalsSearch?.addEventListener("input", renderNewArrivals);
+newArrivalsRoot?.addEventListener("change", (event) => {
+  const input = event.target.closest("[data-new-arrival-product-id]");
+  if (!input) return;
+  if (input.checked) newArrivalProductIds.add(input.value);
+  else newArrivalProductIds.delete(input.value);
+  setNewArrivalsMessage("");
+  renderNewArrivals();
+});
+newArrivalsSelectVisible?.addEventListener("click", () => {
+  filteredNewArrivalProducts().forEach((product) => newArrivalProductIds.add(product.id));
+  setNewArrivalsMessage("");
+  renderNewArrivals();
+});
+newArrivalsClear?.addEventListener("click", () => {
+  newArrivalProductIds.clear();
+  setNewArrivalsMessage("");
+  renderNewArrivals();
+});
+newArrivalsSave?.addEventListener("click", async () => {
+  newArrivalsSave.disabled = true;
+  setNewArrivalsMessage("Salvataggio nuovi arrivi in corso...");
+  try {
+    const orderedIds = adminProducts
+      .map((product) => product.id)
+      .filter((id) => newArrivalProductIds.has(id));
+    const data = await api("/api/admin/products", {
+      method: "PUT",
+      body: JSON.stringify({ newArrivalProductIds: orderedIds }),
+    });
+    newArrivalProductIds = new Set(data.newArrivalProductIds || []);
+    renderNewArrivals();
+    setNewArrivalsMessage("Nuovi arrivi aggiornati.", "success");
+  } catch (error) {
+    setNewArrivalsMessage(error.message, "error");
+  } finally {
+    newArrivalsSave.disabled = false;
+  }
+});
 
 productPreviews?.addEventListener("click", async (event) => {
   if (Date.now() < suppressProductImageClickUntil && event.target.closest("[data-product-image-drag]")) {
@@ -2660,13 +2770,36 @@ document.querySelector("[data-product-reset]")?.addEventListener("click", async 
   try {
     await api("/api/admin/products", {
       method: "DELETE",
-      body: JSON.stringify({ id }),
+      body: JSON.stringify({ id, mode: "reset" }),
     });
     selectedProductId = current?.custom ? "" : id;
     await loadProducts();
     const product = adminProducts.find((entry) => entry.id === id);
     if (product) fillProductForm(product);
     setProductMessage(current?.custom ? "Prodotto custom eliminato." : "Default ripristinato.", "success");
+  } catch (error) {
+    setProductMessage(error.message, "error");
+  }
+});
+
+document.querySelector("[data-product-delete]")?.addEventListener("click", async () => {
+  const id = productForm?.elements.id.value;
+  if (!id) {
+    setProductMessage("Seleziona prima un prodotto da eliminare.", "error");
+    return;
+  }
+  const current = adminProducts.find((product) => product.id === id);
+  if (!current) return;
+  if (!window.confirm(`Eliminare definitivamente “${current.name}” dal catalogo?`)) return;
+  setProductMessage("Eliminazione prodotto in corso...");
+  try {
+    await api("/api/admin/products", {
+      method: "DELETE",
+      body: JSON.stringify({ id, mode: "delete" }),
+    });
+    selectedProductId = "";
+    await loadProducts();
+    setProductMessage(`“${current.name}” eliminato dal catalogo.`, "success");
   } catch (error) {
     setProductMessage(error.message, "error");
   }

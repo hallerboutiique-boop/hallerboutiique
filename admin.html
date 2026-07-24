@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/home-products-1/styles.css">
+    <link rel="stylesheet" href="/assets-v/catalog-controls-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -75,6 +75,7 @@
             <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
             <button type="button" data-admin-tab="orders">Ordini</button>
             <button type="button" data-admin-tab="home">Home</button>
+            <button type="button" data-admin-tab="arrivals">Nuovi arrivi</button>
             <button type="button" data-admin-tab="products">Prodotti</button>
             <button type="button" data-admin-tab="users">Utenti</button>
             <button type="button" data-admin-tab="replay">Video</button>
@@ -174,6 +175,35 @@
               </div>
               <div class="home-products-grid" data-home-products-grid></div>
               <p class="auth-message home-products-message" data-home-products-message aria-live="polite"></p>
+            </section>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="arrivals">
+            <div class="product-section-heading">
+              <div>
+                <span>Vetrina novit&agrave;</span>
+                <h2>Nuovi arrivi</h2>
+                <p>Scegli i prodotti mostrati quando il cliente apre “Nuovi arrivi” dal menu del sito.</p>
+              </div>
+              <button class="admin-new-product-button" type="button" data-new-arrivals-save>
+                <i data-lucide="save"></i>
+                <span>Salva nuovi arrivi</span>
+              </button>
+            </div>
+            <section class="dashboard-card dashboard-card-wide home-products-card">
+              <div class="home-products-toolbar">
+                <label class="product-admin-search">
+                  <span>Cerca prodotto</span>
+                  <input type="search" data-new-arrivals-search placeholder="Nome, marca o categoria">
+                </label>
+                <div class="home-products-actions">
+                  <strong data-new-arrivals-count>0 prodotti selezionati</strong>
+                  <button type="button" data-new-arrivals-select-visible>Seleziona visibili</button>
+                  <button type="button" data-new-arrivals-clear>Deseleziona tutti</button>
+                </div>
+              </div>
+              <div class="home-products-grid" data-new-arrivals-grid></div>
+              <p class="auth-message home-products-message" data-new-arrivals-message aria-live="polite"></p>
             </section>
           </section>
 
@@ -353,6 +383,10 @@
                   <div class="product-editor-actions">
                     <button type="submit">Salva prodotto</button>
                     <button type="button" data-product-reset>Ripristina default</button>
+                    <button type="button" class="product-delete-button" data-product-delete>
+                      <i data-lucide="trash-2"></i>
+                      <span>Elimina prodotto</span>
+                    </button>
                   </div>
                   <p class="auth-message" data-product-message aria-live="polite"></p>
                 </form>
@@ -477,6 +511,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/home-products-2/admin.js"></script>
+    <script src="/assets-v/catalog-controls-1/admin.js"></script>
   </body>
 </html>
