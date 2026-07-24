@@ -67,6 +67,7 @@ let aiBatchResults = [];
 const maximumProductImages = 15;
 const maximumAiProductImages = 100;
 const productUploadBatchSize = 10;
+const directProductUploadConcurrency = 4;
 const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
@@ -795,7 +796,7 @@ function createCroppedProductImage() {
   });
 }
 
-async function uploadProductImages(entries, productId, { signal } = {}) {
+async function uploadProductImagesThroughServer(entries, productId, { signal } = {}) {
   const formData = new FormData();
   formData.append("productId", productId);
   formData.append("makePrimary", "no");
@@ -814,6 +815,135 @@ async function uploadProductImages(entries, productId, { signal } = {}) {
   formData.append("imageVariants", JSON.stringify(imageVariants));
   formData.append("originalImageIndexes", JSON.stringify(originalImageIndexes));
   formData.append("imageVariant", imageVariants[0] || "original");
+  return uploadApi("/api/admin/product-images", formData, { signal });
+}
+
+function productUploadFile(entry, inputIndex) {
+  const file = entry.image?.blob || entry.image;
+  const filename = entry.image?.name || file?.name || `prodotto-${inputIndex + 1}.jpg`;
+  return { file, filename };
+}
+
+function directProductUploadFiles(entries) {
+  return entries.flatMap((entry, inputIndex) => {
+    const { file, filename } = productUploadFile(entry, inputIndex);
+    const files = [{
+      role: "image",
+      inputIndex,
+      file,
+      filename,
+      contentType: file?.type || "",
+      size: Number(file?.size || 0),
+    }];
+    if (entry.variant === "cropped" && entry.originalFile) {
+      files.push({
+        role: "original",
+        inputIndex,
+        file: entry.originalFile,
+        filename: entry.originalFile.name || `prodotto-originale-${inputIndex + 1}.jpg`,
+        contentType: entry.originalFile.type || "",
+        size: Number(entry.originalFile.size || 0),
+      });
+    }
+    return files;
+  });
+}
+
+function putDirectProductFile(file, upload, signal) {
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(new DOMException("Upload interrotto", "AbortError"));
+      return;
+    }
+    const request = new XMLHttpRequest();
+    const abort = () => request.abort();
+    const finish = () => signal?.removeEventListener("abort", abort);
+    request.open("PUT", upload.uploadUrl);
+    Object.entries(upload.headers || {}).forEach(([name, value]) => request.setRequestHeader(name, value));
+    request.onload = () => {
+      finish();
+      if (request.status >= 200 && request.status < 300) resolve();
+      else reject(new Error(`Upload diretto non riuscito (${request.status || "rete"}).`));
+    };
+    request.onerror = () => {
+      finish();
+      reject(new Error("Upload diretto non raggiungibile."));
+    };
+    request.onabort = () => {
+      finish();
+      reject(new DOMException("Upload interrotto", "AbortError"));
+    };
+    signal?.addEventListener("abort", abort, { once: true });
+    request.send(file);
+  });
+}
+
+async function uploadDirectProductFiles(files, uploads, { signal } = {}) {
+  const uploadByIdentity = new Map(uploads.map((upload) => [`${upload.role}:${upload.inputIndex}`, upload]));
+  const directController = new AbortController();
+  const abortDirectUploads = () => directController.abort();
+  signal?.addEventListener("abort", abortDirectUploads, { once: true });
+  let completed = 0;
+  try {
+    await Promise.all(Array.from(
+      { length: Math.min(directProductUploadConcurrency, files.length) },
+      async (_, workerIndex) => {
+        for (let index = workerIndex; index < files.length; index += directProductUploadConcurrency) {
+          if (directController.signal.aborted) throw new DOMException("Upload interrotto", "AbortError");
+          const item = files[index];
+          const upload = uploadByIdentity.get(`${item.role}:${item.inputIndex}`);
+          if (!upload) throw new Error("Autorizzazione upload diretto incompleta.");
+          await putDirectProductFile(item.file, upload, directController.signal);
+          completed += 1;
+          setProductUploadStatus(`Invio diretto foto: ${completed} di ${files.length} file completati...`);
+        }
+      }
+    ));
+  } catch (error) {
+    directController.abort();
+    throw error;
+  } finally {
+    signal?.removeEventListener("abort", abortDirectUploads);
+  }
+}
+
+async function uploadProductImages(entries, productId, { signal } = {}) {
+  const files = directProductUploadFiles(entries);
+  let prepared;
+  try {
+    prepared = await api("/api/admin/product-image-upload-urls", {
+      method: "POST",
+      body: JSON.stringify({
+        productId,
+        files: files.map(({ role, inputIndex, filename, contentType, size }) => ({
+          role,
+          inputIndex,
+          filename,
+          contentType,
+          size,
+        })),
+      }),
+      signal,
+    });
+    if (!prepared.direct) return uploadProductImagesThroughServer(entries, productId, { signal });
+    await uploadDirectProductFiles(files, prepared.uploads || [], { signal });
+  } catch (error) {
+    if (error?.name === "AbortError") throw error;
+    setProductUploadStatus("Upload diretto non disponibile, riprovo tramite server...");
+    return uploadProductImagesThroughServer(entries, productId, { signal });
+  }
+
+  const imageVariants = entries.map((entry) => entry.variant);
+  const formData = new FormData();
+  formData.append("productId", productId);
+  formData.append("makePrimary", "no");
+  formData.append("imageVariants", JSON.stringify(imageVariants));
+  formData.append("imageVariant", imageVariants[0] || "original");
+  formData.append("directUploads", JSON.stringify(prepared.uploads.map(({ role, inputIndex, key }) => ({
+    role,
+    inputIndex,
+    key,
+  }))));
   return uploadApi("/api/admin/product-images", formData, { signal });
 }
 

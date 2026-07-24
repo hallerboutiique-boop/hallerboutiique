@@ -358,7 +358,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/bags-normal-stock-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/bags-no-sizes-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/tigris-direct-upload-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -456,7 +456,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /\.slice\(0, maximumStoredProductImages\)/);
   assert.match(server, /const originalSavedByIndex = new Map\(/);
   assert.match(server, /const uploadedImages = await mapWithConcurrency\(imageParts, 2/);
-  assert.match(server, /const uploadedOriginals = await Promise\.all/);
+  assert.match(server, /uploadedOriginals = await Promise\.all/);
   assert.match(server, /scheduleProductImageOptimization\(productId\)/);
   assert.match(server, /optimization: "queued"/);
   assert.match(server, /if \(productImageStorage\) \{\s*return storeProductImage\(name, data, "image\/webp"\)/);
@@ -475,10 +475,20 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /new S3Client/);
   assert.match(server, /new PutObjectCommand/);
   assert.match(server, /new PutBucketCorsCommand/);
+  assert.match(server, /AllowedMethods: \["GET", "HEAD", "PUT"\]/);
+  assert.match(server, /getSignedUrl\(productImageStorage, new PutObjectCommand/);
+  assert.match(server, /url\.pathname === "\/api\/admin\/product-image-upload-urls"/);
+  assert.match(server, /await inspectDirectProductUpload\(entry\.key, productId\)/);
+  assert.match(server, /fieldValue\(parts, "directUploads", 12000\)/);
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
+  assert.match(admin, /const directProductUploadConcurrency = 4/);
+  assert.match(admin, /api\("\/api\/admin\/product-image-upload-urls"/);
+  assert.match(admin, /request\.open\("PUT", upload\.uploadUrl\)/);
+  assert.match(admin, /formData\.append\("directUploads"/);
+  assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/bags-no-sizes-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/tigris-direct-upload-1\/admin\.js/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {

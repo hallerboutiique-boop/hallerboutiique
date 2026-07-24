@@ -13,6 +13,7 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import sharp from "sharp";
 import QRCode from "qrcode";
 import {
@@ -85,6 +86,8 @@ const orphanUploadGraceMs = 10 * 60 * 1000;
 const productImageRenditionWidths = [480, 720, 1080, 1440];
 const productImageSourceLimitBytes = 40 * 1024 * 1024;
 const maximumStoredProductImages = 15;
+const maximumDirectProductImageBytes = 20 * 1024 * 1024;
+const productImageUploadUrlExpiresSeconds = 15 * 60;
 const productImageBucketName = String(process.env.BUCKET_NAME || "").trim();
 const productImageStorageEndpoint = String(process.env.AWS_ENDPOINT_URL_S3 || "https://t3.storage.dev").trim();
 const productImageStorageRegion = String(process.env.AWS_REGION || "auto").trim();
@@ -92,7 +95,11 @@ const productImagePublicBaseUrl = productImageBucketName
   ? String(process.env.TIGRIS_PUBLIC_URL || `https://${productImageBucketName}.t3.tigrisfiles.io`).replace(/\/+$/, "")
   : "";
 const productImageStorage = productImageBucketName
-  ? new S3Client({ endpoint: productImageStorageEndpoint, region: productImageStorageRegion })
+  ? new S3Client({
+    endpoint: productImageStorageEndpoint,
+    region: productImageStorageRegion,
+    requestChecksumCalculation: "WHEN_REQUIRED",
+  })
   : null;
 let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
@@ -224,6 +231,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/bags-no-sizes-1/script.js", "/script.js"],
   ["/assets-v/bags-no-sizes-1/admin.js", "/admin.js"],
   ["/assets-v/bags-normal-stock-1/script.js", "/script.js"],
+  ["/assets-v/tigris-direct-upload-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -410,7 +418,7 @@ async function ensureProductImageStorage() {
       CORSConfiguration: {
         CORSRules: [{
           AllowedHeaders: ["*"],
-          AllowedMethods: ["GET", "HEAD"],
+          AllowedMethods: ["GET", "HEAD", "PUT"],
           AllowedOrigins: ["*"],
           ExposeHeaders: ["Content-Length", "Content-Type", "ETag"],
           MaxAgeSeconds: 86400,
@@ -465,6 +473,11 @@ async function storeProductImage(name, data, contentType) {
     ContentDisposition: "inline",
   }));
   return `${productImagePublicBaseUrl}/${key}`;
+}
+
+function productImagePublicUrlForKey(key) {
+  const cleanKey = String(key || "").replace(/^\/+/, "");
+  return cleanKey && productImagePublicBaseUrl ? `${productImagePublicBaseUrl}/${cleanKey}` : "";
 }
 
 async function storeProductImageRendition(name, data) {
@@ -2969,6 +2982,108 @@ async function handleAdminProducts(req, res) {
   return notFound(res);
 }
 
+function directProductUploadKey(productId, filename, contentType, role) {
+  const extension = imageExtension(filename, contentType);
+  if (!extension || extension === ".svg") return "";
+  const kind = role === "original" ? "original" : "image";
+  return `products/${slugifyProduct(productId)}-direct-${kind}-${Date.now()}-${randomBytes(8).toString("hex")}${extension}`;
+}
+
+function isDirectProductUploadKey(key, productId) {
+  const value = String(key || "");
+  const prefix = `products/${slugifyProduct(productId)}-direct-`;
+  return value.startsWith(prefix) && /\.(?:png|jpe?g|webp)$/i.test(value);
+}
+
+async function inspectDirectProductUpload(key, productId) {
+  if (!productImageStorage || !isDirectProductUploadKey(key, productId)) return null;
+  const object = await productImageStorage.send(new HeadObjectCommand({
+    Bucket: productImageBucketName,
+    Key: key,
+  }));
+  const size = Number(object.ContentLength || 0);
+  const contentType = storedImageContentType(path.extname(key).toLowerCase(), object.ContentType);
+  if (!Number.isFinite(size) || size < 1 || size > maximumDirectProductImageBytes) return null;
+  if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) return null;
+  return {
+    key,
+    size,
+    contentType,
+    url: productImagePublicUrlForKey(key),
+  };
+}
+
+async function handleAdminProductImageUploadUrls(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+  if (req.method !== "POST") return notFound(res);
+  if (!productImageStorage) return json(res, 200, { ok: true, direct: false });
+
+  let body;
+  try {
+    body = await parseBody(req);
+  } catch {
+    return badRequest(res, "Richiesta upload non valida.");
+  }
+  const productId = cleanTrackingString(body.productId, 120);
+  const files = Array.isArray(body.files) ? body.files.slice(0, 20) : [];
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  const productExists = defaults.some((product) => product.id === productId)
+    || overrides.custom.some((product) => product.id === productId);
+  if (!productExists) return badRequest(res, "Prodotto non valido.");
+  if (!files.length) return badRequest(res, "Nessuna immagine da caricare.");
+
+  const normalizedFiles = files.map((file) => {
+    const role = file?.role === "original" ? "original" : "image";
+    const inputIndex = Number(file?.inputIndex);
+    const filename = cleanTrackingString(file?.filename, 180);
+    const suppliedType = cleanTrackingString(file?.contentType, 80);
+    const size = Number(file?.size);
+    const key = directProductUploadKey(productId, filename, suppliedType, role);
+    const contentType = storedImageContentType(path.extname(key).toLowerCase(), suppliedType);
+    if (!key || !Number.isInteger(inputIndex) || inputIndex < 0 || inputIndex > 9) return null;
+    if (!Number.isInteger(size) || size < 1 || size > maximumDirectProductImageBytes) return null;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(contentType)) return null;
+    return { role, inputIndex, filename, size, key, contentType };
+  });
+  if (normalizedFiles.some((file) => !file)) return badRequest(res, "Una delle immagini non è valida.");
+  const imageCount = normalizedFiles.filter((file) => file.role === "image").length;
+  const originalCount = normalizedFiles.filter((file) => file.role === "original").length;
+  const totalBytes = normalizedFiles.reduce((total, file) => total + file.size, 0);
+  if (!imageCount || imageCount > 10 || originalCount > 10 || totalBytes > 80 * 1024 * 1024) {
+    return badRequest(res, "Il gruppo di immagini supera i limiti consentiti.");
+  }
+
+  await ensureProductImageStorage();
+  const uploads = await Promise.all(normalizedFiles.map(async (file) => {
+    const headers = {
+      "Content-Type": file.contentType,
+      "Cache-Control": "public, max-age=31536000, immutable",
+      "Content-Disposition": "inline",
+    };
+    const uploadUrl = await getSignedUrl(productImageStorage, new PutObjectCommand({
+      Bucket: productImageBucketName,
+      Key: file.key,
+      ContentType: headers["Content-Type"],
+      CacheControl: headers["Cache-Control"],
+      ContentDisposition: headers["Content-Disposition"],
+    }), { expiresIn: productImageUploadUrlExpiresSeconds });
+    return {
+      role: file.role,
+      inputIndex: file.inputIndex,
+      key: file.key,
+      publicUrl: productImagePublicUrlForKey(file.key),
+      uploadUrl,
+      headers,
+    };
+  }));
+  return json(res, 200, {
+    ok: true,
+    direct: true,
+    expiresIn: productImageUploadUrlExpiresSeconds,
+    uploads,
+  }, { "Cache-Control": "private, no-store" });
+}
+
 async function handleAdminProductImages(req, res) {
   if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
   if (req.method !== "POST") return notFound(res);
@@ -2992,20 +3107,99 @@ async function handleAdminProductImages(req, res) {
 
   const imageParts = parts.filter((entry) => entry.name === "images" && entry.filename).slice(0, 10);
   const originalParts = parts.filter((entry) => entry.name === "originalImage" && entry.filename).slice(0, 10);
-  if (originalParts.some((part) => {
-    const extension = imageExtension(part.filename, part.contentType);
-    return !extension || extension === ".svg" || part.data.length === 0;
-  })) return badRequest(res, "Foto originale non valida.");
-  const requiredBytes = [...imageParts, ...originalParts].reduce((total, part) => total + part.data.length, 0);
-  if (!productImageStorage) await ensureProductUploadCapacity(requiredBytes);
-  const uploadedImages = await mapWithConcurrency(imageParts, 2, async (part, inputIndex) => {
-    const ext = imageExtension(part.filename, part.contentType);
-    if (!ext || ext === ".svg" || part.data.length === 0) return null;
-    const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
-    const url = await storeProductImage(name, part.data, part.contentType);
-    return { inputIndex, url, renditions: [] };
-  });
-  const validUploadedImages = uploadedImages.filter(Boolean);
+  let directUploads = [];
+  try {
+    const parsed = JSON.parse(fieldValue(parts, "directUploads", 12000) || "[]");
+    if (Array.isArray(parsed)) {
+      directUploads = parsed.slice(0, 20).map((entry) => ({
+        role: entry?.role === "original" ? "original" : "image",
+        inputIndex: Number(entry?.inputIndex),
+        key: cleanTrackingString(entry?.key, 320),
+      }));
+    }
+  } catch {
+    return badRequest(res, "Conferma upload diretto non valida.");
+  }
+
+  let validUploadedImages = [];
+  let uploadedOriginals = [];
+  if (directUploads.length) {
+    if (imageParts.length || originalParts.length || !productImageStorage) {
+      return badRequest(res, "Upload diretto non valido.");
+    }
+    const directImages = directUploads.filter((entry) => entry.role === "image");
+    const directOriginals = directUploads.filter((entry) => entry.role === "original");
+    const imageIndexes = directImages.map((entry) => entry.inputIndex);
+    const expectedIndexes = directImages.map((_, index) => index);
+    const indexesAreValid = imageIndexes.length > 0
+      && imageIndexes.length <= 10
+      && imageIndexes.every(Number.isInteger)
+      && new Set(imageIndexes).size === imageIndexes.length
+      && [...imageIndexes].sort((left, right) => left - right).every((value, index) => value === expectedIndexes[index]);
+    const originalIndexesAreValid = directOriginals.length <= 10
+      && directOriginals.every((entry) => Number.isInteger(entry.inputIndex) && imageIndexes.includes(entry.inputIndex))
+      && new Set(directOriginals.map((entry) => entry.inputIndex)).size === directOriginals.length;
+    const keysAreValid = new Set(directUploads.map((entry) => entry.key)).size === directUploads.length
+      && directUploads.every((entry) => isDirectProductUploadKey(entry.key, productId));
+    if (!indexesAreValid || !originalIndexesAreValid || !keysAreValid) {
+      return badRequest(res, "Riferimenti upload diretto non validi.");
+    }
+
+    let inspectedUploads;
+    try {
+      inspectedUploads = await mapWithConcurrency(directUploads, 4, async (entry) => ({
+        ...entry,
+        object: await inspectDirectProductUpload(entry.key, productId),
+      }));
+    } catch {
+      return badRequest(res, "Una delle immagini caricate direttamente non è disponibile.");
+    }
+    if (inspectedUploads.some((entry) => !entry.object)) {
+      return badRequest(res, "Una delle immagini caricate direttamente non è valida.");
+    }
+    const totalBytes = inspectedUploads.reduce((total, entry) => total + entry.object.size, 0);
+    if (totalBytes > 80 * 1024 * 1024) {
+      return badRequest(res, "Il gruppo di immagini supera i limiti consentiti.");
+    }
+    validUploadedImages = inspectedUploads
+      .filter((entry) => entry.role === "image")
+      .sort((left, right) => left.inputIndex - right.inputIndex)
+      .map((entry) => ({ inputIndex: entry.inputIndex, url: entry.object.url, renditions: [] }));
+    uploadedOriginals = inspectedUploads
+      .filter((entry) => entry.role === "original")
+      .map((entry) => ({ targetIndex: entry.inputIndex, url: entry.object.url }));
+  } else {
+    if (originalParts.some((part) => {
+      const extension = imageExtension(part.filename, part.contentType);
+      return !extension || extension === ".svg" || part.data.length === 0;
+    })) return badRequest(res, "Foto originale non valida.");
+    const requiredBytes = [...imageParts, ...originalParts].reduce((total, part) => total + part.data.length, 0);
+    if (!productImageStorage) await ensureProductUploadCapacity(requiredBytes);
+    const uploadedImages = await mapWithConcurrency(imageParts, 2, async (part, inputIndex) => {
+      const ext = imageExtension(part.filename, part.contentType);
+      if (!ext || ext === ".svg" || part.data.length === 0) return null;
+      const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
+      const url = await storeProductImage(name, part.data, part.contentType);
+      return { inputIndex, url, renditions: [] };
+    });
+    validUploadedImages = uploadedImages.filter(Boolean);
+
+    let originalImageIndexes = [];
+    try {
+      const parsed = JSON.parse(fieldValue(parts, "originalImageIndexes", 120) || "[]");
+      if (Array.isArray(parsed)) originalImageIndexes = parsed.map(Number);
+    } catch {
+      originalImageIndexes = [];
+    }
+    uploadedOriginals = await Promise.all(originalParts.map(async (originalPart, partIndex) => {
+      const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
+      const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
+      const originalUrl = await storeProductImage(originalName, originalPart.data, originalPart.contentType);
+      const targetIndex = Number.isInteger(originalImageIndexes[partIndex]) ? originalImageIndexes[partIndex] : partIndex;
+      return { targetIndex, url: originalUrl, data: originalPart.data };
+    }));
+  }
+
   const saved = validUploadedImages.map((entry) => entry.url);
   const savedInputIndexes = validUploadedImages.map((entry) => entry.inputIndex);
   const uploadedImageRenditions = Object.fromEntries(
@@ -3013,24 +3207,9 @@ async function handleAdminProductImages(req, res) {
       .filter((entry) => entry.renditions.length)
       .map((entry) => [entry.url, entry.renditions])
   );
-
-  let originalImageIndexes = [];
-  try {
-    const parsed = JSON.parse(fieldValue(parts, "originalImageIndexes", 120) || "[]");
-    if (Array.isArray(parsed)) originalImageIndexes = parsed.map(Number);
-  } catch {
-    originalImageIndexes = [];
-  }
-  const uploadedOriginals = await Promise.all(originalParts.map(async (originalPart, partIndex) => {
-    const originalExt = imageExtension(originalPart.filename, originalPart.contentType);
-    const originalName = `${slugifyProduct(productId)}-original-${Date.now()}-${randomBytes(4).toString("hex")}${originalExt}`;
-    const originalUrl = await storeProductImage(originalName, originalPart.data, originalPart.contentType);
-    const targetIndex = Number.isInteger(originalImageIndexes[partIndex]) ? originalImageIndexes[partIndex] : partIndex;
-    return { targetIndex, url: originalUrl, data: originalPart.data };
-  }));
   const originalSavedByIndex = new Map(
     uploadedOriginals
-      .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
+      .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < validUploadedImages.length)
       .map((entry) => [entry.targetIndex, entry.url])
   );
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
@@ -4168,6 +4347,7 @@ async function handleApi(req, res, url) {
   if (url.pathname === "/api/admin/ai-product") {
     return handleAdminAiProduct(req, res, { streamProgress: url.searchParams.get("progress") === "1" });
   }
+  if (url.pathname === "/api/admin/product-image-upload-urls") return handleAdminProductImageUploadUrls(req, res);
   if (url.pathname === "/api/admin/product-images") return handleAdminProductImages(req, res);
   if (url.pathname === "/api/admin/products") return handleAdminProducts(req, res);
   return notFound(res);
