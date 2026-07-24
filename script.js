@@ -1498,7 +1498,7 @@ const catalogMenuColumns = {
 };
 
 const catalogMenuHiddenCategories = {
-  uomo: new Set(["T-Shirts", "Completo"]),
+  uomo: new Set(["Completo"]),
 };
 
 const catalogCategoryTranslations = {
