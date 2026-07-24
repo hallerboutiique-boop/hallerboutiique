@@ -15,8 +15,8 @@ primary_region = 'fra'
 
 [[vm]]
   cpu_kind = 'shared'
-  cpus = 1
-  memory = '1024mb'
+  cpus = 2
+  memory = '2048mb'
 
 [http_service]
   internal_port = 8080

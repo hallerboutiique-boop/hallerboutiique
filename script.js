@@ -2900,7 +2900,7 @@ async function uploadWithProgress(path, body, onProgress) {
       throw new Error(data.message || translate("tryon-unavailable"));
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 1800));
+    await new Promise((resolve) => setTimeout(resolve, 650));
     try {
       const pollResponse = await fetch(`/api/try-on/jobs/${encodeURIComponent(data.jobId)}?v=${Date.now()}`, {
         cache: "no-store",
@@ -2923,6 +2923,57 @@ async function uploadWithProgress(path, body, onProgress) {
 function setTryOnResult(content) {
   const result = document.querySelector("[data-tryon-result]");
   if (result) result.innerHTML = content;
+}
+
+const preparedTryOnCustomerFiles = new WeakMap();
+
+async function decodeTryOnCustomerImage(file) {
+  if ("createImageBitmap" in window) return createImageBitmap(file, { imageOrientation: "from-image" });
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error(translate("tryon-unavailable")));
+    };
+    image.src = url;
+  });
+}
+
+async function prepareTryOnCustomerFile(file) {
+  if (preparedTryOnCustomerFiles.has(file)) return preparedTryOnCustomerFiles.get(file);
+  const pending = (async () => {
+    const image = await decodeTryOnCustomerImage(file);
+    const sourceWidth = image.width || image.naturalWidth;
+    const sourceHeight = image.height || image.naturalHeight;
+    const maxDimension = 2048;
+    const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+    const width = Math.max(1, Math.round(sourceWidth * scale));
+    const height = Math.max(1, Math.round(sourceHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d", { alpha: false });
+    if (!context) throw new Error(translate("tryon-unavailable"));
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, width, height);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, width, height);
+    image.close?.();
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.94));
+    if (!blob) throw new Error(translate("tryon-unavailable"));
+    return new File([blob], "try-on-customer.jpg", {
+      type: "image/jpeg",
+      lastModified: file.lastModified || Date.now(),
+    });
+  })();
+  preparedTryOnCustomerFiles.set(file, pending);
+  return pending;
 }
 
 function closeTryOnModal() {
@@ -2984,20 +3035,12 @@ async function generateTryOn() {
   setTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const originalProductImage = await loadOptionalTryOnProductImage({
-      name: tryOnProduct.name,
-      image: productPrimaryImage(tryOnProduct),
-      tryOnImage: productPrimaryTryOnImage(tryOnProduct),
-    }, 0);
+    const preparedCustomerFile = await prepareTryOnCustomerFile(file);
     const formData = new FormData();
-    formData.append("userImage", file, file.name || "try-on-customer.jpg");
-    if (originalProductImage) {
-      formData.append("productImage", originalProductImage.blob, originalProductImage.filename);
-    }
+    formData.append("userImage", preparedCustomerFile, preparedCustomerFile.name);
     formData.append("mode", "single");
     if (saveConsent?.checked) {
       formData.append("saveTryOn", "yes");
-      formData.append("customerImage", file, file.name || "try-on-source.jpg");
     }
     formData.append("productId", tryOnProduct.id || "");
     formData.append("productName", tryOnProduct.name || "");
@@ -3204,19 +3247,16 @@ async function generateBundleTryOn() {
   setBundleTryOnResult(`<p>${escapeHtml(translate("tryon-preparing-ai"))}</p>`);
 
   try {
-    const loadedProductImages = await Promise.all(bundleTryOnItems.map(loadOptionalTryOnProductImage));
-    let nextReferenceImageIndex = 2;
     const bundleData = bundleTryOnItems.map(({ id, name, category, sizeType }, index) => ({
       id,
       name,
       category,
       sizeType,
-      referenceImageIndex: loadedProductImages[index] ? nextReferenceImageIndex++ : 0,
+      referenceImageIndex: index + 2,
     }));
-    const originalProductImages = loadedProductImages.filter(Boolean);
+    const preparedCustomerFile = await prepareTryOnCustomerFile(file);
     const formData = new FormData();
-    formData.append("userImage", file, file.name || "bundle-customer.jpg");
-    originalProductImages.forEach((image) => formData.append("productImage", image.blob, image.filename));
+    formData.append("userImage", preparedCustomerFile, preparedCustomerFile.name);
     formData.append("mode", "bundle");
     formData.append("bundleItems", JSON.stringify(bundleData));
     formData.append("productId", bundleData.map((item) => item.id).join(","));

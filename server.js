@@ -66,6 +66,7 @@ const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
 const tryOnJobRetentionMs = 15 * 60 * 1000;
 const tryOnMaxActiveJobs = 4;
+const tryOnProductCacheMaxBytes = 96 * 1024 * 1024;
 const analyticsRetentionMs = 365 * 24 * 60 * 60 * 1000;
 const liveWindowMs = 2 * 60 * 1000;
 const replayMaxEvents = 500;
@@ -88,6 +89,9 @@ const productImageStorage = productImageBucketName
 let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
 let productZoomImageOptimizationJob = null;
+const tryOnProductImageCache = new Map();
+const tryOnProductImageInflight = new Map();
+let tryOnProductImageCacheBytes = 0;
 let productMutationQueue = Promise.resolve();
 let orderMutationQueue = Promise.resolve();
 let pushSubscriptionMutationQueue = Promise.resolve();
@@ -197,6 +201,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/admin-original-price-5/styles.css", "/styles.css"],
   ["/assets-v/admin-original-price-5/script.js", "/script.js"],
   ["/assets-v/admin-original-price-5/admin.js", "/admin.js"],
+  ["/assets-v/tryon-speed-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -555,6 +560,68 @@ async function readProductImageSource(image) {
   const data = Buffer.from(await response.arrayBuffer());
   if (!data.length || data.length > productImageSourceLimitBytes) throw new Error("Immagine sorgente non valida.");
   return data;
+}
+
+function cacheTryOnProductImage(source, image) {
+  const previous = tryOnProductImageCache.get(source);
+  if (previous) tryOnProductImageCacheBytes -= previous.data.length;
+  tryOnProductImageCache.delete(source);
+  tryOnProductImageCache.set(source, image);
+  tryOnProductImageCacheBytes += image.data.length;
+
+  while (tryOnProductImageCacheBytes > tryOnProductCacheMaxBytes && tryOnProductImageCache.size > 1) {
+    const oldestKey = tryOnProductImageCache.keys().next().value;
+    const oldest = tryOnProductImageCache.get(oldestKey);
+    tryOnProductImageCache.delete(oldestKey);
+    tryOnProductImageCacheBytes -= oldest?.data?.length || 0;
+  }
+}
+
+async function loadTryOnProductReference(source, index) {
+  const cached = tryOnProductImageCache.get(source);
+  if (cached) {
+    tryOnProductImageCache.delete(source);
+    tryOnProductImageCache.set(source, cached);
+    return { ...cached, filename: `product-${index + 1}.jpg` };
+  }
+
+  let pending = tryOnProductImageInflight.get(source);
+  if (!pending) {
+    pending = (async () => {
+      const data = await readProductImageSource(source);
+      const normalized = await normalizeTryOnProductImage({
+        data,
+        mime: imageMimeFromExtension(path.extname(String(source).split(/[?#]/)[0]).toLowerCase()),
+        filename: path.basename(String(source).split(/[?#]/)[0]),
+      });
+      const image = { data: normalized.data, mime: normalized.mime };
+      cacheTryOnProductImage(source, image);
+      return image;
+    })().finally(() => tryOnProductImageInflight.delete(source));
+    tryOnProductImageInflight.set(source, pending);
+  }
+
+  const image = await pending;
+  return { ...image, filename: `product-${index + 1}.jpg` };
+}
+
+async function loadCatalogTryOnProductImages(productIds) {
+  const ids = productIds.map((id) => cleanTrackingString(id, 120)).filter(Boolean);
+  if (!ids.length) return [];
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  const catalog = [
+    ...defaults.map((product) => mergeProduct(product, overrides.items)),
+    ...overrides.custom.map(mergeCustomProduct),
+  ];
+  const byId = new Map(catalog.map((product) => [product.id, product]));
+
+  return Promise.all(ids.map(async (id, index) => {
+    const product = byId.get(id);
+    const source = cleanProductImages(product?.originalImages)[0]
+      || cleanProductImages(product?.images)[0];
+    if (!source) throw new Error(`Foto prodotto try-on non disponibile: ${id}`);
+    return loadTryOnProductReference(source, index);
+  }));
 }
 
 async function createAndStoreProductZoomImage(productId, originalImage, publishedImage) {
@@ -1833,6 +1900,8 @@ function buildTryOnForm({ userImage, productImages = [], productName, category, 
   form.append("model", openaiTryOnModel);
   form.append("size", bundleItems.length > 0 || hasSeparateProductImages ? "1024x1536" : "1024x1024");
   form.append("quality", "high");
+  form.append("output_format", "jpeg");
+  form.append("output_compression", "94");
   if (openaiTryOnModel !== "gpt-image-2") form.append("input_fidelity", "high");
   const identityLock = [
     "PERSON LOCK — highest priority: input image 1 is the immutable identity and scene reference.",
@@ -1910,7 +1979,7 @@ async function requestTryOnEdit(form) {
       throw error;
     }
     const output = data?.data?.[0];
-    if (output?.b64_json) return `data:image/png;base64,${output.b64_json}`;
+    if (output?.b64_json) return `data:image/jpeg;base64,${output.b64_json}`;
     if (output?.url) return output.url;
     throw new Error("Immagine try-on non ricevuta.");
   } finally {
@@ -2994,6 +3063,7 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
 
   const productName = fieldValue(parts, "productName", 180);
   const category = fieldValue(parts, "category", 120);
+  const productId = fieldValue(parts, "productId", 120);
   const mode = fieldValue(parts, "mode", 20) === "bundle" ? "bundle" : "single";
   let bundleItems = mode === "bundle" ? cleanTryOnBundleItems(fieldValue(parts, "bundleItems", 6000)) : [];
   if (mode === "bundle" && (bundleItems.length === 0 || bundleItems.length > 2)) {
@@ -3013,7 +3083,7 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
   if (uploadedProductImages.some((item) => !item)) {
     return badRequest(res, copy.bundleImages);
   }
-  if (mode === "bundle") {
+  if (mode === "bundle" && uploadedProductImages.length > 0) {
     const legacyBundle = bundleItems.every((item) => item.referenceImageIndices === null);
     if (legacyBundle) {
       if (uploadedProductImages.length !== bundleItems.length) return badRequest(res, copy.bundleImages);
@@ -3043,11 +3113,30 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
       });
       return badRequest(res, copy.bundleImages);
     }
+  } else {
+    const productIds = mode === "bundle"
+      ? bundleItems.map((item) => item.id)
+      : [productId];
+    try {
+      productImages = await loadCatalogTryOnProductImages(productIds);
+      if (mode === "bundle") {
+        bundleItems = bundleItems.map((item, index) => ({
+          ...item,
+          referenceImageIndices: [index + 2],
+        }));
+      }
+    } catch (error) {
+      console.error("[try-on] catalog product image preparation failed", {
+        productIds,
+        error: cleanTrackingString(error?.message, 220),
+      });
+      return badRequest(res, copy.bundleImages);
+    }
   }
   const progress = streamProgress ? createProgressStream(res) : null;
   progress?.update(24, copy.received);
   const saveTryOn = fieldValue(parts, "saveTryOn", 10) === "yes";
-  const customerImage = parts.find((part) => part.name === "customerImage" && part.filename) || (mode === "bundle" ? image : null);
+  const customerImage = parts.find((part) => part.name === "customerImage" && part.filename) || image;
   let userImage;
   try {
     userImage = await normalizeTryOnCustomerImage({
@@ -3072,7 +3161,7 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
       mode,
       saveTryOn,
       customerImage,
-      productId: fieldValue(parts, "productId", 120),
+      productId,
       copy,
     });
     if (!job) return json(res, 429, { ok: false, message: copy.busy });
@@ -3085,7 +3174,7 @@ async function handleTryOn(req, res, { streamProgress = false, asyncJob = false 
     progress?.update(60, mode === "bundle" ? copy.bundleGenerating : copy.generating);
     const generated = await generateTryOnImage({ userImage, productImages, productName, category, bundleItems });
     progress?.update(92, mode === "bundle" ? copy.bundlePreview : copy.preview);
-    const archived = saveTryOn && customerImage ? await archiveTryOn({ customerImage, generated, productId: fieldValue(parts, "productId", 120), productName, category }) : null;
+    const archived = saveTryOn && customerImage ? await archiveTryOn({ customerImage, generated, productId, productName, category }) : null;
     const result = { ok: true, image: generated, saved: Boolean(archived), mode };
     if (progress) return progress.done(result);
     json(res, 200, result);
