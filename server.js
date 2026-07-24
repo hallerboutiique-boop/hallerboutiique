@@ -217,6 +217,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/tryon-speed-1/script.js", "/script.js"],
   ["/assets-v/delivery-minutes-1/script.js", "/script.js"],
   ["/assets-v/delivery-estimate-1/script.js", "/script.js"],
+  ["/assets-v/clothing-xxl-1/script.js", "/script.js"],
+  ["/assets-v/clothing-xxl-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1739,7 +1741,8 @@ function cleanProductPatch(body) {
   });
   const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
   const images = cleanProductImages(body.images);
-  const sizes = cleanProductSizes(body.sizes);
+  const sizes = cleanProductSizes(body.sizes)
+    .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
   const inventorySizes = sizes.length ? sizes : defaultProductSizes[sizeType];
   const inventoryBySize = normalizeInventoryBySize(body.inventoryBySize, inventorySizes);
   const sizeInventoryTotal = inventoryBySizeTotal(inventoryBySize);

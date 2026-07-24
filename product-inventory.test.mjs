@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   adjustProductInventory,
   availableInventorySizes,
+  defaultProductSizes,
   inventoryBySizeTotal,
   normalizeInventoryBySize,
   productInventoryTotal,
@@ -29,6 +30,7 @@ test("uses European sizes for footwear and clothing sizes for apparel", () => {
   assert.equal(resolveProductSizeType({ collection: "Scarpe Uomo", category: "Nuovi arrivi", sizeType: "clothing" }), "sneakers");
   assert.equal(resolveProductSizeType({ collection: "Catalogo Uomo", category: "T-Shirts", sizeType: "none" }), "clothing");
   assert.equal(resolveProductSizeType({ collection: "Catalogo Donna", category: "Borse Donna", sizeType: "clothing" }), "none");
+  assert.deepEqual(defaultProductSizes.clothing, ["S", "M", "L", "XL", "XXL"]);
 });
 
 test("calculates total and available sizes from size inventory", () => {

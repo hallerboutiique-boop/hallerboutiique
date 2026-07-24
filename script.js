@@ -313,7 +313,7 @@ function translatePage() {
   document.title = siteLanguage === "it" ? "Haller Boutique" : `Haller Boutique | ${translate("new-arrivals")}`;
 }
 
-const clothingSizes = ["S", "M", "L", "XL", "XXL", "XXXL"];
+const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
 
 function resolveCatalogProductSizeType(productOrSizeType) {
@@ -1304,7 +1304,8 @@ function showSlide(index) {
 
 function getSizes(productOrSizeType) {
   if (productOrSizeType && typeof productOrSizeType === "object" && Array.isArray(productOrSizeType.sizes) && productOrSizeType.sizes.length) {
-    return productOrSizeType.sizes;
+    const supportedSizes = productOrSizeType.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL");
+    if (supportedSizes.length) return supportedSizes;
   }
   const sizeType = resolveCatalogProductSizeType(productOrSizeType);
   if (sizeType === "clothing") {

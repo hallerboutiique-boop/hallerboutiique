@@ -75,7 +75,7 @@ const productUploadMaximumEdge = 2400;
 const productUploadWebpQuality = 0.92;
 const aiProductResultsStorageKey = "haller-admin-ai-product-results";
 const defaultAdminProductSizes = {
-  clothing: ["S", "M", "L", "XL", "XXL", "XXXL"],
+  clothing: ["S", "M", "L", "XL", "XXL"],
   sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
   none: [],
 };
@@ -108,7 +108,7 @@ function productSizeValues() {
   return String(productForm?.elements.sizes?.value || "")
     .split(/[\n,;]+/)
     .map((size) => size.trim())
-    .filter(Boolean);
+    .filter((size) => size && size.toUpperCase() !== "XXXL");
 }
 
 function inferShoeSizeRange(sizes = productSizeValues()) {
@@ -1454,10 +1454,7 @@ function parseAdminInventoryBySize(value) {
 }
 
 function adminProductSizes() {
-  const explicitSizes = String(productForm?.elements.sizes?.value || "")
-    .split(/[\n,;]+/)
-    .map((size) => size.trim())
-    .filter(Boolean);
+  const explicitSizes = productSizeValues();
   if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
   const sizeType = resolveAdminProductSizeType({
     collection: productForm?.elements.collection?.value,
@@ -1558,7 +1555,9 @@ function fillProductForm(product) {
   productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
   productForm.elements.discount.value = product.discount || "";
   syncAdminProductSizeTypeFromDetails();
-  productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
+  productForm.elements.sizes.value = Array.isArray(product.sizes)
+    ? product.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL").join(", ")
+    : "";
   syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.inventoryBySize.value = JSON.stringify(parseAdminInventoryBySize(product.inventoryBySize));
@@ -1588,7 +1587,9 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.finalPrice.value = "";
   productForm.elements.discount.value = "";
   syncAdminProductSizeTypeFromDetails();
-  productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
+  productForm.elements.sizes.value = Array.isArray(suggestion.sizes)
+    ? suggestion.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL").join(", ")
+    : "";
   syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = "";
   productForm.elements.inventoryBySize.value = "{}";

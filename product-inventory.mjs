@@ -9,7 +9,7 @@ function cleanQuantity(value) {
 }
 
 export const defaultProductSizes = {
-  clothing: ["S", "M", "L", "XL", "XXL", "XXXL"],
+  clothing: ["S", "M", "L", "XL", "XXL"],
   sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
   none: [],
 };
