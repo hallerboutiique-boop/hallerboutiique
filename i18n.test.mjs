@@ -363,7 +363,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/home-products-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/home-products-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/home-products-2\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -493,7 +493,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("directUploads"/);
   assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/home-products-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/home-products-2\/admin\.js/);
 });
 
 test("admin can choose exactly which catalog products appear on the home page", async () => {
@@ -508,6 +508,7 @@ test("admin can choose exactly which catalog products appear on the home page", 
   assert.match(adminHtml, /data-admin-tab="home"/);
   assert.match(adminHtml, /data-home-products-grid/);
   assert.match(adminHtml, /data-home-products-save/);
+  assert.match(admin, /function normalizeSearchText\(value\)/);
   assert.match(admin, /function renderHomeProducts\(\)/);
   assert.match(admin, /body: JSON\.stringify\(\{ homeProductIds: orderedIds \}\)/);
   assert.match(script, /if \(Array\.isArray\(homeProductIds\)\)/);

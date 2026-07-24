@@ -1795,13 +1795,16 @@ function updateProductSuggestions() {
   });
 }
 
-function filteredAdminProducts() {
-  const normalizeSearchText = (value) => String(value || "")
+function normalizeSearchText(value) {
+  return String(value || "")
     .toLocaleLowerCase("it")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function filteredAdminProducts() {
   const query = normalizeSearchText(productSearch?.value);
   if (!query) return [];
   const terms = query.split(" ").filter(Boolean);
