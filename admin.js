@@ -20,6 +20,9 @@ const productTotalInventoryHelp = document.querySelector("[data-product-total-in
 const productSizeInventoryBulk = document.querySelector("[data-product-size-inventory-bulk]");
 const productSizeInventoryApply = document.querySelector("[data-product-size-inventory-apply]");
 const productSizeInventoryClear = document.querySelector("[data-product-size-inventory-clear]");
+const productShoeSizeRange = document.querySelector("[data-product-shoe-size-range]");
+const productShoeSizeRangeField = document.querySelector("[data-product-shoe-size-range-field]");
+const productCustomSizesField = document.querySelector("[data-product-custom-sizes-field]");
 const productImageUpload = document.querySelector("[data-product-image-upload]");
 const productImageButton = document.querySelector("[data-product-image-button]");
 const productUploadCancel = document.querySelector("[data-product-upload-cancel]");
@@ -76,6 +79,11 @@ const defaultAdminProductSizes = {
   sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
   none: [],
 };
+const adminShoeSizeRanges = {
+  "36-41": ["36", "37", "38", "39", "40", "41"],
+  "40-45": ["40", "41", "42", "43", "44", "45"],
+  "36-45": ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+};
 
 function resolveAdminProductSizeType({ collection = "", category = "" } = {}) {
   const label = `${collection} ${category}`.toLocaleLowerCase("it");
@@ -86,11 +94,44 @@ function resolveAdminProductSizeType({ collection = "", category = "" } = {}) {
 
 function syncAdminProductSizeTypeFromDetails() {
   if (!productForm?.elements.sizeType) return;
+  const previousSizeType = productForm.elements.sizeType.value;
   const sizeType = resolveAdminProductSizeType({
     collection: productForm.elements.collection?.value,
     category: productForm.elements.category?.value,
   });
   productForm.elements.sizeType.value = sizeType;
+  syncShoeSizeRangeVisibility({ applyDefault: sizeType === "sneakers" && previousSizeType !== "sneakers" });
+  return sizeType;
+}
+
+function productSizeValues() {
+  return String(productForm?.elements.sizes?.value || "")
+    .split(/[\n,;]+/)
+    .map((size) => size.trim())
+    .filter(Boolean);
+}
+
+function inferShoeSizeRange(sizes = productSizeValues()) {
+  const values = new Set(sizes);
+  const exactRange = Object.entries(adminShoeSizeRanges)
+    .find(([, range]) => range.length === values.size && range.every((size) => values.has(size)));
+  if (exactRange) return exactRange[0];
+  const numeric = sizes.map(Number).filter(Number.isFinite);
+  if (numeric.length && Math.min(...numeric) >= 40) return "40-45";
+  if (numeric.length && Math.max(...numeric) <= 41) return "36-41";
+  return "36-45";
+}
+
+function syncShoeSizeRangeVisibility({ applyDefault = false } = {}) {
+  if (!productForm?.elements.sizeType) return;
+  const isSneakers = productForm.elements.sizeType.value === "sneakers";
+  if (productShoeSizeRangeField) productShoeSizeRangeField.hidden = !isSneakers;
+  if (productCustomSizesField) productCustomSizesField.hidden = isSneakers;
+  if (!isSneakers || !productShoeSizeRange) return;
+  productShoeSizeRange.value = inferShoeSizeRange();
+  if (applyDefault || productSizeValues().length === 0) {
+    productForm.elements.sizes.value = adminShoeSizeRanges[productShoeSizeRange.value].join(", ");
+  }
 }
 
 function storedAiProductResultIds() {
@@ -1518,6 +1559,7 @@ function fillProductForm(product) {
   productForm.elements.discount.value = product.discount || "";
   syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(product.sizes) ? product.sizes.join(", ") : "";
+  syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.inventoryBySize.value = JSON.stringify(parseAdminInventoryBySize(product.inventoryBySize));
   renderProductSizeInventory(product.inventoryBySize);
@@ -1547,6 +1589,7 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.discount.value = "";
   syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes) ? suggestion.sizes.join(", ") : "";
+  syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = "";
   productForm.elements.inventoryBySize.value = "{}";
   renderProductSizeInventory({});
@@ -1570,6 +1613,7 @@ function startNewProduct() {
   productForm.elements.zoomImages.value = "";
   productForm.elements.imageVariant.value = "original";
   productForm.elements.sizeType.value = "clothing";
+  syncShoeSizeRangeVisibility();
   productForm.elements.inventoryBySize.value = "{}";
   renderProductSizeInventory({});
   setProductImageEntries([], [], [], "original", {});
@@ -2275,7 +2319,12 @@ productForm?.addEventListener("submit", async (event) => {
 
 productForm?.elements.sizes?.addEventListener("input", () => renderProductSizeInventory());
 productForm?.elements.sizeType?.addEventListener("change", () => {
-  syncAdminProductSizeTypeFromDetails();
+  syncShoeSizeRangeVisibility({ applyDefault: true });
+  renderProductSizeInventory();
+});
+productShoeSizeRange?.addEventListener("change", () => {
+  const sizes = adminShoeSizeRanges[productShoeSizeRange.value] || adminShoeSizeRanges["36-45"];
+  productForm.elements.sizes.value = sizes.join(", ");
   renderProductSizeInventory();
 });
 productForm?.elements.collection?.addEventListener("input", () => {

@@ -358,7 +358,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-speed-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-search-all-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/admin-shoe-ranges-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -462,7 +462,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/admin-search-all-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-shoe-ranges-1\/admin\.js/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {
@@ -488,6 +488,22 @@ test("admin product search returns every matching catalog product", async () => 
   assert.match(renderSource, /products\.map\(\(product\) =>/);
   assert.doesNotMatch(renderSource, /const product = products\[0\]/);
   assert.match(adminHtml, /Vengono mostrati tutti i prodotti corrispondenti/);
+});
+
+test("admin offers the three supported shoe size ranges", async () => {
+  const [admin, adminHtml] = await Promise.all([
+    readFile("admin.js", "utf8"),
+    readFile("admin.html", "utf8"),
+  ]);
+  assert.match(adminHtml, /data-product-shoe-size-range/);
+  assert.match(adminHtml, /value="36-41">36–41/);
+  assert.match(adminHtml, /value="40-45">40–45/);
+  assert.match(adminHtml, /value="36-45">36–45/);
+  assert.match(admin, /"36-41": \["36", "37", "38", "39", "40", "41"\]/);
+  assert.match(admin, /"40-45": \["40", "41", "42", "43", "44", "45"\]/);
+  assert.match(admin, /"36-45": \["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"\]/);
+  assert.match(admin, /productShoeSizeRange\?\.addEventListener\("change"/);
+  assert.match(admin, /productForm\.elements\.sizes\.value = sizes\.join\(", "\)/);
 });
 
 test("checkout renders product images from the cart", async () => {

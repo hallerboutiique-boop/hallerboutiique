@@ -256,7 +256,16 @@
                       <option value="none">Nessuna taglia</option>
                     </select>
                   </label>
-                  <label>
+                  <label data-product-shoe-size-range-field hidden>
+                    <span>Intervallo taglie scarpe</span>
+                    <select data-product-shoe-size-range>
+                      <option value="36-41">36–41</option>
+                      <option value="40-45">40–45</option>
+                      <option value="36-45">36–45</option>
+                    </select>
+                    <small>Scegli l’intervallo disponibile per questo modello.</small>
+                  </label>
+                  <label data-product-custom-sizes-field>
                     <span>Taglie personalizzate</span>
                     <input name="sizes" placeholder="S, M, L oppure 39, 40, 41">
                     <small>Sostituiscono il set standard quando le inserisci.</small>
@@ -437,6 +446,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/admin-search-all-1/admin.js"></script>
+    <script src="/assets-v/admin-shoe-ranges-1/admin.js"></script>
   </body>
 </html>
