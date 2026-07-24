@@ -106,8 +106,8 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
   assert.match(womanSlide, /data-i18n-html="hero-title">LUSSO<br>QUALITÀ<br>STILE/);
   assert.match(womanSlide, /data-i18n-html="hero-description">Scopri le ultime novit/);
-  assert.match(index, /data-src="\/assets\/hero-videos\/man-turn-balenciaga-smooth-v2\.mp4"/);
-  assert.match(index, /data-src="\/assets\/hero-videos\/woman-glasses-smile-smooth-v2\.mp4"/);
+  assert.match(index, /data-src="\/assets\/hero-videos\/man-turn-balenciaga-clean-v3\.mp4"/);
+  assert.match(index, /data-src="\/assets\/hero-videos\/woman-glasses-smile-clean-v3\.mp4"/);
   assert.equal((index.match(/preload="none"/g) || []).length, 2);
   assert.match(script, /function playHeroCharacterVideo\(slide\)/);
   assert.match(script, /if \(!video\.hasAttribute\("src"\)\)/);
