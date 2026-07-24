@@ -341,6 +341,8 @@ test("mobile logos use collision-free layouts on every storefront page", async (
       ? /\/assets-v\/home-image-drag-1\/styles\.css/
       : pageNames[index] === "index.html"
         ? /\/assets-v\/hero-videos-1\/styles\.css/
+        : pageNames[index] === "ultimi-disponibili.html"
+          ? /\/assets-v\/last-stock-sizes-1\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
@@ -367,7 +369,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/tshirts-all-2\/script\.js/));
+  pages.forEach((html, index) => {
+    const expectedScript = scriptPages[index] === "ultimi-disponibili.html"
+      ? /\/assets-v\/last-stock-sizes-1\/script\.js/
+      : /\/assets-v\/tshirts-all-2\/script\.js/;
+    assert.match(html, expectedScript);
+  });
   assert.match(index, /\/assets-v\/tshirts-all-2\/script\.js/);
   assert.match(index, /\/assets-v\/hero-videos-1\/styles\.css/);
   assert.match(checkout, /\/assets-v\/tshirts-all-2\/script\.js/);
@@ -379,8 +386,26 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/hero-videos-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tshirts-restored-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tshirts-all-2\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/last-stock-sizes-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/last-stock-sizes-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
+});
+
+test("last-stock cards show only inventory-confirmed sizes with a visible pulse", async () => {
+  const [page, script, styles] = await Promise.all([
+    readFile("ultimi-disponibili.html", "utf8"),
+    readFile("script.js", "utf8"),
+    readFile("styles.css", "utf8"),
+  ]);
+  assert.match(page, /\/assets-v\/last-stock-sizes-1\/script\.js/);
+  assert.match(page, /\/assets-v\/last-stock-sizes-1\/styles\.css/);
+  assert.match(script, /const visibleSizes = onlyAvailable[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
+  assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
+  assert.match(script, /is-last-stock-available/);
+  assert.match(script, /is-available-pulse/);
+  assert.match(styles, /@keyframes last-stock-size-pulse/);
+  assert.match(styles, /animation:\s*last-stock-size-pulse 1\.45s ease-in-out infinite/);
 });
 
 test("delivery messaging calculates a road estimate from Monza and spells out minutes", async () => {

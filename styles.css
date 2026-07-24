@@ -4533,6 +4533,57 @@ body.motion-enabled .product-card:hover .product-image {
   background: var(--gold);
 }
 
+.product-sizes.is-last-stock-available > span {
+  color: #ffe09a;
+}
+
+.product-sizes.is-last-stock-available button.is-available-pulse {
+  color: #fff9e8;
+  border-color: #f3c969;
+  background: linear-gradient(145deg, rgba(176, 125, 21, 0.92), rgba(76, 47, 4, 0.96));
+  box-shadow:
+    0 0 0 0 rgba(243, 201, 105, 0.42),
+    0 0 12px rgba(243, 201, 105, 0.48),
+    inset 0 0 8px rgba(255, 237, 190, 0.16);
+  animation: last-stock-size-pulse 1.45s ease-in-out infinite;
+}
+
+.product-sizes.is-last-stock-available button.is-available-pulse:nth-child(2n) {
+  animation-delay: 0.16s;
+}
+
+.product-sizes.is-last-stock-available button.is-available-pulse:hover,
+.product-sizes.is-last-stock-available button.is-available-pulse.is-selected {
+  color: #080808;
+  border-color: #fff0c8;
+  background: #f3c969;
+}
+
+@keyframes last-stock-size-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 0 rgba(243, 201, 105, 0.42),
+      0 0 10px rgba(243, 201, 105, 0.42),
+      inset 0 0 8px rgba(255, 237, 190, 0.14);
+  }
+
+  50% {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 0 5px rgba(243, 201, 105, 0.08),
+      0 0 22px rgba(255, 218, 125, 0.92),
+      inset 0 0 11px rgba(255, 247, 224, 0.28);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-sizes.is-last-stock-available button.is-available-pulse {
+    animation: none;
+  }
+}
+
 .product-sizes button.is-sold-out,
 .product-sizes button:disabled {
   color: var(--text-muted);

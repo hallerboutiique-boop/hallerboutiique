@@ -1396,8 +1396,9 @@ function getSizes(productOrSizeType) {
   return [];
 }
 
-function createSizesMarkup(product) {
+function createSizesMarkup(product, options = {}) {
   const sizes = getSizes(product);
+  const onlyAvailable = options?.onlyAvailable === true;
 
   if (sizes.length === 0) {
     return "";
@@ -1408,13 +1409,21 @@ function createSizesMarkup(product) {
     (Array.isArray(product?.availableSizes) ? product.availableSizes : [])
       .map((size) => String(size).toLocaleLowerCase("it"))
   );
+  const visibleSizes = onlyAvailable
+    ? sizes.filter((size) => availableSizes.has(String(size).toLocaleLowerCase("it")))
+    : sizes;
+
+  if (visibleSizes.length === 0) {
+    return "";
+  }
 
   return `
-    <div class="product-sizes" aria-label="${translate("sizes-available")}">
+    <div class="product-sizes${onlyAvailable ? " is-last-stock-available" : ""}" aria-label="${translate("sizes-available")}">
       <span>${translate("sizes")}</span>
-      <div>${sizes.map((size) => {
+      <div>${visibleSizes.map((size) => {
         const soldOut = inventoryTrackedBySize && !availableSizes.has(String(size).toLocaleLowerCase("it"));
-        return `<button type="button" data-size-option data-product-size="${escapeHtml(size)}"${soldOut ? ` class="is-sold-out" disabled aria-disabled="true" title="${translate("size-sold-out")}"` : ""}>${escapeHtml(size)}</button>`;
+        const buttonClass = onlyAvailable ? ` class="is-available-pulse"` : soldOut ? ` class="is-sold-out"` : "";
+        return `<button type="button" data-size-option data-product-size="${escapeHtml(size)}"${buttonClass}${soldOut ? ` disabled aria-disabled="true" title="${translate("size-sold-out")}"` : ""}>${escapeHtml(size)}</button>`;
       }).join("")}</div>
     </div>
   `;
@@ -1790,7 +1799,8 @@ function ensureProductImageZoomDialog() {
   return dialog;
 }
 
-function createProductCard(product) {
+function createProductCard(product, options = {}) {
+  const showOnlyAvailableSizes = options?.showOnlyAvailableSizes === true;
   return `
     <article class="product-card" data-product-card="${escapeHtml(product.id)}" data-product-url="${productPageUrl(product)}">
       <div class="product-media">
@@ -1805,7 +1815,7 @@ function createProductCard(product) {
           <span class="price-original">${escapeHtml(product.original)}</span>
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
-        ${createSizesMarkup(product)}
+        ${createSizesMarkup(product, { onlyAvailable: showOnlyAvailableSizes })}
         ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
         <div class="product-actions">
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
@@ -2134,7 +2144,7 @@ function renderLastStockCatalog() {
   const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category);
     const brands = getBrands(categoryProducts);
-    return `<section class="last-stock-category"><h3>${escapeHtml(translateCatalogCategory(category))}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map(createProductCard).join("")}</div></section>`).join("")}</section>`;
+    return `<section class="last-stock-category"><h3>${escapeHtml(translateCatalogCategory(category))}</h3>${brands.map((brand) => `<section class="last-stock-brand"><h4>${escapeHtml(brand)}</h4><div class="product-grid">${categoryProducts.filter((product) => getProductBrand(product) === brand).map((product) => createProductCard(product, { showOnlyAvailableSizes: true })).join("")}</div></section>`).join("")}</section>`;
   }).join("")}</section>` : `<p class="catalog-empty">${translate("catalog-last-empty")}</p>`;
   root.innerHTML = chooser + section;
   observeProductImages(root);
