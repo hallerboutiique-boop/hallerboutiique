@@ -2325,8 +2325,14 @@ function openProductImageZoom(control) {
   }
   if (!dialog || !stage || !zoomImage || galleryEntries.length === 0) return;
   productImageZoomGallery = galleryEntries;
-  const requestedIndex = Number.parseInt(control.dataset.zoomIndex || "0", 10);
-  productImageZoomIndex = Number.isInteger(requestedIndex) ? requestedIndex : 0;
+  const gallerySlides = gallery ? [...gallery.querySelectorAll("[data-gallery-slide]")] : [];
+  const activeImageIndex = activeImage ? gallerySlides.indexOf(activeImage) : -1;
+  const requestedIndex = control.hasAttribute("data-zoom-index")
+    ? Number.parseInt(control.dataset.zoomIndex, 10)
+    : activeImageIndex;
+  productImageZoomIndex = Number.isInteger(requestedIndex) && requestedIndex >= 0
+    ? requestedIndex
+    : 0;
   if (!dialog.open) dialog.showModal();
   document.body.classList.add("is-product-zoom-open");
   loadProductImageZoom(productImageZoomIndex);

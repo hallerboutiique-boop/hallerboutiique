@@ -219,6 +219,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/delivery-estimate-1/script.js", "/script.js"],
   ["/assets-v/clothing-xxl-1/script.js", "/script.js"],
   ["/assets-v/clothing-xxl-1/admin.js", "/admin.js"],
+  ["/assets-v/zoom-selected-image-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
