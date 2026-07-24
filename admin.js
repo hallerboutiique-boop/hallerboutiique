@@ -67,6 +67,9 @@ const productUploadBatchSize = 10;
 const aiProductConcurrency = 3;
 const maximumProductImageBytes = 20 * 1024 * 1024;
 const maximumProductUploadBatchBytes = 70 * 1024 * 1024;
+const productUploadResizeThresholdBytes = 2 * 1024 * 1024;
+const productUploadMaximumEdge = 2400;
+const productUploadWebpQuality = 0.92;
 const aiProductResultsStorageKey = "haller-admin-ai-product-results";
 const defaultAdminProductSizes = {
   clothing: ["S", "M", "L", "XL", "XXL", "XXXL"],
@@ -1015,22 +1018,67 @@ async function editProductImageEntry(entry) {
   });
 }
 
-function addProductImageFiles(files) {
+async function prepareProductUploadImage(file) {
+  if (file.size <= productUploadResizeThresholdBytes || typeof createImageBitmap !== "function") {
+    return { blob: file, name: file.name };
+  }
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, productUploadMaximumEdge / Math.max(bitmap.width, bitmap.height));
+    const width = Math.max(1, Math.round(bitmap.width * scale));
+    const height = Math.max(1, Math.round(bitmap.height * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    if (!context) return { blob: file, name: file.name };
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(bitmap, 0, 0, width, height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", productUploadWebpQuality));
+    if (!blob || blob.size >= file.size) return { blob: file, name: file.name };
+    const baseName = file.name.replace(/\.[^.]+$/, "") || "prodotto";
+    return { blob, name: `${baseName}.webp` };
+  } catch {
+    return { blob: file, name: file.name };
+  } finally {
+    bitmap?.close?.();
+  }
+}
+
+async function prepareProductUploadImages(files, concurrency = 2) {
+  const results = new Array(files.length);
+  let nextIndex = 0;
+  const workers = Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+    while (nextIndex < files.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await prepareProductUploadImage(files[index]);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
+
+async function addProductImageFiles(files) {
   const remaining = Math.max(0, maximumProductImages - productImageEntries.length);
   const validFiles = files.filter((file) => file.type.startsWith("image/") && file.size > 0 && file.size <= maximumProductImageBytes);
   const accepted = validFiles.slice(0, remaining);
   if (!accepted.length) {
     throw new Error(remaining ? "Usa immagini JPG, PNG o WebP fino a 20 MB ciascuna." : `La galleria contiene gia ${maximumProductImages} foto.`);
   }
-  const newEntries = accepted.map((file) => ({
+  setProductUploadStatus(`Preparazione rapida di ${accepted.length} foto...`);
+  const prepared = await prepareProductUploadImages(accepted);
+  const newEntries = accepted.map((file, index) => ({
     key: nextProductImageKey(),
     image: "",
     originalImage: "",
     renditions: [],
     variant: "original",
-    pendingImage: { blob: file, name: file.name },
+    pendingImage: prepared[index],
     originalFile: file,
-    previewUrl: URL.createObjectURL(file),
+    previewUrl: URL.createObjectURL(prepared[index].blob),
   }));
   productImageEntries.push(...newEntries);
   selectedProductImageKey = newEntries[0].key;
@@ -2199,7 +2247,7 @@ productForm?.addEventListener("submit", async (event) => {
     await loadProducts();
     const product = adminProducts.find((entry) => entry.id === selectedProductId);
     if (product) fillProductForm(product);
-    setProductUploadStatus(`${productImageEntries.length} foto salvate nell'ordine mostrato.`);
+    setProductUploadStatus(`${productImageEntries.length} foto salvate. Le versioni ottimizzate vengono create in background.`);
     setProductMessage("Prodotto salvato.", "success");
   } catch (error) {
     if (error.name !== "AbortError") setProductMessage(error.message, "error");
@@ -2277,11 +2325,11 @@ productUploadCancel?.addEventListener("click", () => {
   interruptProductUpload();
 });
 
-productImageUpload?.addEventListener("change", () => {
+productImageUpload?.addEventListener("change", async () => {
   const files = [...(productImageUpload.files || [])];
   if (files.length === 0) return;
   try {
-    addProductImageFiles(files);
+    await addProductImageFiles(files);
   } catch (error) {
     setProductUploadStatus(error.message);
     setProductMessage(error.message, "error");

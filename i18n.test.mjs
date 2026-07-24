@@ -358,7 +358,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-speed-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-original-price-5\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/admin-upload-speed-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -399,7 +399,10 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(styles, /\.product-editor-form \.product-gallery-editor-header\s*\{[\s\S]*?order:\s*-3/);
   assert.match(styles, /\.product-editor-form \.product-preview-grid\s*\{[\s\S]*?display:\s*flex[\s\S]*?order:\s*-2/);
   assert.match(styles, /\.product-size-inventory-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(admin, /function addProductImageFiles\(files\)/);
+  assert.match(admin, /async function addProductImageFiles\(files\)/);
+  assert.match(admin, /async function prepareProductUploadImage\(file\)/);
+  assert.match(admin, /const productUploadMaximumEdge = 2400/);
+  assert.match(admin, /canvas\.toBlob\(resolve, "image\/webp", productUploadWebpQuality\)/);
   assert.match(admin, /async function editProductImageEntry\(entry\)/);
   assert.match(admin, /async function uploadPendingProductImages\(productId\)/);
   assert.match(admin, /data-product-image-drag/);
@@ -438,6 +441,9 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /const originalSavedByIndex = new Map\(/);
   assert.match(server, /const uploadedImages = await mapWithConcurrency\(imageParts, 2/);
   assert.match(server, /const uploadedOriginals = await Promise\.all/);
+  assert.match(server, /scheduleProductImageOptimization\(productId\)/);
+  assert.match(server, /optimization: "queued"/);
+  assert.match(server, /if \(productImageStorage\) \{\s*return storeProductImage\(name, data, "image\/webp"\)/);
   assert.match(server, /sourceSaved = saved\.map/);
   assert.match(server, /originalImages: sourceSaved/);
   assert.match(server, /originalImages: mergeUploadedImages\(existing\.originalImages, sourceSaved\)/);
@@ -456,7 +462,14 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/admin-original-price-5\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-upload-speed-1\/admin\.js/);
+});
+
+test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {
+  const fly = await readFile("fly.toml", "utf8");
+  assert.match(fly, /cpu_kind = 'performance'/);
+  assert.match(fly, /cpus = 1/);
+  assert.match(fly, /memory = '2048mb'/);
 });
 
 test("checkout renders product images from the cart", async () => {

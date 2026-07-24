@@ -2638,6 +2638,51 @@ body.motion-enabled .icon-button:focus-visible {
   transition: color 180ms ease, transform 180ms ease;
 }
 
+.main-nav .last-stock-nav {
+  color: var(--gold);
+  background: linear-gradient(
+    105deg,
+    #9d741f 0%,
+    var(--gold) 32%,
+    #fff2ad 48%,
+    var(--gold) 64%,
+    #9d741f 100%
+  );
+  background-size: 240% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 5px rgba(var(--gold-rgb), 0.42));
+  font-weight: 800;
+  animation: last-stock-nav-shine 2.8s ease-in-out infinite;
+}
+
+@keyframes last-stock-nav-shine {
+  0%,
+  18% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 3px rgba(var(--gold-rgb), 0.3));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 9px rgba(var(--gold-rgb), 0.78));
+  }
+
+  82%,
+  100% {
+    background-position: 0 50%;
+    filter: drop-shadow(0 0 4px rgba(var(--gold-rgb), 0.38));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .main-nav .last-stock-nav {
+    animation: none;
+    background-position: 50% 50%;
+    filter: drop-shadow(0 0 4px rgba(var(--gold-rgb), 0.38));
+  }
+}
+
 body.motion-enabled .main-nav a:not(.active):hover,
 body.motion-enabled .main-nav a:not(.active):focus-visible {
   color: var(--gold);

@@ -89,6 +89,7 @@ const productImageStorage = productImageBucketName
 let productImageStorageReadyPromise = null;
 let productImageOptimizationJob = null;
 let productZoomImageOptimizationJob = null;
+const productImageOptimizationTimers = new Map();
 const tryOnProductImageCache = new Map();
 const tryOnProductImageInflight = new Map();
 let tryOnProductImageCacheBytes = 0;
@@ -201,6 +202,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/admin-original-price-5/styles.css", "/styles.css"],
   ["/assets-v/admin-original-price-5/script.js", "/script.js"],
   ["/assets-v/admin-original-price-5/admin.js", "/admin.js"],
+  ["/assets-v/admin-upload-speed-1/admin.js", "/admin.js"],
   ["/assets-v/tryon-speed-1/script.js", "/script.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
@@ -446,26 +448,23 @@ async function storeProductImage(name, data, contentType) {
 }
 
 async function storeProductImageRendition(name, data) {
+  if (productImageStorage) {
+    return storeProductImage(name, data, "image/webp");
+  }
+
+  await fs.mkdir(uploadsDir, { recursive: true });
+  const target = path.join(uploadsDir, name);
+  const existingSize = await fs.stat(target).then((stat) => stat.size, () => 0);
+  await ensureProductUploadCapacity(Math.max(0, data.length - existingSize));
+  const temporary = `${target}.${randomBytes(6).toString("hex")}.tmp`;
   try {
-    await fs.mkdir(uploadsDir, { recursive: true });
-    const target = path.join(uploadsDir, name);
-    const existingSize = await fs.stat(target).then((stat) => stat.size, () => 0);
-    await ensureProductUploadCapacity(Math.max(0, data.length - existingSize));
-    const temporary = `${target}.${randomBytes(6).toString("hex")}.tmp`;
-    try {
-      await fs.writeFile(temporary, data);
-      await fs.rename(temporary, target);
-    } catch (error) {
-      await fs.unlink(temporary).catch(() => undefined);
-      throw error;
-    }
-    return `/uploads/${name}`;
+    await fs.writeFile(temporary, data);
+    await fs.rename(temporary, target);
   } catch (error) {
-    if (isStorageCapacityError(error) && productImageStorage) {
-      return storeProductImage(name, data, "image/webp");
-    }
+    await fs.unlink(temporary).catch(() => undefined);
     throw error;
   }
+  return `/uploads/${name}`;
 }
 
 async function mapWithConcurrency(items, concurrency, worker) {
@@ -820,6 +819,24 @@ async function optimizeExistingProductZoomImages({ force = false, productId = ""
     state: productZoomImageOptimizationStatus.failed ? "completed_with_errors" : "completed",
     current: "",
   };
+}
+
+function scheduleProductImageOptimization(productId) {
+  const id = cleanTrackingString(productId, 120);
+  if (!id) return;
+  const existingTimer = productImageOptimizationTimers.get(id);
+  if (existingTimer) clearTimeout(existingTimer);
+  const timer = setTimeout(() => {
+    productImageOptimizationTimers.delete(id);
+    void enqueueProductMutation(async () => {
+      await optimizeExistingProductImages({ productId: id });
+      await optimizeExistingProductZoomImages({ productId: id });
+    }).catch((error) => {
+      console.error(`Background product image optimization failed for ${id}: ${error.message}`);
+    });
+  }, 5000);
+  timer.unref?.();
+  productImageOptimizationTimers.set(id, timer);
 }
 
 function handleProductImageOptimization(req, res, url) {
@@ -2837,8 +2854,7 @@ async function handleAdminProductImages(req, res) {
     if (!ext || ext === ".svg" || part.data.length === 0) return null;
     const name = `${slugifyProduct(productId)}-${Date.now()}-${randomBytes(4).toString("hex")}${ext}`;
     const url = await storeProductImage(name, part.data, part.contentType);
-    const renditions = await createProductImageRenditions(name, part.data);
-    return { inputIndex, url, renditions };
+    return { inputIndex, url, renditions: [] };
   });
   const validUploadedImages = uploadedImages.filter(Boolean);
   const saved = validUploadedImages.map((entry) => entry.url);
@@ -2868,12 +2884,6 @@ async function handleAdminProductImages(req, res) {
       .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
       .map((entry) => [entry.targetIndex, entry.url])
   );
-  const originalUploadByIndex = new Map(
-    uploadedOriginals
-      .filter((entry) => entry.targetIndex >= 0 && entry.targetIndex < imageParts.length)
-      .map((entry) => [entry.targetIndex, entry])
-  );
-
   if (saved.length === 0) return badRequest(res, "Nessuna immagine valida caricata.");
 
   const makePrimary = fieldValue(parts, "makePrimary", 8) === "yes";
@@ -2887,17 +2897,7 @@ async function handleAdminProductImages(req, res) {
   const legacyImageVariant = fieldValue(parts, "imageVariant", 12) === "cropped" ? "cropped" : "original";
   const imageVariant = imageVariants[savedInputIndexes[0]] || legacyImageVariant;
   const sourceSaved = saved.map((image, savedIndex) => originalSavedByIndex.get(savedInputIndexes[savedIndex]) || image);
-  const zoomSaved = await mapWithConcurrency(validUploadedImages, 1, async (entry) => {
-    const variant = imageVariants[entry.inputIndex] || legacyImageVariant;
-    const originalUpload = originalUploadByIndex.get(entry.inputIndex);
-    if (variant !== "cropped" || !originalUpload) return entry.url;
-    const generated = await createAndStoreProductZoomImage(
-      productId,
-      originalUpload.data,
-      imageParts[entry.inputIndex].data
-    );
-    return generated.url;
-  });
+  const zoomSaved = validUploadedImages.map((entry) => entry.url);
   const mergeUploadedImages = (current, incoming) => {
     const existing = cleanProductImages(current).filter((image) => !incoming.includes(image));
     return (makePrimary ? [...incoming, ...existing] : [...existing, ...incoming]).slice(0, maximumStoredProductImages);
@@ -2948,6 +2948,7 @@ async function handleAdminProductImages(req, res) {
     product = mergeCustomProduct(overrides.custom[customIndex]);
   }
   await writeProductOverrides(overrides);
+  scheduleProductImageOptimization(productId);
 
   json(res, 200, {
     ok: true,
@@ -2955,6 +2956,7 @@ async function handleAdminProductImages(req, res) {
     originalImages: sourceSaved,
     zoomImages: zoomSaved,
     imageRenditions: uploadedImageRenditions,
+    optimization: "queued",
     product,
   });
 }

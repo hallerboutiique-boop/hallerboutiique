@@ -14,8 +14,8 @@ primary_region = 'fra'
   destination = '/data'
 
 [[vm]]
-  cpu_kind = 'shared'
-  cpus = 2
+  cpu_kind = 'performance'
+  cpus = 1
   memory = '2048mb'
 
 [http_service]
