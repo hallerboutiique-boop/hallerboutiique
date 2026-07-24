@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/tryon-speed-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/delivery-minutes-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/tryon-speed-1\/script\.js/);
+  assert.match(index, /\/assets-v\/delivery-minutes-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -352,15 +352,26 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/tryon-speed-1\/script\.js/));
-  assert.match(index, /\/assets-v\/tryon-speed-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/tryon-speed-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/delivery-minutes-1\/script\.js/));
+  assert.match(index, /\/assets-v\/delivery-minutes-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/delivery-minutes-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/tryon-speed-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/delivery-minutes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-shoe-ranges-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
+});
+
+test("delivery messaging spells out minutes and does not expose GPS metres as a delivery time", async () => {
+  const [index, script] = await Promise.all([
+    readFile("index.html", "utf8"),
+    readFile("script.js", "utf8"),
+  ]);
+  assert.match(index, /tempi di consegna espressi in minuti/);
+  assert.match(script, /tempi di consegna in tempo reale sono indicati in minuti/);
+  assert.doesNotMatch(script, /preciseLocation\.accuracy\}m/);
+  assert.doesNotMatch(script, /\{accuracy\}/);
 });
 
 test("admin can publish the original or cropped product image while preserving the try-on source", async () => {
