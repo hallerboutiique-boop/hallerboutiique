@@ -11,6 +11,7 @@ function cleanQuantity(value) {
 export const defaultProductSizes = {
   clothing: ["S", "M", "L", "XL", "XXL"],
   sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  jeans: ["40", "42", "44", "46", "48", "50", "52", "54", "56"],
   none: [],
 };
 
@@ -22,8 +23,10 @@ export function isBagProduct({ name = "", collection = "", category = "" } = {})
 export function resolveProductSizeType({ name = "", collection = "", category = "", sizeType = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:jeans?|denim)\b/u.test(label)) return "jeans";
   if (isBagProduct({ name, collection, category })) return "none";
   if (/\b(?:wallet|portafogli[oa]?|card holder|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  if (sizeType === "jeans" || sizeType === "sneakers") return sizeType;
   return "clothing";
 }
 

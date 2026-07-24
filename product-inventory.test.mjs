@@ -35,6 +35,18 @@ test("uses European sizes for footwear and clothing sizes for apparel", () => {
   assert.deepEqual(defaultProductSizes.clothing, ["S", "M", "L", "XL", "XXL"]);
 });
 
+test("uses the complete European 40-56 range for jeans and denim", () => {
+  const jeansSizes = ["40", "42", "44", "46", "48", "50", "52", "54", "56"];
+  assert.equal(resolveProductSizeType({ name: "Jeans Dsquared", sizeType: "clothing" }), "jeans");
+  assert.equal(resolveProductSizeType({ category: "Denim Uomo", sizeType: "clothing" }), "jeans");
+  assert.equal(resolveProductSizeType({ name: "Pantalone Uomo", sizeType: "jeans" }), "jeans");
+  assert.deepEqual(defaultProductSizes.jeans, jeansSizes);
+  assert.deepEqual(
+    normalizeInventoryBySize({ 38: 1, 40: 2, 48: 3, 56: 1, 58: 4 }, jeansSizes),
+    { 40: 2, 48: 3, 56: 1 }
+  );
+});
+
 test("recognizes bags independently from their catalog category", () => {
   assert.equal(isBagProduct({ name: "BORSA PRADA", category: "Nuovi arrivi" }), true);
   assert.equal(isBagProduct({ name: "Flap Bag Chanel", category: "Novità" }), true);

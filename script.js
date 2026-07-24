@@ -315,6 +315,7 @@ function translatePage() {
 
 const clothingSizes = ["S", "M", "L", "XL", "XXL"];
 const sneakerSizes = ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"];
+const jeansSizes = ["40", "42", "44", "46", "48", "50", "52", "54", "56"];
 
 function isCatalogBagProduct({ name = "", collection = "", category = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
@@ -323,12 +324,14 @@ function isCatalogBagProduct({ name = "", collection = "", category = "" } = {})
 
 function resolveCatalogProductSizeType(productOrSizeType) {
   if (!productOrSizeType || typeof productOrSizeType !== "object") {
-    return ["clothing", "sneakers", "none"].includes(productOrSizeType) ? productOrSizeType : "clothing";
+    return ["clothing", "sneakers", "jeans", "none"].includes(productOrSizeType) ? productOrSizeType : "clothing";
   }
   const label = `${productOrSizeType.name || ""} ${productOrSizeType.collection || ""} ${productOrSizeType.category || ""}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:jeans?|denim)\b/u.test(label)) return "jeans";
   if (isCatalogBagProduct(productOrSizeType)) return "none";
   if (/\b(?:wallet|portafogli[oa]?|card holder|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  if (productOrSizeType.sizeType === "jeans" || productOrSizeType.sizeType === "sneakers") return productOrSizeType.sizeType;
   return "clothing";
 }
 let productOverrides = {};
@@ -1322,6 +1325,9 @@ function getSizes(productOrSizeType) {
   }
   if (sizeType === "sneakers") {
     return sneakerSizes;
+  }
+  if (sizeType === "jeans") {
+    return jeansSizes;
   }
   return [];
 }

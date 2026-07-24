@@ -232,6 +232,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/bags-no-sizes-1/admin.js", "/admin.js"],
   ["/assets-v/bags-normal-stock-1/script.js", "/script.js"],
   ["/assets-v/tigris-direct-upload-1/admin.js", "/admin.js"],
+  ["/assets-v/jeans-sizes-1/script.js", "/script.js"],
+  ["/assets-v/jeans-sizes-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1767,7 +1769,8 @@ function cleanProductPatch(body) {
   const sizes = sizeType === "none"
     ? []
     : cleanProductSizes(body.sizes)
-      .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
+      .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL")
+      .filter((size) => sizeType !== "jeans" || defaultProductSizes.jeans.includes(size));
   const inventorySizes = sizes.length ? sizes : defaultProductSizes[sizeType];
   const inventoryBySize = sizeType === "none"
     ? {}
@@ -1962,7 +1965,7 @@ async function analyzeProductImageWithAi(dataUrl) {
       original: { type: "string" },
       finalPrice: { type: "string" },
       discount: { type: "string" },
-      sizeType: { type: "string", enum: ["clothing", "sneakers", "none"] },
+      sizeType: { type: "string", enum: ["clothing", "sneakers", "jeans", "none"] },
       sizes: { type: "array", items: { type: "string" } },
       confidence: { type: "string", enum: ["alta", "media", "bassa"] },
       sources: { type: "array", items: { type: "string" } },
@@ -1982,6 +1985,7 @@ async function analyzeProductImageWithAi(dataUrl) {
     "Non inventare marchi o modelli non riconoscibili: se non sei sicuro, usa un nome generico premium.",
     "Scegli collection tra Catalogo Uomo, Catalogo Donna o Selezione Haller Boutique.",
     "Scegli category in italiano. Per tutte le scarpe usa esattamente Scarpe, senza aggiungere Uomo o Donna; per gli altri prodotti usa ad esempio Borse Uomo, Borse Donna, T-Shirts Uomo, Giacche Uomo o Accessori.",
+    "Per jeans e denim usa sizeType jeans e, quando le taglie specifiche non sono verificabili, usa le taglie europee 40, 42, 44, 46, 48, 50, 52, 54 e 56.",
     "Per sizes restituisci solo le taglie ufficialmente previste per il modello quando sono verificabili sul sito della marca; altrimenti restituisci un array vuoto.",
     "Per original, finalPrice e discount restituisci sempre stringhe vuote: i prezzi vengono inseriti manualmente dall'admin.",
   ].join(" ");
@@ -2648,7 +2652,8 @@ async function handleProducts(req, res) {
     const sizes = sizeType === "none"
       ? []
       : cleanProductSizes(publicProduct.sizes)
-        .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
+        .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL")
+        .filter((size) => sizeType !== "jeans" || defaultProductSizes.jeans.includes(size));
     const normalizedInventoryBySize = sizeType === "none"
       ? {}
       : normalizeInventoryBySize(inventoryBySize, sizes.length ? sizes : defaultProductSizes[sizeType]);

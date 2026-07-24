@@ -78,6 +78,7 @@ const aiProductResultsStorageKey = "haller-admin-ai-product-results";
 const defaultAdminProductSizes = {
   clothing: ["S", "M", "L", "XL", "XXL"],
   sneakers: ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
+  jeans: ["40", "42", "44", "46", "48", "50", "52", "54", "56"],
   none: [],
 };
 const adminShoeSizeRanges = {
@@ -86,10 +87,12 @@ const adminShoeSizeRanges = {
   "36-45": ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
 };
 
-function resolveAdminProductSizeType({ name = "", collection = "", category = "" } = {}) {
+function resolveAdminProductSizeType({ name = "", collection = "", category = "", sizeType = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
+  if (/\b(?:jeans?|denim)\b/u.test(label)) return "jeans";
   if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
+  if (sizeType === "jeans" || sizeType === "sneakers") return sizeType;
   return "clothing";
 }
 
@@ -100,6 +103,7 @@ function syncAdminProductSizeTypeFromDetails() {
     name: productForm.elements.name?.value,
     collection: productForm.elements.collection?.value,
     category: productForm.elements.category?.value,
+    sizeType: productForm.elements.sizeType.value,
   });
   productForm.elements.sizeType.value = sizeType;
   syncShoeSizeRangeVisibility({ applyDefault: sizeType === "sneakers" && previousSizeType !== "sneakers" });
@@ -128,12 +132,17 @@ function inferShoeSizeRange(sizes = productSizeValues()) {
 function syncShoeSizeRangeVisibility({ applyDefault = false } = {}) {
   if (!productForm?.elements.sizeType) return;
   const isSneakers = productForm.elements.sizeType.value === "sneakers";
+  const isJeans = productForm.elements.sizeType.value === "jeans";
   const hasNoSizes = productForm.elements.sizeType.value === "none";
   if (productShoeSizeRangeField) productShoeSizeRangeField.hidden = !isSneakers;
-  if (productCustomSizesField) productCustomSizesField.hidden = isSneakers || hasNoSizes;
+  if (productCustomSizesField) productCustomSizesField.hidden = isSneakers || isJeans || hasNoSizes;
   if (hasNoSizes) {
     productForm.elements.sizes.value = "";
     productForm.elements.inventoryBySize.value = "{}";
+  }
+  if (isJeans) {
+    productForm.elements.sizes.value = defaultAdminProductSizes.jeans.join(", ");
+    return;
   }
   if (!isSneakers || !productShoeSizeRange) return;
   productShoeSizeRange.value = inferShoeSizeRange();
@@ -1591,11 +1600,7 @@ function parseAdminInventoryBySize(value) {
 }
 
 function adminProductSizes() {
-  const sizeType = resolveAdminProductSizeType({
-    name: productForm?.elements.name?.value,
-    collection: productForm?.elements.collection?.value,
-    category: productForm?.elements.category?.value,
-  });
+  const sizeType = productForm?.elements.sizeType?.value || "clothing";
   if (sizeType === "none") return [];
   const explicitSizes = productSizeValues();
   if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
@@ -1693,6 +1698,7 @@ function fillProductForm(product) {
   productForm.elements.original.value = formatAdminProductPrice(product.original);
   productForm.elements.finalPrice.value = formatAdminProductPrice(product.finalPrice);
   productForm.elements.discount.value = product.discount || "";
+  productForm.elements.sizeType.value = product.sizeType || "clothing";
   syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(product.sizes)
     ? product.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL").join(", ")
@@ -1725,6 +1731,7 @@ function fillAiProductDraft(suggestion) {
   productForm.elements.original.value = "";
   productForm.elements.finalPrice.value = "";
   productForm.elements.discount.value = "";
+  productForm.elements.sizeType.value = suggestion.sizeType || "clothing";
   syncAdminProductSizeTypeFromDetails();
   productForm.elements.sizes.value = Array.isArray(suggestion.sizes)
     ? suggestion.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL").join(", ")
