@@ -14,8 +14,8 @@ export const defaultProductSizes = {
   none: [],
 };
 
-export function resolveProductSizeType({ collection = "", category = "", sizeType = "" } = {}) {
-  const label = `${collection} ${category}`.toLocaleLowerCase("it");
+export function resolveProductSizeType({ name = "", collection = "", category = "", sizeType = "" } = {}) {
+  const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
   if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
   return "clothing";

@@ -85,8 +85,8 @@ const adminShoeSizeRanges = {
   "36-45": ["36", "37", "38", "39", "40", "41", "42", "43", "44", "45"],
 };
 
-function resolveAdminProductSizeType({ collection = "", category = "" } = {}) {
-  const label = `${collection} ${category}`.toLocaleLowerCase("it");
+function resolveAdminProductSizeType({ name = "", collection = "", category = "" } = {}) {
+  const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
   if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
   return "clothing";
@@ -96,6 +96,7 @@ function syncAdminProductSizeTypeFromDetails() {
   if (!productForm?.elements.sizeType) return;
   const previousSizeType = productForm.elements.sizeType.value;
   const sizeType = resolveAdminProductSizeType({
+    name: productForm.elements.name?.value,
     collection: productForm.elements.collection?.value,
     category: productForm.elements.category?.value,
   });
@@ -105,6 +106,7 @@ function syncAdminProductSizeTypeFromDetails() {
 }
 
 function productSizeValues() {
+  if (productForm?.elements.sizeType?.value === "none") return [];
   return String(productForm?.elements.sizes?.value || "")
     .split(/[\n,;]+/)
     .map((size) => size.trim())
@@ -125,8 +127,13 @@ function inferShoeSizeRange(sizes = productSizeValues()) {
 function syncShoeSizeRangeVisibility({ applyDefault = false } = {}) {
   if (!productForm?.elements.sizeType) return;
   const isSneakers = productForm.elements.sizeType.value === "sneakers";
+  const hasNoSizes = productForm.elements.sizeType.value === "none";
   if (productShoeSizeRangeField) productShoeSizeRangeField.hidden = !isSneakers;
-  if (productCustomSizesField) productCustomSizesField.hidden = isSneakers;
+  if (productCustomSizesField) productCustomSizesField.hidden = isSneakers || hasNoSizes;
+  if (hasNoSizes) {
+    productForm.elements.sizes.value = "";
+    productForm.elements.inventoryBySize.value = "{}";
+  }
   if (!isSneakers || !productShoeSizeRange) return;
   productShoeSizeRange.value = inferShoeSizeRange();
   if (applyDefault || productSizeValues().length === 0) {
@@ -1454,12 +1461,14 @@ function parseAdminInventoryBySize(value) {
 }
 
 function adminProductSizes() {
-  const explicitSizes = productSizeValues();
-  if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
   const sizeType = resolveAdminProductSizeType({
+    name: productForm?.elements.name?.value,
     collection: productForm?.elements.collection?.value,
     category: productForm?.elements.category?.value,
   });
+  if (sizeType === "none") return [];
+  const explicitSizes = productSizeValues();
+  if (explicitSizes.length) return [...new Set(explicitSizes)].slice(0, 20);
   return defaultAdminProductSizes[sizeType] || [];
 }
 
@@ -2333,6 +2342,10 @@ productForm?.elements.collection?.addEventListener("input", () => {
   renderProductSizeInventory();
 });
 productForm?.elements.category?.addEventListener("input", () => {
+  syncAdminProductSizeTypeFromDetails();
+  renderProductSizeInventory();
+});
+productForm?.elements.name?.addEventListener("input", () => {
   syncAdminProductSizeTypeFromDetails();
   renderProductSizeInventory();
 });

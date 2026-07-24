@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/zoom-selected-image-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/bags-no-sizes-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -99,7 +99,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/zoom-selected-image-1\/script\.js/);
+  assert.match(index, /\/assets-v\/bags-no-sizes-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -352,13 +352,13 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html) => assert.match(html, /\/assets-v\/zoom-selected-image-1\/script\.js/));
-  assert.match(index, /\/assets-v\/zoom-selected-image-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/zoom-selected-image-1\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/bags-no-sizes-1\/script\.js/));
+  assert.match(index, /\/assets-v\/bags-no-sizes-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/bags-no-sizes-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
-  assert.match(server, /"\/assets-v\/zoom-selected-image-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/clothing-xxl-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/bags-no-sizes-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/bags-no-sizes-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -478,7 +478,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/clothing-xxl-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/bags-no-sizes-1\/admin\.js/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {
@@ -534,6 +534,30 @@ test("clothing sizes stop at XXL throughout storefront and admin", async () => {
   assert.match(adminHtml, /Abbigliamento S-XXL/);
   assert.doesNotMatch(adminHtml, /S-XXXL/);
   assert.match(server, /size\.toUpperCase\(\) !== "XXXL"/);
+});
+
+test("bags never expose or persist product sizes", async () => {
+  const [script, admin, server] = await Promise.all([
+    readFile("script.js", "utf8"),
+    readFile("admin.js", "utf8"),
+    readFile("server.js", "utf8"),
+  ]);
+  const storefrontSizesStart = script.indexOf("function getSizes(productOrSizeType)");
+  const storefrontSizesEnd = script.indexOf("function createSizesMarkup", storefrontSizesStart);
+  const storefrontSizes = script.slice(storefrontSizesStart, storefrontSizesEnd);
+  assert.match(storefrontSizes, /const sizeType = resolveCatalogProductSizeType\(productOrSizeType\)/);
+  assert.match(storefrontSizes, /if \(sizeType === "none"\)\s*\{\s*return \[\];\s*\}/);
+  assert.ok(
+    storefrontSizes.indexOf('if (sizeType === "none")') < storefrontSizes.indexOf("Array.isArray(productOrSizeType.sizes)"),
+    "bag size detection must run before accepting explicit legacy sizes"
+  );
+  assert.match(admin, /const hasNoSizes = productForm\.elements\.sizeType\.value === "none"/);
+  assert.match(admin, /productCustomSizesField\.hidden = isSneakers \|\| hasNoSizes/);
+  assert.match(admin, /if \(hasNoSizes\)\s*\{[\s\S]*?productForm\.elements\.sizes\.value = ""/);
+  assert.match(admin, /productForm\?\.elements\.name\?\.addEventListener\("input"/);
+  assert.match(server, /const sizes = sizeType === "none"\s*\?\s*\[\]/);
+  assert.match(server, /const inventoryBySize = sizeType === "none"\s*\?\s*\{\}/);
+  assert.match(server, /const sizes = sizeType === "none"\s*\?\s*\[\][\s\S]*?cleanProductSizes\(publicProduct\.sizes\)/);
 });
 
 test("checkout renders product images from the cart", async () => {

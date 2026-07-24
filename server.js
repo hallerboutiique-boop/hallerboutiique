@@ -220,6 +220,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/clothing-xxl-1/script.js", "/script.js"],
   ["/assets-v/clothing-xxl-1/admin.js", "/admin.js"],
   ["/assets-v/zoom-selected-image-1/script.js", "/script.js"],
+  ["/assets-v/bags-no-sizes-1/script.js", "/script.js"],
+  ["/assets-v/bags-no-sizes-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 
@@ -1656,6 +1658,7 @@ async function readDefaultProducts() {
 function mergeProduct(product, overrides) {
   const override = overrides[product.id] || {};
   const images = Array.isArray(override.images) ? override.images : product.images;
+  const name = override.name || product.name;
   const collection = override.collection || product.collection;
   const category = override.category || product.category;
   return {
@@ -1664,9 +1667,11 @@ function mergeProduct(product, overrides) {
     id: product.id,
     baseName: product.name,
     custom: false,
+    name,
     collection,
     category,
     sizeType: resolveProductSizeType({
+      name,
       collection,
       category,
       sizeType: override.sizeType || product.sizeType,
@@ -1733,22 +1738,28 @@ function cleanProductInventory(inventory) {
 }
 
 function cleanProductPatch(body) {
+  const name = cleanTrackingString(body.name, 180) || "Prodotto";
   const collection = cleanTrackingString(body.collection, 80);
   const category = cleanTrackingString(body.category, 80);
   const sizeType = resolveProductSizeType({
+    name,
     collection,
     category,
     sizeType: body.sizeType,
   });
   const imageVariant = body.imageVariant === "cropped" ? "cropped" : "original";
   const images = cleanProductImages(body.images);
-  const sizes = cleanProductSizes(body.sizes)
-    .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
+  const sizes = sizeType === "none"
+    ? []
+    : cleanProductSizes(body.sizes)
+      .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
   const inventorySizes = sizes.length ? sizes : defaultProductSizes[sizeType];
-  const inventoryBySize = normalizeInventoryBySize(body.inventoryBySize, inventorySizes);
+  const inventoryBySize = sizeType === "none"
+    ? {}
+    : normalizeInventoryBySize(body.inventoryBySize, inventorySizes);
   const sizeInventoryTotal = inventoryBySizeTotal(inventoryBySize);
   return {
-    name: cleanTrackingString(body.name, 180) || "Prodotto",
+    name,
     brand: cleanTrackingString(body.brand, 100),
     description: cleanTrackingString(body.description, 700),
     original: cleanTrackingString(body.original, 40),
@@ -2617,11 +2628,20 @@ async function handleProducts(req, res) {
   const data = await readProductOverrides();
   const toPublicProduct = (product) => {
     const { inventory, inventoryBySize, ...publicProduct } = product || {};
-    const normalizedInventoryBySize = normalizeInventoryBySize(inventoryBySize);
+    const sizeType = resolveProductSizeType(publicProduct);
+    const sizes = sizeType === "none"
+      ? []
+      : cleanProductSizes(publicProduct.sizes)
+        .filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
+    const normalizedInventoryBySize = sizeType === "none"
+      ? {}
+      : normalizeInventoryBySize(inventoryBySize, sizes.length ? sizes : defaultProductSizes[sizeType]);
     const inventoryTrackedBySize = Object.keys(normalizedInventoryBySize).length > 0;
     const inventoryTotal = productInventoryTotal({ inventory, inventoryBySize: normalizedInventoryBySize });
     return {
       ...publicProduct,
+      sizeType,
+      sizes,
       zoomImages: cleanProductImages(publicProduct.zoomImages).map(productZoomDeliveryPath),
       inventoryTrackedBySize,
       availableSizes: inventoryTrackedBySize

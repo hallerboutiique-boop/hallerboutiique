@@ -320,7 +320,7 @@ function resolveCatalogProductSizeType(productOrSizeType) {
   if (!productOrSizeType || typeof productOrSizeType !== "object") {
     return ["clothing", "sneakers", "none"].includes(productOrSizeType) ? productOrSizeType : "clothing";
   }
-  const label = `${productOrSizeType.collection || ""} ${productOrSizeType.category || ""}`.toLocaleLowerCase("it");
+  const label = `${productOrSizeType.name || ""} ${productOrSizeType.collection || ""} ${productOrSizeType.category || ""}`.toLocaleLowerCase("it");
   if (/\b(?:scarp[ae]|sneakers?|shoes?|boots?|stivali?)\b/u.test(label)) return "sneakers";
   if (/\b(?:bors[ae]|bag|wallet|portafogli[oa]?|card holder|backpack|zain[oi]|cintur[ae]|accessori?)\b/u.test(label)) return "none";
   return "clothing";
@@ -1303,11 +1303,14 @@ function showSlide(index) {
 }
 
 function getSizes(productOrSizeType) {
+  const sizeType = resolveCatalogProductSizeType(productOrSizeType);
+  if (sizeType === "none") {
+    return [];
+  }
   if (productOrSizeType && typeof productOrSizeType === "object" && Array.isArray(productOrSizeType.sizes) && productOrSizeType.sizes.length) {
     const supportedSizes = productOrSizeType.sizes.filter((size) => String(size).trim().toUpperCase() !== "XXXL");
     if (supportedSizes.length) return supportedSizes;
   }
-  const sizeType = resolveCatalogProductSizeType(productOrSizeType);
   if (sizeType === "clothing") {
     return clothingSizes;
   }
@@ -1483,6 +1486,7 @@ function applyProductOverride(product) {
     finalPrice: normalizeProductPrice(override.finalPrice || product.finalPrice),
     discount: override.discount || product.discount,
     sizeType: resolveCatalogProductSizeType({
+      name: override.name || product.name,
       collection,
       category,
       sizeType: override.sizeType || product.sizeType,
@@ -1509,7 +1513,7 @@ function applyProductOverride(product) {
 function normalizeCustomProduct(product) {
   const collection = product.collection || "Selezione Haller Boutique";
   const category = normalizeCatalogCategory(product.category || "Nuovi arrivi");
-  const sizeType = resolveCatalogProductSizeType({ collection, category, sizeType: product.sizeType });
+  const sizeType = resolveCatalogProductSizeType({ name: product.name, collection, category, sizeType: product.sizeType });
   return {
     id: product.id || slugifyProduct(product.name),
     custom: true,
