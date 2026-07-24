@@ -132,7 +132,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(adminJs, /data-product-size-inventory-step/);
   assert.match(adminJs, /function resolveAdminProductSizeType/);
   assert.match(adminJs, /const productUploadBatchSize = 10/);
-  assert.match(adminJs, /Cerca un prodotto per visualizzare una sola anteprima/);
+  assert.match(adminJs, /Cerca un prodotto per visualizzare tutti i risultati corrispondenti/);
   assert.match(script, /inventoryTrackedBySize/);
   assert.match(script, /availableSizes/);
   assert.match(script, /translate\("select-size"\)/);
@@ -358,7 +358,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/tryon-speed-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/admin-upload-speed-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/admin-search-all-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -462,7 +462,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(server, /async function pruneOrphanProductObjects/);
   assert.match(server, /if \(!productImageStorage\) await ensureProductUploadCapacity\(requiredBytes\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/admin-upload-speed-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-search-all-1\/admin\.js/);
 });
 
 test("Fly keeps the production machine on performance CPU with 2 GB RAM", async () => {
@@ -470,6 +470,24 @@ test("Fly keeps the production machine on performance CPU with 2 GB RAM", async 
   assert.match(fly, /cpu_kind = 'performance'/);
   assert.match(fly, /cpus = 1/);
   assert.match(fly, /memory = '2048mb'/);
+});
+
+test("admin product search returns every matching catalog product", async () => {
+  const [admin, adminHtml] = await Promise.all([
+    readFile("admin.js", "utf8"),
+    readFile("admin.html", "utf8"),
+  ]);
+  const filterStart = admin.indexOf("function filteredAdminProducts()");
+  const renderStart = admin.indexOf("function renderAdminProducts()");
+  const loadStart = admin.indexOf("async function loadProducts()");
+  const filterSource = admin.slice(filterStart, renderStart);
+  const renderSource = admin.slice(renderStart, loadStart);
+  assert.match(filterSource, /const terms = query\.split\(" "\)\.filter\(Boolean\)/);
+  assert.match(filterSource, /terms\.every\(\(term\) => searchable\.includes\(term\)\)/);
+  assert.doesNotMatch(filterSource, /\.slice\(0,\s*1\)/);
+  assert.match(renderSource, /products\.map\(\(product\) =>/);
+  assert.doesNotMatch(renderSource, /const product = products\[0\]/);
+  assert.match(adminHtml, /Vengono mostrati tutti i prodotti corrispondenti/);
 });
 
 test("checkout renders product images from the cart", async () => {

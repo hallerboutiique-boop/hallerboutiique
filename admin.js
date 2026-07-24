@@ -1597,29 +1597,43 @@ function updateProductSuggestions() {
 }
 
 function filteredAdminProducts() {
-  const query = (productSearch?.value || "").trim().toLowerCase();
+  const normalizeSearchText = (value) => String(value || "")
+    .toLocaleLowerCase("it")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  const query = normalizeSearchText(productSearch?.value);
   if (!query) return [];
+  const terms = query.split(" ").filter(Boolean);
   const score = (product) => {
-    const name = String(product.name || "").toLowerCase();
+    const name = normalizeSearchText(product.name);
     if (name === query) return 0;
     if (name.startsWith(query)) return 1;
     return 2;
   };
   return adminProducts
-    .filter((product) =>
-      [product.name, product.brand, product.collection, product.category, product.discount]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(query))
-    )
-    .sort((left, right) => score(left) - score(right) || String(left.name).localeCompare(String(right.name), "it"))
-    .slice(0, 1);
+    .filter((product) => {
+      const searchable = normalizeSearchText([
+        product.id,
+        product.name,
+        product.brand,
+        product.collection,
+        product.category,
+        product.description,
+        product.discount,
+        ...(Array.isArray(product.sizes) ? product.sizes : []),
+      ].filter(Boolean).join(" "));
+      return terms.every((term) => searchable.includes(term));
+    })
+    .sort((left, right) => score(left) - score(right) || String(left.name).localeCompare(String(right.name), "it"));
 }
 
 function renderAdminProducts() {
   if (!adminProductsRoot) return;
   const query = (productSearch?.value || "").trim();
   if (!query) {
-    adminProductsRoot.innerHTML = emptyState("Cerca un prodotto per visualizzare una sola anteprima.");
+    adminProductsRoot.innerHTML = emptyState("Cerca un prodotto per visualizzare tutti i risultati corrispondenti.");
     return;
   }
   const products = filteredAdminProducts();
@@ -1627,24 +1641,27 @@ function renderAdminProducts() {
     adminProductsRoot.innerHTML = emptyState("Nessun prodotto trovato.");
     return;
   }
-  const product = products[0];
-  const image = Array.isArray(product.images) && product.images.length ? product.images[0] : "";
   adminProductsRoot.innerHTML = `
-    <p class="admin-product-search-result">Anteprima del prodotto cercato</p>
-    <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
-      <span class="admin-product-thumb">
-        ${
-          image
-            ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
-            : `<i data-lucide="image"></i>`
-        }
-      </span>
-      <span class="admin-product-text">
-        <strong>${escapeHtml(product.name)}</strong>
-        <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
-        <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
-      </span>
-    </button>
+    <p class="admin-product-search-result">${escapeHtml(products.length)} ${products.length === 1 ? "prodotto trovato" : "prodotti trovati"}</p>
+    ${products.map((product) => {
+      const image = Array.isArray(product.images) && product.images.length ? product.images[0] : "";
+      return `
+        <button class="admin-product-item${product.id === selectedProductId ? " is-active" : ""}" type="button" data-product-id="${escapeHtml(product.id)}">
+          <span class="admin-product-thumb">
+            ${
+              image
+                ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+                : `<i data-lucide="image"></i>`
+            }
+          </span>
+          <span class="admin-product-text">
+            <strong>${escapeHtml(product.name)}</strong>
+            <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+            <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
+          </span>
+        </button>
+      `;
+    }).join("")}
   `;
   if (window.lucide) window.lucide.createIcons();
 }
