@@ -337,7 +337,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   ]);
   pages.forEach((html, index) => {
     const expectedStyles = pageNames[index] === "admin.html"
-      ? /\/assets-v\/catalog-controls-1\/styles\.css/
+      ? /\/assets-v\/home-image-drag-1\/styles\.css/
       : pageNames[index] === "index.html"
         ? /\/assets-v\/hero-videos-1\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
@@ -506,7 +506,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("directUploads"/);
   assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/catalog-controls-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/home-image-drag-1\/admin\.js/);
 });
 
 test("admin can choose exactly which catalog products appear on the home page", async () => {
@@ -521,15 +521,25 @@ test("admin can choose exactly which catalog products appear on the home page", 
   assert.match(adminHtml, /data-admin-tab="home"/);
   assert.match(adminHtml, /data-home-products-grid/);
   assert.match(adminHtml, /data-home-products-save/);
+  assert.match(adminHtml, /trascina le schede selezionate/);
   assert.match(admin, /function normalizeSearchText\(value\)/);
   assert.match(admin, /function renderHomeProducts\(\)/);
+  assert.match(admin, /function moveHomeProductTo\(productId, targetId, placeAfter\)/);
+  assert.match(admin, /data-home-product-drag-handle/);
+  assert.match(admin, /addEventListener\("pointermove"/);
+  assert.match(admin, /homeProductIds = \[\.\.\.new Set\(/);
+  assert.match(admin, /const orderedIds = homeProductIds\.filter/);
   assert.match(admin, /body: JSON\.stringify\(\{ homeProductIds: orderedIds \}\)/);
   assert.match(script, /if \(Array\.isArray\(homeProductIds\)\)/);
   assert.match(script, /\.filter\(\(product\) => !product\.isLastAvailable\)/);
   assert.match(server, /homeProductIds: overrides\.homeProductIds/);
   assert.match(server, /overrides\.homeProductIds = cleanSelection\(body\.homeProductIds\)/);
   assert.match(styles, /\.home-products-grid/);
-  assert.match(adminHtml, /\/assets-v\/catalog-controls-1\/styles\.css/);
+  assert.match(styles, /\.home-product-position/);
+  assert.match(styles, /\.home-product-drag-handle/);
+  assert.match(adminHtml, /\/assets-v\/home-image-drag-1\/styles\.css/);
+  assert.match(server, /"\/assets-v\/home-image-drag-1\/admin\.js", "\/admin\.js"/);
+  assert.match(server, /"\/assets-v\/home-image-drag-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("admin controls new arrivals and can remove products from the catalog", async () => {

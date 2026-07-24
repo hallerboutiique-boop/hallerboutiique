@@ -245,6 +245,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/hero-videos-1/script.js", "/script.js"],
   ["/assets-v/hero-videos-1/styles.css", "/styles.css"],
   ["/assets-v/tshirts-restored-1/script.js", "/script.js"],
+  ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
+  ["/assets-v/home-image-drag-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);

@@ -66,7 +66,8 @@ const productCropOriginal = document.querySelector("[data-product-crop-original]
 const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
 let adminProducts = [];
-let homeProductIds = new Set();
+let homeProductIds = [];
+let homeProductDrag = null;
 let newArrivalProductIds = new Set();
 let selectedProductId = "";
 let cropState = null;
@@ -1890,10 +1891,46 @@ function setHomeProductsMessage(message, type = "") {
   homeProductsMessage.dataset.type = type;
 }
 
+function moveHomeProductByStep(productId, direction) {
+  const currentIndex = homeProductIds.indexOf(productId);
+  const nextIndex = currentIndex + direction;
+  if (currentIndex < 0 || nextIndex < 0 || nextIndex >= homeProductIds.length) return false;
+  const nextIds = [...homeProductIds];
+  [nextIds[currentIndex], nextIds[nextIndex]] = [nextIds[nextIndex], nextIds[currentIndex]];
+  homeProductIds = nextIds;
+  return true;
+}
+
+function moveHomeProductTo(productId, targetId, placeAfter) {
+  if (productId === targetId) return false;
+  const nextIds = homeProductIds.filter((id) => id !== productId);
+  const targetIndex = nextIds.indexOf(targetId);
+  if (targetIndex < 0) return false;
+  nextIds.splice(targetIndex + (placeAfter ? 1 : 0), 0, productId);
+  if (nextIds.every((id, index) => id === homeProductIds[index])) return false;
+  homeProductIds = nextIds;
+  return true;
+}
+
+function finishHomeProductDrag(event) {
+  if (!homeProductDrag || (event?.pointerId != null && event.pointerId !== homeProductDrag.pointerId)) return;
+  const changed = homeProductDrag.changed;
+  homeProductDrag = null;
+  document.body.classList.remove("is-home-product-dragging");
+  if (changed) setHomeProductsMessage("Ordine modificato. Premi “Salva home” per pubblicarlo.");
+  renderHomeProducts();
+}
+
 function renderHomeProducts() {
   if (!homeProductsRoot) return;
-  const products = filteredHomeProducts();
-  const selectedCount = homeProductIds.size;
+  const filteredProducts = filteredHomeProducts();
+  const productsById = new Map(filteredProducts.map((product) => [product.id, product]));
+  const selectedIds = new Set(homeProductIds);
+  const products = [
+    ...homeProductIds.map((id) => productsById.get(id)).filter(Boolean),
+    ...filteredProducts.filter((product) => !selectedIds.has(product.id)),
+  ];
+  const selectedCount = homeProductIds.length;
   if (homeProductsCount) {
     homeProductsCount.textContent = `${selectedCount} ${selectedCount === 1 ? "prodotto selezionato" : "prodotti selezionati"}`;
   }
@@ -1902,22 +1939,31 @@ function renderHomeProducts() {
     return;
   }
   homeProductsRoot.innerHTML = products.map((product) => {
-    const selected = homeProductIds.has(product.id);
+    const selected = selectedIds.has(product.id);
+    const position = selected ? homeProductIds.indexOf(product.id) + 1 : 0;
     const image = Array.isArray(product.images) ? product.images[0] : "";
     return `
-      <label class="home-product-option${selected ? " is-selected" : ""}">
-        <input type="checkbox" value="${escapeHtml(product.id)}" data-home-product-id${selected ? " checked" : ""}>
-        <span class="home-product-check" aria-hidden="true"><i data-lucide="${selected ? "check" : "plus"}"></i></span>
-        <span class="home-product-image">
-          ${image
-            ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
-            : `<i data-lucide="image"></i>`}
-        </span>
-        <span class="home-product-copy">
-          <strong>${escapeHtml(product.name)}</strong>
-          <small>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.category || product.collection || "Catalogo")}</small>
-        </span>
-      </label>
+      <article class="home-product-option${selected ? " is-selected" : ""}${homeProductDrag?.productId === product.id ? " is-dragging" : ""}"${selected ? ` data-home-product-order-id="${escapeHtml(product.id)}"` : ""}>
+        <label class="home-product-select">
+          <input type="checkbox" value="${escapeHtml(product.id)}" data-home-product-id${selected ? " checked" : ""}>
+          ${selected ? `<span class="home-product-position" aria-label="Posizione ${position}">${position}</span>` : ""}
+          <span class="home-product-check" aria-hidden="true"><i data-lucide="${selected ? "check" : "plus"}"></i></span>
+          <span class="home-product-image">
+            ${image
+              ? `<img src="${escapeHtml(productImageUrl(image))}" alt="${escapeHtml(product.name)}" loading="lazy">`
+              : `<i data-lucide="image"></i>`}
+          </span>
+          <span class="home-product-copy">
+            <strong>${escapeHtml(product.name)}</strong>
+            <small>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.category || product.collection || "Catalogo")}</small>
+          </span>
+        </label>
+        ${selected ? `
+          <button class="home-product-drag-handle" type="button" data-home-product-drag-handle data-home-product-drag-id="${escapeHtml(product.id)}" aria-label="Trascina ${escapeHtml(product.name)} per cambiare posizione">
+            <i data-lucide="grip-horizontal"></i><span>Trascina per riordinare</span>
+          </button>
+        ` : ""}
+      </article>
     `;
   }).join("");
   if (window.lucide) window.lucide.createIcons();
@@ -2018,11 +2064,11 @@ function renderAdminProducts() {
 async function loadProducts() {
   const data = await api("/api/admin/products");
   adminProducts = data.products || [];
-  homeProductIds = new Set(
+  homeProductIds = [...new Set(
     Array.isArray(data.homeProductIds)
       ? data.homeProductIds
       : defaultHomeProductIds(adminProducts)
-  );
+  )];
   newArrivalProductIds = new Set(
     Array.isArray(data.newArrivalProductIds)
       ? data.newArrivalProductIds
@@ -2373,21 +2419,70 @@ document.addEventListener("click", (event) => {
 
 productSearch?.addEventListener("input", renderAdminProducts);
 homeProductsSearch?.addEventListener("input", renderHomeProducts);
+homeProductsRoot?.addEventListener("pointerdown", (event) => {
+  const dragHandle = event.target.closest("[data-home-product-drag-handle]");
+  if (!dragHandle || (event.button !== undefined && event.button !== 0)) return;
+  homeProductDrag = {
+    productId: dragHandle.dataset.homeProductDragId,
+    pointerId: event.pointerId,
+    changed: false,
+  };
+  document.body.classList.add("is-home-product-dragging");
+  dragHandle.closest(".home-product-option")?.classList.add("is-dragging");
+  event.preventDefault();
+});
+document.addEventListener("pointermove", (event) => {
+  if (!homeProductDrag || event.pointerId !== homeProductDrag.pointerId) return;
+  const target = document.elementFromPoint(event.clientX, event.clientY)
+    ?.closest("[data-home-product-order-id]");
+  if (!target) return;
+  const targetId = target.dataset.homeProductOrderId;
+  const targetRect = target.getBoundingClientRect();
+  const singleColumn = targetRect.width >= homeProductsRoot.getBoundingClientRect().width * 0.8;
+  const placeAfter = singleColumn
+    ? event.clientY > targetRect.top + (targetRect.height / 2)
+    : event.clientX > targetRect.left + (targetRect.width / 2);
+  if (moveHomeProductTo(homeProductDrag.productId, targetId, placeAfter)) {
+    homeProductDrag.changed = true;
+    renderHomeProducts();
+  }
+  event.preventDefault();
+}, { passive: false });
+document.addEventListener("pointerup", finishHomeProductDrag);
+document.addEventListener("pointercancel", finishHomeProductDrag);
+homeProductsRoot?.addEventListener("keydown", (event) => {
+  const dragHandle = event.target.closest("[data-home-product-drag-handle]");
+  if (!dragHandle || !["ArrowUp", "ArrowLeft", "ArrowDown", "ArrowRight"].includes(event.key)) return;
+  const direction = ["ArrowUp", "ArrowLeft"].includes(event.key) ? -1 : 1;
+  if (moveHomeProductByStep(dragHandle.dataset.homeProductDragId, direction)) {
+    setHomeProductsMessage("Ordine modificato. Premi “Salva home” per pubblicarlo.");
+    renderHomeProducts();
+    const movedHandle = homeProductsRoot.querySelector(
+      `[data-home-product-drag-id="${CSS.escape(dragHandle.dataset.homeProductDragId)}"]`
+    );
+    movedHandle?.focus();
+  }
+  event.preventDefault();
+});
 homeProductsRoot?.addEventListener("change", (event) => {
   const input = event.target.closest("[data-home-product-id]");
   if (!input) return;
-  if (input.checked) homeProductIds.add(input.value);
-  else homeProductIds.delete(input.value);
+  if (input.checked && !homeProductIds.includes(input.value)) homeProductIds = [...homeProductIds, input.value];
+  else if (!input.checked) homeProductIds = homeProductIds.filter((id) => id !== input.value);
   setHomeProductsMessage("");
   renderHomeProducts();
 });
 homeProductsSelectVisible?.addEventListener("click", () => {
-  filteredHomeProducts().forEach((product) => homeProductIds.add(product.id));
+  const selectedIds = new Set(homeProductIds);
+  homeProductIds = [
+    ...homeProductIds,
+    ...filteredHomeProducts().map((product) => product.id).filter((id) => !selectedIds.has(id)),
+  ];
   setHomeProductsMessage("");
   renderHomeProducts();
 });
 homeProductsClear?.addEventListener("click", () => {
-  homeProductIds.clear();
+  homeProductIds = [];
   setHomeProductsMessage("");
   renderHomeProducts();
 });
@@ -2395,14 +2490,13 @@ homeProductsSave?.addEventListener("click", async () => {
   homeProductsSave.disabled = true;
   setHomeProductsMessage("Salvataggio home in corso...");
   try {
-    const orderedIds = adminProducts
-      .map((product) => product.id)
-      .filter((id) => homeProductIds.has(id));
+    const validIds = new Set(adminProducts.map((product) => product.id));
+    const orderedIds = homeProductIds.filter((id) => validIds.has(id));
     const data = await api("/api/admin/products", {
       method: "PUT",
       body: JSON.stringify({ homeProductIds: orderedIds }),
     });
-    homeProductIds = new Set(data.homeProductIds || []);
+    homeProductIds = [...new Set(data.homeProductIds || [])];
     renderHomeProducts();
     setHomeProductsMessage("Prodotti della home aggiornati.", "success");
   } catch (error) {
