@@ -1465,6 +1465,12 @@ function normalizeOptionalProductPrice(value) {
 }
 
 const catalogCategoryAliases = {
+  "t-shirt": "T-Shirts",
+  "t-shirts": "T-Shirts",
+  "t shirt": "T-Shirts",
+  "t shirts": "T-Shirts",
+  "tshirt": "T-Shirts",
+  "tshirts": "T-Shirts",
   "tracksuit": "Tuta",
   "tracksuits": "Tuta",
   "two piece set": "Completo",

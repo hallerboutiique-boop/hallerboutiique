@@ -245,6 +245,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/hero-videos-1/script.js", "/script.js"],
   ["/assets-v/hero-videos-1/styles.css", "/styles.css"],
   ["/assets-v/tshirts-restored-1/script.js", "/script.js"],
+  ["/assets-v/tshirts-all-2/script.js", "/script.js"],
   ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
   ["/assets-v/home-image-drag-1/styles.css", "/styles.css"],
 ]);
