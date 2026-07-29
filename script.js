@@ -1579,7 +1579,7 @@ function createSizesMarkup(product, options = {}) {
     (Array.isArray(product?.availableSizes) ? product.availableSizes : [])
       .map((size) => String(size).toLocaleLowerCase("it"))
   );
-  const visibleSizes = onlyAvailable
+  const visibleSizes = onlyAvailable && inventoryTrackedBySize
     ? sizes.filter((size) => availableSizes.has(String(size).toLocaleLowerCase("it")))
     : sizes;
 
@@ -2726,7 +2726,8 @@ function renderLastStockCatalog() {
     return;
   }
 
-  const products = collapseProductVariants(getGenderProducts(lastStockGender).filter((product) => product.isLastAvailable));
+  const products = collapseProductVariants(getGenderProducts(lastStockGender)
+    .filter((product) => product.isLastAvailable && !isCatalogBagProduct(product)));
   const categories = [...new Set(products.map((product) => product.category))];
   const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category);
