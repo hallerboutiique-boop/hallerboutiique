@@ -104,7 +104,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/product-variants-1\/script\.js/);
+  assert.match(index, /\/assets-v\/catalog-back-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -129,6 +129,12 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(script.slice(catalogStart, catalogEnd), /getCatalogGenderProducts\(catalogState\.gender\)/);
   assert.match(script.slice(catalogStart, catalogEnd), /if \(!productCatalogDataReady\)/);
   assert.match(script.slice(catalogStart, catalogEnd), /catalogRoot\.replaceChildren\(\)/);
+  assert.match(script, /function createCatalogBackMarkup\(\)/);
+  assert.match(script, /function goBackInCatalog\(\)/);
+  assert.match(script, /data-catalog-back/);
+  assert.match(script, /if \(catalogState\.brand\)[\s\S]*?brand: ""/);
+  assert.match(styles, /\.catalog-collection-back\s*\{/);
+  assert.match(styles, /\.catalog-collection-back:hover/);
   assert.match(script, /productCatalogDataReady = true;[\s\S]*?renderCatalog\(\)/);
   assert.match(script, /productCatalogDataReady = false;[\s\S]*?window\.setTimeout\(loadProductOverrides, productCatalogRetryDelay\)/);
   const lastStockStart = script.indexOf("function renderLastStockCatalog()");
@@ -344,7 +350,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     const expectedStyles = pageNames[index] === "admin.html"
       ? /\/assets-v\/home-image-drag-1\/styles\.css/
       : ["index.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
-        ? /\/assets-v\/product-variants-1\/styles\.css/
+        ? /\/assets-v\/catalog-back-1\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
@@ -374,11 +380,11 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   pages.forEach((html, pageIndex) => {
     const expectedScript = scriptPages[pageIndex] === "account.html"
       ? /\/assets-v\/hide-zero-stock-1\/script\.js/
-      : /\/assets-v\/product-variants-1\/script\.js/;
+      : /\/assets-v\/catalog-back-1\/script\.js/;
     assert.match(html, expectedScript);
   });
-  assert.match(index, /\/assets-v\/product-variants-1\/script\.js/);
-  assert.match(index, /\/assets-v\/product-variants-1\/styles\.css/);
+  assert.match(index, /\/assets-v\/catalog-back-1\/script\.js/);
+  assert.match(index, /\/assets-v\/catalog-back-1\/styles\.css/);
   assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
@@ -391,8 +397,8 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/product-variants-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/product-variants-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/catalog-back-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/catalog-back-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -403,8 +409,8 @@ test("last-stock cards show only inventory-confirmed sizes with a visible pulse"
     readFile("script.js", "utf8"),
     readFile("styles.css", "utf8"),
   ]);
-  assert.match(page, /\/assets-v\/product-variants-1\/script\.js/);
-  assert.match(page, /\/assets-v\/product-variants-1\/styles\.css/);
+  assert.match(page, /\/assets-v\/catalog-back-1\/script\.js/);
+  assert.match(page, /\/assets-v\/catalog-back-1\/styles\.css/);
   assert.match(script, /const visibleSizes = onlyAvailable[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
   assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
   assert.match(script, /is-last-stock-available/);
@@ -423,8 +429,8 @@ test("every product can share its direct page through social and native apps", a
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/product-variants-1\/script\.js/);
-    assert.match(page, /\/assets-v\/product-variants-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/catalog-back-1\/script\.js/);
+    assert.match(page, /\/assets-v\/catalog-back-1\/styles\.css/);
   }
   assert.match(script, /function productAbsoluteUrl\(product\)[\s\S]*?new URL\(productPageUrl\(product\), window\.location\.origin\)\.href/);
   assert.equal((script.match(/\$\{createProductShareMarkup\(product\)\}/g) || []).length, 2);
@@ -455,8 +461,8 @@ test("every product can share its direct page through social and native apps", a
   assert.match(script, /class="product-share-brand-icon"/);
   assert.doesNotMatch(script, /mark:\s*"WA"/);
   assert.match(styles, /\.product-share-brand-icon/);
-  assert.match(server, /"\/assets-v\/product-variants-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/product-variants-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/catalog-back-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/catalog-back-1\/styles\.css", "\/styles\.css"/);
 });
 
 test("color variants stay grouped while preserving their own gallery, price and cart identity", async () => {
@@ -471,8 +477,8 @@ test("color variants stay grouped while preserving their own gallery, price and 
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/product-variants-1\/script\.js/);
-    assert.match(page, /\/assets-v\/product-variants-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/catalog-back-1\/script\.js/);
+    assert.match(page, /\/assets-v\/catalog-back-1\/styles\.css/);
   }
   assert.match(admin, /\/assets-v\/product-variants-1\/admin\.js/);
   for (const field of ["variantGroup", "variantColor", "variantSwatch", "variantOrder"]) {
