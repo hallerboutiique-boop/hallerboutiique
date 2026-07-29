@@ -58,14 +58,14 @@ const updates = new Map([
     variantGroup: "nike-tn-colori",
     variantColor: "Nero",
     variantSwatch: "#202020",
-    variantOrder: 0,
+    variantOrder: 1,
   }],
   ["nike-tn-full-white", {
     name: "Nike TN",
     variantGroup: "nike-tn-colori",
     variantColor: "Bianco",
     variantSwatch: "#f5f5f5",
-    variantOrder: 1,
+    variantOrder: 0,
   }],
   // New Balance colors must remain separate cards in their respective gender sections.
   ["custom-new-balance-ms0zncnb", {
@@ -79,6 +79,113 @@ const updates = new Map([
     variantColor: "",
     variantSwatch: "",
     variantOrder: 0,
+  }],
+  // Keep Louis Vuitton T-shirt variants inside their own gender catalog.
+  ["custom-t-shirt-louis-vuitton-mrzbsol6", {
+    variantGroup: "t-shirt-louis-vuitton-uomo",
+    variantColor: "Nero",
+    variantSwatch: "#171717",
+    variantOrder: 1,
+  }],
+  ["custom-t-shirt-louis-vuitton-mrzbggz2", {
+    variantGroup: "t-shirt-louis-vuitton-uomo",
+    variantColor: "Bianco",
+    variantSwatch: "#f5f5f5",
+    variantOrder: 0,
+  }],
+  ["t-shirt-louis-vuitton", {
+    variantGroup: "t-shirt-louis-vuitton-uomo",
+    variantColor: "Nero / Verde",
+    variantSwatch: "#315f49",
+    variantOrder: 2,
+  }],
+  ["t-shirt-louis-vuitton-2", {
+    collection: "Catalogo Donna",
+    category: "T-Shirts",
+    variantGroup: "t-shirt-louis-vuitton-donna",
+    variantColor: "Nero / Argento",
+    variantSwatch: "#777b80",
+    variantOrder: 0,
+  }],
+  // Alexander McQueen colors are grouped by gender, never across both catalogs.
+  ["alexander-mcqueen-classic-white", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-uomo",
+    variantColor: "Bianco",
+    variantSwatch: "#f5f5f5",
+    variantOrder: 0,
+  }],
+  ["alexander-mcqueen-sky-blue", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-uomo",
+    variantColor: "Bianco / Azzurro",
+    variantSwatch: "#6fa8dc",
+    variantOrder: 1,
+  }],
+  ["alexander-mcqueen-black-laces", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-uomo",
+    variantColor: "Bianco / Nero",
+    variantSwatch: "#202020",
+    variantOrder: 2,
+  }],
+  ["alexander-mcqueen-grey-white", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-uomo",
+    variantColor: "Bianco / Grigio",
+    variantSwatch: "#8a8d91",
+    variantOrder: 3,
+  }],
+  ["alexander-mcqueen-classic", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-uomo",
+    variantColor: "Bianco / Nero (tallone)",
+    variantSwatch: "#202020",
+    variantOrder: 4,
+  }],
+  ["alexander-mcqueen-classic-white-2", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-donna",
+    variantColor: "Bianco",
+    variantSwatch: "#f5f5f5",
+    variantOrder: 0,
+  }],
+  ["alexander-mcqueen-sky-blue-2", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-donna",
+    variantColor: "Bianco / Azzurro",
+    variantSwatch: "#6fa8dc",
+    variantOrder: 1,
+  }],
+  ["alexander-mcqueen-grey-white-2", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-donna",
+    variantColor: "Bianco / Grigio",
+    variantSwatch: "#8a8d91",
+    variantOrder: 2,
+  }],
+  ["alexander-mcqueen-classic-2", {
+    name: "Alexander McQueen",
+    variantGroup: "alexander-mcqueen-donna",
+    variantColor: "Bianco / Nero (tallone)",
+    variantSwatch: "#202020",
+    variantOrder: 3,
+  }],
+  // Keep Bianco first whenever a color variant contains it.
+  ["custom-completo-gucci-ms0fdvjs", {
+    variantColor: "Bianco / Blu",
+  }],
+  ["custom-louis-vuitton-skete-verde-mrza3o2e", {
+    variantColor: "Bianco / Nero / Verde acqua",
+  }],
+  ["louis-vuitton-skate-black-white", {
+    variantColor: "Bianco / Nero",
+  }],
+  ["louis-vuitton-skate-beige-white", {
+    variantColor: "Bianco / Beige",
+  }],
+  ["louis-vuitton-skate-blue", {
+    variantColor: "Bianco / Blu",
   }],
 ]);
 
