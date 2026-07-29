@@ -1385,7 +1385,6 @@ const catalogSections = [
         products: [
           item("Crossbody Bag Gucci", "171,41", "119,99", "-30%", "none"),
           item("Crossbody Bag Louis Vuitton", "185,70", "129,99", "-30%", "none"),
-          item("Card Holder Herm\u00e8s", "157,13", "109,99", "-30%", "none"),
         ],
       },
     ],
