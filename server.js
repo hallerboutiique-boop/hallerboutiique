@@ -258,6 +258,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/product-variants-1/admin.js", "/admin.js"],
   ["/assets-v/catalog-back-1/script.js", "/script.js"],
   ["/assets-v/catalog-back-1/styles.css", "/styles.css"],
+  ["/assets-v/stable-color-groups-1/script.js", "/script.js"],
+  ["/assets-v/stable-color-groups-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);

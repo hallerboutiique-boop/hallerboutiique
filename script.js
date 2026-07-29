@@ -2582,13 +2582,22 @@ function refreshCatalogSearchLanguage() {
   if (dialog && wasOpen) dialog.showModal();
 }
 
+function normalizeCatalogSearchText(value) {
+  return String(value || "")
+    .toLocaleLowerCase("it")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function renderCatalogSearchResults(query = "") {
   const root = document.querySelector("[data-catalog-search-results]");
   if (!root) return;
-  const value = String(query).trim().toLowerCase();
+  const value = normalizeCatalogSearchText(query);
   const availableProducts = collapseProductVariants(getAllProducts().filter((product) => !product.isLastAvailable));
   const products = value
-    ? availableProducts.filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
+    ? availableProducts.filter((product) => normalizeCatalogSearchText(`${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`).includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();
   root.innerHTML = products.length
     ? products.map((product) => `<button class="catalog-search-result" type="button" data-catalog-search-result="${escapeHtml(product.id)}">${productPreviewMarkup(product, "catalog-search-preview")}<span><strong>${escapeHtml(product.name)}</strong><small>${escapeHtml(translateCatalogCategory(product.category))} · ${escapeHtml(getProductBrand(product))}</small></span></button>`).join("")
