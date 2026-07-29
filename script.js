@@ -302,6 +302,10 @@ const productShareTranslations = {
     "share-close": "Chiudi condivisione",
     "share-options-label": "Canali di condivisione",
     "product-color": "Colore",
+    "like-product": "Mi piace",
+    "liked-product": "Ti piace",
+    "unlike-product": "Rimuovi Mi piace",
+    "product-likes": "{count} Mi piace",
   },
   en: {
     "share-product-action": "Share",
@@ -318,6 +322,10 @@ const productShareTranslations = {
     "share-close": "Close sharing",
     "share-options-label": "Sharing channels",
     "product-color": "Color",
+    "like-product": "Like",
+    "liked-product": "Liked",
+    "unlike-product": "Remove like",
+    "product-likes": "{count} likes",
   },
   fr: {
     "share-product-action": "Partager",
@@ -334,6 +342,10 @@ const productShareTranslations = {
     "share-close": "Fermer le partage",
     "share-options-label": "Canaux de partage",
     "product-color": "Couleur",
+    "like-product": "J’aime",
+    "liked-product": "Aimé",
+    "unlike-product": "Retirer le J’aime",
+    "product-likes": "{count} J’aime",
   },
   de: {
     "share-product-action": "Teilen",
@@ -350,6 +362,10 @@ const productShareTranslations = {
     "share-close": "Teilen schliessen",
     "share-options-label": "Teilen-Kanale",
     "product-color": "Farbe",
+    "like-product": "Gefällt mir",
+    "liked-product": "Gefällt dir",
+    "unlike-product": "Gefällt mir entfernen",
+    "product-likes": "{count} Likes",
   },
   es: {
     "share-product-action": "Compartir",
@@ -366,6 +382,10 @@ const productShareTranslations = {
     "share-close": "Cerrar compartir",
     "share-options-label": "Canales para compartir",
     "product-color": "Color",
+    "like-product": "Me gusta",
+    "liked-product": "Te gusta",
+    "unlike-product": "Quitar Me gusta",
+    "product-likes": "{count} Me gusta",
   },
   sq: {
     "share-product-action": "Shperndaje",
@@ -382,6 +402,10 @@ const productShareTranslations = {
     "share-close": "Mbyll shperndarjen",
     "share-options-label": "Kanalet e shperndarjes",
     "product-color": "Ngjyra",
+    "like-product": "Pëlqej",
+    "liked-product": "Të pëlqen",
+    "unlike-product": "Hiq pëlqimin",
+    "product-likes": "{count} pëlqime",
   },
   ro: {
     "share-product-action": "Distribuie",
@@ -398,6 +422,10 @@ const productShareTranslations = {
     "share-close": "Inchide distribuirea",
     "share-options-label": "Canale de distribuire",
     "product-color": "Culoare",
+    "like-product": "Îmi place",
+    "liked-product": "Îți place",
+    "unlike-product": "Elimină aprecierea",
+    "product-likes": "{count} aprecieri",
   },
 };
 
@@ -463,6 +491,9 @@ let newArrivalProductIds = null;
 let deletedProductIds = new Set();
 let productCatalogDataReady = false;
 let productCatalogRetryDelay = 1500;
+let productLikeCounts = {};
+let likedProductIds = new Set();
+const pendingProductLikeIds = new Set();
 let catalogState = { gender: "", category: "", brand: "", productIds: [], view: "" };
 let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
@@ -477,6 +508,7 @@ const consentKey = "hallerBoutiqueConsent";
 const consentVersion = 2;
 const isReplayView = new URLSearchParams(window.location.search).get("replay_view") === "1";
 let runtimeConsent = null;
+let runtimeVisitorId = "";
 
 function randomId(prefix) {
   const bytes =
@@ -557,11 +589,21 @@ function hasLocationConsent() {
 }
 
 function getVisitorId() {
-  let id = window.localStorage.getItem(serverVisitorIdKey) || window.localStorage.getItem(visitorIdKey);
-  if (!id) {
-    id = randomId("vis");
-    window.localStorage.setItem(visitorIdKey, id);
+  let id = runtimeVisitorId;
+  try {
+    id = window.localStorage.getItem(serverVisitorIdKey) || window.localStorage.getItem(visitorIdKey) || id;
+  } catch {
+    // Private or embedded contexts can block local storage.
   }
+  if (!/^(?:vis_[a-f0-9]{20}|anon_[a-f0-9]{24})$/.test(String(id || ""))) {
+    id = randomId("vis");
+    try {
+      window.localStorage.setItem(visitorIdKey, id);
+    } catch {
+      // The in-memory ID still keeps likes stable for this page session.
+    }
+  }
+  runtimeVisitorId = id;
   return id;
 }
 
@@ -1893,6 +1935,112 @@ function createTryOnMarkup(product) {
   return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
+function productLikeCount(productId) {
+  const count = Number(productLikeCounts[productId]);
+  return Number.isInteger(count) && count > 0 ? count : 0;
+}
+
+function formattedProductLikeCount(productId) {
+  return new Intl.NumberFormat(siteLanguage).format(productLikeCount(productId));
+}
+
+function createProductLikeMarkup(product) {
+  const liked = likedProductIds.has(product.id);
+  const count = formattedProductLikeCount(product.id);
+  const actionLabel = translate(liked ? "unlike-product" : "like-product");
+  const countLabel = translate("product-likes").replace("{count}", count);
+  return `
+    <button class="like-action${liked ? " is-liked" : ""}" type="button" data-product-like="${escapeHtml(product.id)}" aria-pressed="${liked}" aria-label="${escapeHtml(`${actionLabel}: ${product.name}. ${countLabel}`)}">
+      <i data-lucide="heart"></i>
+      <span data-product-like-label>${escapeHtml(translate(liked ? "liked-product" : "like-product"))}</span>
+      <strong data-product-like-count aria-label="${escapeHtml(countLabel)}">${escapeHtml(count)}</strong>
+    </button>
+  `;
+}
+
+function refreshProductLikeButtons() {
+  document.querySelectorAll("[data-product-like]").forEach((button) => {
+    const productId = button.dataset.productLike || "";
+    const liked = likedProductIds.has(productId);
+    const count = formattedProductLikeCount(productId);
+    const product = findProductById(productId);
+    const actionLabel = translate(liked ? "unlike-product" : "like-product");
+    const countLabel = translate("product-likes").replace("{count}", count);
+    button.classList.toggle("is-liked", liked);
+    button.disabled = pendingProductLikeIds.has(productId);
+    button.setAttribute("aria-pressed", String(liked));
+    button.setAttribute("aria-label", `${actionLabel}: ${product?.name || ""}. ${countLabel}`);
+    const label = button.querySelector("[data-product-like-label]");
+    const counter = button.querySelector("[data-product-like-count]");
+    if (label) label.textContent = translate(liked ? "liked-product" : "like-product");
+    if (counter) {
+      counter.textContent = count;
+      counter.setAttribute("aria-label", countLabel);
+    }
+  });
+}
+
+async function loadProductLikes() {
+  try {
+    const response = await fetch("/api/product-likes", {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+        "X-Haller-Visitor": getVisitorId(),
+      },
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) return;
+    productLikeCounts = Object.fromEntries(
+      Object.entries(data.counts || {})
+        .map(([productId, count]) => [productId, Number(count)])
+        .filter(([, count]) => Number.isInteger(count) && count >= 0)
+    );
+    likedProductIds = new Set(Array.isArray(data.likedProductIds) ? data.likedProductIds : []);
+    refreshProductLikeButtons();
+  } catch {
+    // Likes are optional UI; the catalog remains usable if this request fails.
+  }
+}
+
+async function toggleProductLike(button) {
+  const productId = String(button?.dataset.productLike || "");
+  if (!productId || pendingProductLikeIds.has(productId)) return;
+
+  const wasLiked = likedProductIds.has(productId);
+  const previousCount = productLikeCount(productId);
+  const nextLiked = !wasLiked;
+  if (nextLiked) likedProductIds.add(productId);
+  else likedProductIds.delete(productId);
+  productLikeCounts[productId] = Math.max(0, previousCount + (nextLiked ? 1 : -1));
+  pendingProductLikeIds.add(productId);
+  refreshProductLikeButtons();
+
+  try {
+    const response = await fetch("/api/product-likes", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+        "X-Haller-Visitor": getVisitorId(),
+      },
+      body: JSON.stringify({ productId, liked: nextLiked }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || "Like unavailable");
+    productLikeCounts[productId] = Math.max(0, Number.parseInt(data.count, 10) || 0);
+    if (data.liked) likedProductIds.add(productId);
+    else likedProductIds.delete(productId);
+  } catch {
+    productLikeCounts[productId] = previousCount;
+    if (wasLiked) likedProductIds.add(productId);
+    else likedProductIds.delete(productId);
+  } finally {
+    pendingProductLikeIds.delete(productId);
+    refreshProductLikeButtons();
+  }
+}
+
 function createProductShareMarkup(product) {
   return `<button class="share-action" type="button" data-product-share-open="${escapeHtml(product.id)}" aria-label="${escapeHtml(translate("share-product-action"))}: ${escapeHtml(product.name)}"><i data-lucide="share-2"></i><span>${escapeHtml(translate("share-product-action"))}</span></button>`;
 }
@@ -2174,7 +2322,10 @@ function createProductCard(product, options = {}) {
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
-          ${createProductShareMarkup(product)}
+          <div class="product-community-actions">
+            ${createProductLikeMarkup(product)}
+            ${createProductShareMarkup(product)}
+          </div>
         </div>
       </div>
     </article>
@@ -2309,7 +2460,10 @@ function renderProductDetail() {
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
-          ${createProductShareMarkup(product)}
+          <div class="product-community-actions">
+            ${createProductLikeMarkup(product)}
+            ${createProductShareMarkup(product)}
+          </div>
         </div>
       </section>
     </article>
@@ -4536,6 +4690,7 @@ async function confirmCheckoutOrder(button) {
 renderCatalog();
 renderProductDetail();
 loadProductOverrides();
+loadProductLikes();
 updateCartCount();
 setupLocationDeliveryBanner();
 setSiteMotion(true, true);
@@ -4646,11 +4801,17 @@ document.addEventListener("click", (event) => {
   const shareChannel = event.target.closest("[data-product-share-channel]");
   const shareNative = event.target.closest("[data-product-share-native], [data-product-share-native-app]");
   const shareCopy = event.target.closest("[data-product-share-copy]");
+  const likeButton = event.target.closest("[data-product-like]");
   const productVariant = event.target.closest("[data-product-variant-id]");
   const productCard = event.target.closest("[data-product-url]");
 
   if (heroVideoSlide && !event.target.closest("a, button, input, select, textarea")) {
     playHeroCharacterVideo(heroVideoSlide);
+    return;
+  }
+
+  if (likeButton) {
+    toggleProductLike(likeButton);
     return;
   }
 

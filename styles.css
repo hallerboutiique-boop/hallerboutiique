@@ -4722,6 +4722,7 @@ body.motion-enabled .product-actions button:focus-visible {
 
 body.motion-enabled .product-actions .cart-action:hover,
 body.motion-enabled .product-actions .tryon-action:hover,
+body.motion-enabled .product-actions .like-action:hover,
 body.motion-enabled .product-actions .share-action:hover {
   border-color: var(--gold-hot);
   background: rgba(var(--gold-rgb), 0.16);
@@ -4852,6 +4853,13 @@ body.motion-enabled .product-actions .buy-action:hover {
   background: rgba(255, 255, 255, 0.035);
 }
 
+.product-community-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.product-actions .like-action,
 .product-actions .share-action {
   display: flex;
   align-items: center;
@@ -4862,9 +4870,50 @@ body.motion-enabled .product-actions .buy-action:hover {
   background: linear-gradient(135deg, rgba(var(--gold-rgb), 0.11), rgba(255, 255, 255, 0.025));
 }
 
+.product-actions .like-action {
+  color: #ffe5a7;
+  border: 1px solid rgba(var(--gold-rgb), 0.38);
+  background: linear-gradient(135deg, rgba(var(--gold-rgb), 0.11), rgba(255, 255, 255, 0.025));
+}
+
+.product-actions .like-action.is-liked {
+  color: #fff4f6;
+  border-color: rgba(243, 92, 124, 0.72);
+  background: linear-gradient(135deg, rgba(174, 28, 61, 0.3), rgba(255, 255, 255, 0.035));
+  box-shadow: inset 0 0 18px rgba(239, 66, 104, 0.08);
+}
+
+.product-actions .like-action:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.product-actions .like-action strong {
+  display: inline-grid;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0 6px;
+  place-items: center;
+  color: #111;
+  border-radius: 999px;
+  background: var(--gold);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.product-actions .like-action.is-liked strong {
+  color: #fff;
+  background: #d92f58;
+}
+
+.product-actions .like-action svg,
 .product-actions .share-action svg {
   width: 17px;
   height: 17px;
+}
+
+.product-actions .like-action.is-liked svg {
+  fill: currentColor;
 }
 
 .product-share-dialog {
@@ -7173,6 +7222,14 @@ body.is-product-zoom-open {
   grid-column: 1 / -1;
 }
 
+.product-detail-actions .product-community-actions {
+  grid-column: 1 / -1;
+}
+
+.product-community-actions .share-action {
+  grid-column: auto;
+}
+
 .product-detail-empty {
   display: grid;
   min-height: 48vh;
@@ -7685,12 +7742,30 @@ body.is-product-zoom-open {
     gap: 5px;
   }
 
+  .product-grid-featured .product-community-actions {
+    gap: 5px;
+  }
+
   .product-grid-featured .product-actions button {
     min-height: 30px;
     padding: 7px 5px;
     border-radius: 6px;
     font-size: 9px;
     line-height: 1.1;
+  }
+
+  .product-grid-featured .like-action span,
+  .product-grid-featured .share-action span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .product-grid-featured .product-actions .like-action strong {
+    min-width: 17px;
+    min-height: 17px;
+    padding: 0 4px;
+    font-size: 9px;
   }
 
   .product-grid-featured .image-placeholder {

@@ -46,6 +46,12 @@ import {
   isBagProduct,
   resolveProductSizeType,
 } from "./product-inventory.mjs";
+import {
+  cleanLikeProductId,
+  normalizeProductLikes,
+  setProductLike,
+  summarizeProductLikes,
+} from "./product-likes.mjs";
 
 sharp.cache(false);
 sharp.concurrency(1);
@@ -58,6 +64,7 @@ const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
 const pushSubscriptionsFile = path.join(dataDir, "push-subscriptions.json");
 const productsFile = path.join(dataDir, "products.json");
+const productLikesFile = path.join(dataDir, "product-likes.json");
 const uploadsDir = path.join(dataDir, "uploads");
 const tryOnDir = path.join(dataDir, "try-on");
 const tryOnArchiveFile = path.join(dataDir, "try-on.json");
@@ -109,6 +116,7 @@ const tryOnProductImageCache = new Map();
 const tryOnProductImageInflight = new Map();
 let tryOnProductImageCacheBytes = 0;
 let productMutationQueue = Promise.resolve();
+let productLikeMutationQueue = Promise.resolve();
 let orderMutationQueue = Promise.resolve();
 let pushSubscriptionMutationQueue = Promise.resolve();
 let mobilePushQueueRunning = false;
@@ -141,6 +149,12 @@ const tryOnRequestJobs = new Map();
 function enqueueProductMutation(mutation) {
   const result = productMutationQueue.then(mutation, mutation);
   productMutationQueue = result.catch(() => {});
+  return result;
+}
+
+function enqueueProductLikeMutation(mutation) {
+  const result = productLikeMutationQueue.then(mutation, mutation);
+  productLikeMutationQueue = result.catch(() => {});
   return result;
 }
 
@@ -260,6 +274,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/catalog-back-1/styles.css", "/styles.css"],
   ["/assets-v/stable-color-groups-1/script.js", "/script.js"],
   ["/assets-v/stable-color-groups-1/styles.css", "/styles.css"],
+  ["/assets-v/product-likes-2/script.js", "/script.js"],
+  ["/assets-v/product-likes-2/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);
@@ -290,6 +306,7 @@ async function ensureStorage() {
   await ensureJsonFile(ordersFile, []);
   await ensureJsonFile(pushSubscriptionsFile, []);
   await ensureJsonFile(productsFile, { items: {}, custom: [] });
+  await ensureJsonFile(productLikesFile, { products: {} });
   await ensureJsonFile(tryOnArchiveFile, []);
   await fs.mkdir(uploadsDir, { recursive: true });
   await fs.mkdir(tryOnDir, { recursive: true });
@@ -2743,6 +2760,82 @@ async function handleProducts(req, res) {
   });
 }
 
+async function readProductLikes() {
+  return normalizeProductLikes(await readJson(productLikesFile, { products: {} }));
+}
+
+async function writeProductLikes(store) {
+  const normalized = normalizeProductLikes(store);
+  await writeJson(productLikesFile, {
+    updatedAt: new Date().toISOString(),
+    products: normalized.products,
+  });
+}
+
+function productLikeVisitorId(req) {
+  const cookieVisitorId = cleanAnonId(parseCookies(req).hb_anon);
+  if (cookieVisitorId) return cookieVisitorId;
+  const headerVisitorId = String(req.headers["x-haller-visitor"] || "").trim().toLowerCase();
+  if (cleanAnonId(headerVisitorId)) return headerVisitorId;
+  return /^vis_[a-f0-9]{20}$/.test(headerVisitorId) ? headerVisitorId : "";
+}
+
+function productLikeVisitorHash(req) {
+  const visitorId = productLikeVisitorId(req);
+  return visitorId ? createHmac("sha256", sessionSecret).update(visitorId).digest("hex") : "";
+}
+
+async function availableProductLikeIds() {
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  const deleted = new Set(overrides.deletedProductIds);
+  return new Set([
+    ...defaults.filter((product) => !deleted.has(product.id)).map((product) => product.id),
+    ...overrides.custom.filter((product) => !deleted.has(product.id)).map((product) => product.id),
+  ]);
+}
+
+async function handleProductLikes(req, res) {
+  const visitorHash = productLikeVisitorHash(req);
+
+  if (req.method === "GET") {
+    const [store, productIds] = await Promise.all([readProductLikes(), availableProductLikeIds()]);
+    return json(res, 200, {
+      ok: true,
+      ...summarizeProductLikes(store, visitorHash, productIds),
+    }, {
+      "Cache-Control": "private, no-store",
+    });
+  }
+
+  if (req.method !== "POST") {
+    return json(res, 405, { ok: false, message: "Metodo non consentito." });
+  }
+  if (!visitorHash) return badRequest(res, "Identificativo visitatore non valido.");
+
+  const body = await parseBody(req);
+  const productId = cleanLikeProductId(body.productId);
+  if (!productId || typeof body.liked !== "boolean") {
+    return badRequest(res, "Richiesta like non valida.");
+  }
+
+  return enqueueProductLikeMutation(async () => {
+    const productIds = await availableProductLikeIds();
+    if (!productIds.has(productId)) {
+      return json(res, 404, { ok: false, message: "Prodotto non trovato." });
+    }
+    const result = setProductLike(await readProductLikes(), productId, visitorHash, body.liked);
+    await writeProductLikes(result.store);
+    return json(res, 200, {
+      ok: true,
+      productId: result.productId,
+      liked: result.liked,
+      count: result.count,
+    }, {
+      "Cache-Control": "private, no-store",
+    });
+  });
+}
+
 function cleanChatMessage(value) {
   return cleanTrackingString(value, 900);
 }
@@ -4442,6 +4535,7 @@ async function handleApi(req, res, url) {
   if (req.method === "GET" && url.pathname === "/api/auth/me") return handleMe(req, res);
   if (req.method === "GET" && url.pathname === "/api/auth/providers") return json(res, 200, { ok: true, providers: providerStatus() });
   if (req.method === "GET" && url.pathname === "/api/products") return handleProducts(req, res);
+  if (url.pathname === "/api/product-likes") return handleProductLikes(req, res);
   if (req.method === "POST" && url.pathname === "/api/mobile/admin/login") return handleMobileAdminLogin(req, res);
   if (req.method === "GET" && url.pathname === "/api/mobile/admin/orders") return handleMobileAdminOrders(req, res, url);
   if (req.method === "GET" && url.pathname === "/api/mobile/admin/dashboard") return handleMobileAdminDashboard(req, res);
