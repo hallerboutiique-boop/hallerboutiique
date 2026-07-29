@@ -4886,6 +4886,8 @@ body.motion-enabled .product-actions .buy-action:hover {
 
 .product-share-option {
   --share-brand: var(--gold);
+  --share-mark-background: var(--share-brand);
+  --share-mark-color: #fff;
   display: flex;
   min-width: 0;
   min-height: 58px;
@@ -4917,42 +4919,53 @@ body.motion-enabled .product-actions .buy-action:hover {
   height: 35px;
   flex: 0 0 35px;
   place-items: center;
-  color: #fff;
+  color: var(--share-mark-color);
   border-radius: 9px;
-  background: var(--share-brand);
-  font-size: 11px;
-  font-weight: 900;
+  background: var(--share-mark-background);
 }
 
 .product-share-option-mark svg {
-  width: 17px;
-  height: 17px;
+  width: 20px;
+  height: 20px;
+}
+
+.product-share-brand-icon {
+  display: block;
+  fill: currentColor;
 }
 
 .product-share-option[data-share-brand="whatsapp"] { --share-brand: #25d366; }
-.product-share-option[data-share-brand="telegram"] { --share-brand: #229ed9; }
-.product-share-option[data-share-brand="facebook"] { --share-brand: #1877f2; }
-.product-share-option[data-share-brand="x"] { --share-brand: #3a3a3a; }
-.product-share-option[data-share-brand="pinterest"] { --share-brand: #e60023; }
+.product-share-option[data-share-brand="telegram"] { --share-brand: #26a5e4; }
+.product-share-option[data-share-brand="facebook"] { --share-brand: #0866ff; }
+.product-share-option[data-share-brand="x"] { --share-brand: #000; }
+.product-share-option[data-share-brand="pinterest"] { --share-brand: #bd081c; }
 .product-share-option[data-share-brand="linkedin"] { --share-brand: #0a66c2; }
 .product-share-option[data-share-brand="reddit"] { --share-brand: #ff4500; }
 .product-share-option[data-share-brand="email"] { --share-brand: #7d6af2; }
-.product-share-option[data-share-brand="instagram"] { --share-brand: #d62976; }
-.product-share-option[data-share-brand="tiktok"] { --share-brand: #20d5ec; }
-.product-share-option[data-share-brand="snapchat"] { --share-brand: #f2dc00; }
+.product-share-option[data-share-brand="instagram"] { --share-brand: #ff0069; }
+.product-share-option[data-share-brand="tiktok"] { --share-brand: #000; }
+.product-share-option[data-share-brand="snapchat"] { --share-brand: #fffc00; }
 .product-share-option[data-share-brand="native"] { --share-brand: #b58b37; }
+
+.product-share-option:is(
+  [data-share-brand="telegram"],
+  [data-share-brand="facebook"],
+  [data-share-brand="x"],
+  [data-share-brand="pinterest"],
+  [data-share-brand="linkedin"],
+  [data-share-brand="reddit"],
+  [data-share-brand="tiktok"]
+) {
+  --share-mark-background: #fff;
+  --share-mark-color: var(--share-brand);
+}
 
 .product-share-option[data-share-brand="instagram"] .product-share-option-mark {
   background: linear-gradient(135deg, #833ab4, #fd1d1d, #fcb045);
 }
 
-.product-share-option[data-share-brand="tiktok"] .product-share-option-mark {
-  color: #fff;
-  background: linear-gradient(135deg, #25f4ee, #111 48%, #fe2c55);
-}
-
 .product-share-option[data-share-brand="snapchat"] .product-share-option-mark {
-  color: #111;
+  --share-mark-color: #000;
 }
 
 .product-share-copy {

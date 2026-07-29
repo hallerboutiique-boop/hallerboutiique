@@ -249,8 +249,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/last-stock-sizes-1/script.js", "/script.js"],
   ["/assets-v/last-stock-sizes-1/styles.css", "/styles.css"],
   ["/assets-v/hide-zero-stock-1/script.js", "/script.js"],
-  ["/assets-v/product-share-1/script.js", "/script.js"],
-  ["/assets-v/product-share-1/styles.css", "/styles.css"],
+  ["/assets-v/product-share-2/script.js", "/script.js"],
+  ["/assets-v/product-share-2/styles.css", "/styles.css"],
   ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
   ["/assets-v/home-image-drag-1/styles.css", "/styles.css"],
 ]);
