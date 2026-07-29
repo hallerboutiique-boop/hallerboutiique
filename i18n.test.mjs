@@ -352,7 +352,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     const expectedStyles = pageNames[index] === "admin.html"
       ? /\/assets-v\/home-image-drag-1\/styles\.css/
       : ["index.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
-        ? /\/assets-v\/catalog-stock-variants-1\/styles\.css/
+        ? /\/assets-v\/catalog-stock-variants-2\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
@@ -386,7 +386,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     assert.match(html, expectedScript);
   });
   assert.match(index, /\/assets-v\/catalog-stock-variants-1\/script\.js/);
-  assert.match(index, /\/assets-v\/catalog-stock-variants-1\/styles\.css/);
+  assert.match(index, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
@@ -400,7 +400,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-stock-variants-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/catalog-stock-variants-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/catalog-stock-variants-2\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -412,7 +412,7 @@ test("last-stock cards show only inventory-confirmed sizes with a visible pulse"
     readFile("styles.css", "utf8"),
   ]);
   assert.match(page, /\/assets-v\/catalog-stock-variants-1\/script\.js/);
-  assert.match(page, /\/assets-v\/catalog-stock-variants-1\/styles\.css/);
+  assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   assert.match(script, /const visibleSizes = onlyAvailable[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
   assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
   assert.match(script, /is-last-stock-available/);
@@ -432,7 +432,7 @@ test("every product can share its direct page through social and native apps", a
   ]);
   for (const page of [index, productPage, lastStock]) {
     assert.match(page, /\/assets-v\/catalog-stock-variants-1\/script\.js/);
-    assert.match(page, /\/assets-v\/catalog-stock-variants-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   }
   assert.match(script, /function productAbsoluteUrl\(product\)[\s\S]*?new URL\(productPageUrl\(product\), window\.location\.origin\)\.href/);
   assert.equal((script.match(/\$\{createProductShareMarkup\(product\)\}/g) || []).length, 2);
@@ -464,7 +464,7 @@ test("every product can share its direct page through social and native apps", a
   assert.doesNotMatch(script, /mark:\s*"WA"/);
   assert.match(styles, /\.product-share-brand-icon/);
   assert.match(server, /"\/assets-v\/catalog-stock-variants-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/catalog-stock-variants-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/catalog-stock-variants-2\/styles\.css", "\/styles\.css"/);
 });
 
 test("product likes are public, visitor-specific and persisted by the server", async () => {
@@ -511,7 +511,7 @@ test("color variants stay grouped while preserving their own gallery, price and 
   ]);
   for (const page of [index, productPage, lastStock]) {
     assert.match(page, /\/assets-v\/catalog-stock-variants-1\/script\.js/);
-    assert.match(page, /\/assets-v\/catalog-stock-variants-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   }
   assert.match(admin, /\/assets-v\/product-variants-1\/admin\.js/);
   for (const field of ["variantGroup", "variantColor", "variantSwatch", "variantOrder"]) {
@@ -810,10 +810,11 @@ test("bags never expose or persist product sizes", async () => {
 });
 
 test("bags with one unit appear in last stock and remain in the normal catalog", async () => {
-  const [script, server, inventory] = await Promise.all([
+  const [script, server, inventory, styles] = await Promise.all([
     readFile("script.js", "utf8"),
     readFile("server.js", "utf8"),
     readFile("product-inventory.mjs", "utf8"),
+    readFile("styles.css", "utf8"),
   ]);
   assert.match(inventory, /export function isBagProduct/);
   assert.match(server, /isLastAvailable:\s*inventoryTotal === 1/);
@@ -823,6 +824,9 @@ test("bags with one unit appear in last stock and remain in the normal catalog",
   assert.match(script, /class="bag-last-piece-notice"/);
   assert.match(script, /isLastAvailable:\s*Boolean\(override\.isLastAvailable\)/);
   assert.match(script, /isLastAvailable:\s*Boolean\(product\.isLastAvailable\)/);
+  assert.match(styles, /\.bag-last-piece-notice\s*\{[\s\S]*?color:\s*#f3c969[\s\S]*?font-family:\s*inherit[\s\S]*?font-weight:\s*800/);
+  assert.match(styles, /animation:\s*bag-last-piece-pulse 1\.45s ease-in-out infinite/);
+  assert.match(styles, /@keyframes bag-last-piece-pulse/);
 });
 
 test("checkout renders product images from the cart", async () => {
