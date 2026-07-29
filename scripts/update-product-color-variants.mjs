@@ -67,6 +67,19 @@ const updates = new Map([
     variantSwatch: "#f5f5f5",
     variantOrder: 1,
   }],
+  // New Balance colors must remain separate cards in their respective gender sections.
+  ["custom-new-balance-ms0zncnb", {
+    variantGroup: "",
+    variantColor: "",
+    variantSwatch: "",
+    variantOrder: 0,
+  }],
+  ["custom-new-balance-ms0gc4wo", {
+    variantGroup: "",
+    variantColor: "",
+    variantSwatch: "",
+    variantOrder: 0,
+  }],
 ]);
 
 const editableFields = [
