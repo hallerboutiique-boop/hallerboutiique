@@ -4527,6 +4527,17 @@ body.motion-enabled .product-card:hover .product-image {
   font-weight: 800;
 }
 
+.bag-last-piece-notice {
+  margin: -5px 0 13px;
+  color: #ef4e4e;
+  letter-spacing: 0.075em;
+  text-transform: uppercase;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 10px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
 .product-variants {
   display: grid;
   gap: 8px;

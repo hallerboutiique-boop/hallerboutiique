@@ -51,6 +51,9 @@ test("recognizes bags independently from their catalog category", () => {
   assert.equal(isBagProduct({ name: "BORSA PRADA", category: "Nuovi arrivi" }), true);
   assert.equal(isBagProduct({ name: "Flap Bag Chanel", category: "Novità" }), true);
   assert.equal(isBagProduct({ name: "Backpack Louis Vuitton", category: "Donna" }), true);
+  assert.equal(isBagProduct({ name: "Pochette Hermès", category: "Nuovi arrivi" }), true);
+  assert.equal(isBagProduct({ name: "Portafoglio Hermès", category: "Borse Uomo" }), false);
+  assert.equal(isBagProduct({ name: "Dogon Wallet Hermès", category: "Borse Donna" }), false);
   assert.equal(isBagProduct({ name: "T-Shirt Gucci", category: "T-Shirts Uomo" }), false);
 });
 

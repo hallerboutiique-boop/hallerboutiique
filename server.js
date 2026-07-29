@@ -277,6 +277,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/product-likes-2/script.js", "/script.js"],
   ["/assets-v/product-likes-2/styles.css", "/styles.css"],
   ["/assets-v/catalog-no-cardholder-1/script.js", "/script.js"],
+  ["/assets-v/catalog-stock-variants-1/script.js", "/script.js"],
+  ["/assets-v/catalog-stock-variants-1/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);
@@ -2720,7 +2722,6 @@ async function handleProducts(req, res) {
   const data = await readProductOverrides();
   const toPublicProduct = (product) => {
     const { inventory, inventoryBySize, ...publicProduct } = product || {};
-    const isBag = isBagProduct(publicProduct);
     const sizeType = resolveProductSizeType(publicProduct);
     const sizes = sizeType === "none"
       ? []
@@ -2742,7 +2743,7 @@ async function handleProducts(req, res) {
         ? availableInventorySizes({ inventoryBySize: normalizedInventoryBySize })
         : [],
       isSoldOut: inventoryTotal === 0,
-      isLastAvailable: !isBag && inventoryTotal === 1,
+      isLastAvailable: inventoryTotal === 1,
     };
   };
   const items = Object.fromEntries(Object.entries(data.items).map(([id, product]) => [id, toPublicProduct(product)]));

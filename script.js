@@ -306,6 +306,7 @@ const productShareTranslations = {
     "liked-product": "Ti piace",
     "unlike-product": "Rimuovi Mi piace",
     "product-likes": "{count} Mi piace",
+    "bag-last-piece": "ULTIMO PEZZO DISPONIBILE",
   },
   en: {
     "share-product-action": "Share",
@@ -326,6 +327,7 @@ const productShareTranslations = {
     "liked-product": "Liked",
     "unlike-product": "Remove like",
     "product-likes": "{count} likes",
+    "bag-last-piece": "LAST PIECE AVAILABLE",
   },
   fr: {
     "share-product-action": "Partager",
@@ -346,6 +348,7 @@ const productShareTranslations = {
     "liked-product": "Aimé",
     "unlike-product": "Retirer le J’aime",
     "product-likes": "{count} J’aime",
+    "bag-last-piece": "DERNIERE PIECE DISPONIBLE",
   },
   de: {
     "share-product-action": "Teilen",
@@ -366,6 +369,7 @@ const productShareTranslations = {
     "liked-product": "Gefällt dir",
     "unlike-product": "Gefällt mir entfernen",
     "product-likes": "{count} Likes",
+    "bag-last-piece": "LETZTES STUCK VERFUGBAR",
   },
   es: {
     "share-product-action": "Compartir",
@@ -386,6 +390,7 @@ const productShareTranslations = {
     "liked-product": "Te gusta",
     "unlike-product": "Quitar Me gusta",
     "product-likes": "{count} Me gusta",
+    "bag-last-piece": "ULTIMA UNIDAD DISPONIBLE",
   },
   sq: {
     "share-product-action": "Shperndaje",
@@ -469,7 +474,12 @@ const jeansSizes = ["40", "42", "44", "46", "48", "50", "52", "54", "56"];
 
 function isCatalogBagProduct({ name = "", collection = "", category = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
-  return /\b(?:bors[ae]|bags?|backpacks?|zain[oi])\b/u.test(label);
+  if (/\b(?:wallet|portafogli[oa]?|card holder)\b/u.test(label)) return false;
+  return /\b(?:bors[ae]|bags?|backpacks?|zain[oi]|pochette|pouches?|clutches?|crossbody|flap)\b/u.test(label);
+}
+
+function isNormalCatalogProduct(product) {
+  return !product?.isLastAvailable || isCatalogBagProduct(product);
 }
 
 function resolveCatalogProductSizeType(productOrSizeType) {
@@ -1731,7 +1741,6 @@ function applyProductOverride(product) {
   const name = override.name || product.name;
   const collection = override.collection || product.collection;
   const category = normalizeCatalogCategory(override.category || product.category);
-  const isBag = isCatalogBagProduct({ name, collection, category });
   return {
     ...product,
     ...override,
@@ -1752,7 +1761,7 @@ function applyProductOverride(product) {
     inventoryTrackedBySize: Boolean(override.inventoryTrackedBySize),
     availableSizes: Array.isArray(override.availableSizes) ? override.availableSizes : [],
     isSoldOut: Boolean(override.isSoldOut),
-    isLastAvailable: !isBag && Boolean(override.isLastAvailable),
+    isLastAvailable: Boolean(override.isLastAvailable),
     images: Array.isArray(override.images) ? override.images : product.images || [],
     originalImages: Array.isArray(override.originalImages)
       ? override.originalImages
@@ -1770,7 +1779,6 @@ function applyProductOverride(product) {
 function normalizeCustomProduct(product) {
   const collection = product.collection || "Selezione Haller Boutique";
   const category = normalizeCatalogCategory(product.category || "Nuovi arrivi");
-  const isBag = isCatalogBagProduct({ name: product.name, collection, category });
   const sizeType = resolveCatalogProductSizeType({ name: product.name, collection, category, sizeType: product.sizeType });
   return {
     id: product.id || slugifyProduct(product.name),
@@ -1788,7 +1796,7 @@ function normalizeCustomProduct(product) {
     inventoryTrackedBySize: Boolean(product.inventoryTrackedBySize),
     availableSizes: Array.isArray(product.availableSizes) ? product.availableSizes : [],
     isSoldOut: Boolean(product.isSoldOut),
-    isLastAvailable: !isBag && Boolean(product.isLastAvailable),
+    isLastAvailable: Boolean(product.isLastAvailable),
     variantGroup: String(product.variantGroup || "").trim(),
     variantColor: String(product.variantColor || "").trim(),
     variantSwatch: /^#[0-9a-f]{6}$/i.test(String(product.variantSwatch || "").trim())
@@ -2259,11 +2267,18 @@ function productVariantOrder(product) {
   return Number.isInteger(order) && order >= 0 ? order : 0;
 }
 
-function getProductVariants(product) {
+function getProductVariants(product, options = {}) {
   const group = String(product?.variantGroup || "").trim();
   if (!group) return [product];
-  return getAllProducts()
-    .filter((candidate) => String(candidate.variantGroup || "").trim() === group)
+  const stockScope = String(options.stockScope || "").trim();
+  const variants = getAllProducts()
+    .filter((candidate) => String(candidate.variantGroup || "").trim() === group);
+  const scopedVariants = stockScope === "last"
+    ? variants.filter((candidate) => candidate.isLastAvailable)
+    : stockScope === "normal"
+      ? variants.filter(isNormalCatalogProduct)
+      : variants;
+  return scopedVariants
     .sort((left, right) =>
       productVariantOrder(left) - productVariantOrder(right)
       || String(left.variantColor || left.name).localeCompare(String(right.variantColor || right.name), "it")
@@ -2275,8 +2290,8 @@ function productVariantSwatch(product) {
   return /^#[0-9a-f]{6}$/i.test(swatch) ? swatch : "#b58b37";
 }
 
-function createProductVariantMarkup(product) {
-  const variants = getProductVariants(product);
+function createProductVariantMarkup(product, options = {}) {
+  const variants = getProductVariants(product, options);
   if (variants.length < 2) return "";
   const selectedColor = String(product.variantColor || "").trim();
   return `
@@ -2298,12 +2313,26 @@ function createProductVariantMarkup(product) {
   `;
 }
 
+function productDiscountLabel(value) {
+  const match = String(value || "").match(/\d+(?:[.,]\d+)?/);
+  return match ? `-${match[0]}%` : "";
+}
+
+function createBagLastPieceMarkup(product) {
+  return product?.isLastAvailable && isCatalogBagProduct(product)
+    ? `<p class="bag-last-piece-notice">${escapeHtml(translate("bag-last-piece"))}</p>`
+    : "";
+}
+
 function createProductCard(product, options = {}) {
   const showOnlyAvailableSizes = options?.showOnlyAvailableSizes === true;
+  const isLastPieceBag = product.isLastAvailable && isCatalogBagProduct(product);
+  const discount = productDiscountLabel(product.discount);
+  const stockScope = showOnlyAvailableSizes ? "last" : "normal";
   return `
     <article class="product-card" data-product-card="${escapeHtml(product.id)}" data-product-url="${productPageUrl(product)}">
       <div class="product-media">
-        ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
+        ${discount ? `<span class="discount-badge">${escapeHtml(discount)}</span>` : ""}
         ${createProductMediaMarkup(product)}
         <button class="product-media-open" type="button" aria-label="${translate("gallery-next")}: ${escapeHtml(product.name)}"></button>
         <button class="product-card-zoom-open" type="button" data-product-zoom-open aria-label="${translate("zoom-open")}: ${escapeHtml(product.name)}" title="${translate("zoom-open")}"><i data-lucide="zoom-in"></i></button>
@@ -2314,9 +2343,10 @@ function createProductCard(product, options = {}) {
           <span class="price-original">${escapeHtml(product.original)}</span>
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
-        ${createProductVariantMarkup(product)}
+        ${createBagLastPieceMarkup(product)}
+        ${createProductVariantMarkup(product, { stockScope })}
         ${createSizesMarkup(product, { onlyAvailable: showOnlyAvailableSizes })}
-        ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
+        ${product.isLastAvailable && !isLastPieceBag ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
         <div class="product-actions">
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
@@ -2381,7 +2411,7 @@ function getHomeFeaturedProducts() {
     return collapseProductVariants(homeProductIds
       .map((id) => productsById.get(id))
       .filter(Boolean)
-      .filter((product) => !product.isLastAvailable)
+      .filter(isNormalCatalogProduct)
       .filter((product) => getProductGallery(product).length > 0));
   }
   const defaultFeatured = homeFeaturedProductNames
@@ -2390,7 +2420,7 @@ function getHomeFeaturedProducts() {
   const seen = new Set();
   return collapseProductVariants([...customProducts, ...defaultFeatured, ...allProducts]
     .filter((product) => !product.isSoldOut)
-    .filter((product) => !product.isLastAvailable)
+    .filter(isNormalCatalogProduct)
     .filter((product) => getProductGallery(product).length > 0)
     .filter((product) => {
       if (seen.has(product.id)) return false;
@@ -2406,7 +2436,7 @@ function getNewArrivalProducts() {
   return collapseProductVariants(newArrivalProductIds
     .map((id) => productsById.get(id))
     .filter(Boolean)
-    .filter((product) => !product.isLastAvailable)
+    .filter(isNormalCatalogProduct)
     .filter((product) => getProductGallery(product).length > 0));
 }
 
@@ -2433,11 +2463,14 @@ function renderProductDetail() {
   document.documentElement.dataset.originalTitle = productPageTitle;
   document.title = productPageTitle;
   const description = product.description || translate("product-description");
+  const isLastPieceBag = product.isLastAvailable && isCatalogBagProduct(product);
+  const discount = productDiscountLabel(product.discount);
+  const stockScope = product.isLastAvailable && !isLastPieceBag ? "last" : "normal";
   root.innerHTML = `
     <a class="product-detail-back" href="index.html#selezione"><i data-lucide="arrow-left"></i><span>${translate("product-back")}</span></a>
     <article class="product-detail" data-product-card="${escapeHtml(product.id)}">
       <section class="product-detail-gallery" aria-label="${escapeHtml(product.name)}">
-        ${product.discount ? `<span class="discount-badge">${escapeHtml(product.discount)}</span>` : ""}
+        ${discount ? `<span class="discount-badge">${escapeHtml(discount)}</span>` : ""}
         ${createProductMediaMarkup(product, true)}
         <button class="product-detail-zoom-open" type="button" data-product-zoom-open aria-label="${translate("zoom-open")}" title="${translate("zoom-open")}"><i data-lucide="zoom-in"></i></button>
       </section>
@@ -2448,13 +2481,14 @@ function renderProductDetail() {
           ${product.original ? `<span class="price-original">${escapeHtml(product.original)}</span>` : ""}
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
-        ${createProductVariantMarkup(product)}
+        ${createBagLastPieceMarkup(product)}
+        ${createProductVariantMarkup(product, { stockScope })}
         <div class="product-detail-copy">
           <h2>${translate("product-details")}</h2>
           <p>${escapeHtml(description)}</p>
         </div>
         ${createSizesMarkup(product)}
-        ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
+        ${product.isLastAvailable && !isLastPieceBag ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
         <div class="product-actions product-detail-actions">
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
@@ -2533,7 +2567,7 @@ function getGenderProducts(gender) {
 }
 
 function getCatalogGenderProducts(gender) {
-  return collapseProductVariants(getGenderProducts(gender).filter((product) => !product.isLastAvailable));
+  return collapseProductVariants(getGenderProducts(gender).filter(isNormalCatalogProduct));
 }
 
 function getCategoryProducts(gender, category) {
@@ -2748,7 +2782,7 @@ function renderCatalogSearchResults(query = "") {
   const root = document.querySelector("[data-catalog-search-results]");
   if (!root) return;
   const value = normalizeCatalogSearchText(query);
-  const availableProducts = collapseProductVariants(getAllProducts().filter((product) => !product.isLastAvailable));
+  const availableProducts = collapseProductVariants(getAllProducts().filter(isNormalCatalogProduct));
   const products = value
     ? availableProducts.filter((product) => normalizeCatalogSearchText(`${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`).includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();

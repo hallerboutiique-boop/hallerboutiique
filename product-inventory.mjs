@@ -17,7 +17,8 @@ export const defaultProductSizes = {
 
 export function isBagProduct({ name = "", collection = "", category = "" } = {}) {
   const label = `${name} ${collection} ${category}`.toLocaleLowerCase("it");
-  return /\b(?:bors[ae]|bags?|backpacks?|zain[oi])\b/u.test(label);
+  if (/\b(?:wallet|portafogli[oa]?|card holder)\b/u.test(label)) return false;
+  return /\b(?:bors[ae]|bags?|backpacks?|zain[oi]|pochette|pouches?|clutches?|crossbody|flap)\b/u.test(label);
 }
 
 export function resolveProductSizeType({ name = "", collection = "", category = "", sizeType = "" } = {}) {
