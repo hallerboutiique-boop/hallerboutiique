@@ -10,6 +10,7 @@ import {
   productInventoryTotal,
   resolveProductSizeType,
 } from "./product-inventory.mjs";
+import { applyProductStockOverwrite, productStockOverwriteId } from "./product-stock-overwrite.mjs";
 
 test("normalizes inventory for configured product sizes", () => {
   assert.deepEqual(
@@ -88,4 +89,20 @@ test("rejects a size or quantity that is not available", () => {
   assert.equal(adjustProductInventory(product, { size: "XL", quantity: 1 }, -1), false);
   assert.deepEqual(product.inventoryBySize, { S: 1, M: 0 });
   assert.equal(product.inventory, 1);
+});
+
+test("overwrites the supplied stock once without creating duplicate products", () => {
+  const customNike = { id: "custom-nike-air-force-ms0glv9y", inventory: 9 };
+  const data = {
+    items: { "balenciaga-track-full-black": { inventory: 99 } },
+    custom: [customNike],
+  };
+
+  assert.equal(applyProductStockOverwrite(data), true);
+  assert.deepEqual(data.items["balenciaga-track-full-black"].inventoryBySize, { 40: 1, 41: 2, 43: 2, 44: 1, 45: 1 });
+  assert.equal(data.items["balenciaga-track-full-black"].inventory, 7);
+  assert.deepEqual(customNike.inventoryBySize, { 44: 1 });
+  assert.deepEqual(customNike.sizes, ["44"]);
+  assert.deepEqual(data.appliedStockOverwriteIds, [productStockOverwriteId]);
+  assert.equal(applyProductStockOverwrite(data), false);
 });

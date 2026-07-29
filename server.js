@@ -46,6 +46,7 @@ import {
   isBagProduct,
   resolveProductSizeType,
 } from "./product-inventory.mjs";
+import { applyProductStockOverwrite } from "./product-stock-overwrite.mjs";
 import {
   cleanLikeProductId,
   normalizeProductLikes,
@@ -382,6 +383,10 @@ async function readProductOverrides() {
   data.homeProductIds = normalizeProductIds(data.homeProductIds);
   data.newArrivalProductIds = normalizeProductIds(data.newArrivalProductIds);
   data.deletedProductIds = normalizeProductIds(data.deletedProductIds, []);
+  data.appliedStockOverwriteIds = Array.isArray(data.appliedStockOverwriteIds)
+    ? data.appliedStockOverwriteIds.filter((id) => typeof id === "string")
+    : [];
+  if (applyProductStockOverwrite(data)) await writeProductOverrides(data);
   return data;
 }
 
@@ -394,6 +399,7 @@ async function writeProductOverrides(data) {
   if (Array.isArray(data.homeProductIds)) payload.homeProductIds = data.homeProductIds;
   if (Array.isArray(data.newArrivalProductIds)) payload.newArrivalProductIds = data.newArrivalProductIds;
   if (Array.isArray(data.deletedProductIds)) payload.deletedProductIds = data.deletedProductIds;
+  if (Array.isArray(data.appliedStockOverwriteIds)) payload.appliedStockOverwriteIds = data.appliedStockOverwriteIds;
   await writeJson(productsFile, payload);
 }
 
