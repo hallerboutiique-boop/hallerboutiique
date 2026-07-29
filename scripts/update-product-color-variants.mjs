@@ -139,7 +139,7 @@ const updates = new Map([
   ["alexander-mcqueen-classic", {
     name: "Alexander McQueen",
     variantGroup: "alexander-mcqueen-uomo",
-    variantColor: "Bianco / Nero (tallone)",
+    variantColor: "Nera Classica",
     variantSwatch: "#202020",
     variantOrder: 4,
   }],
@@ -167,7 +167,7 @@ const updates = new Map([
   ["alexander-mcqueen-classic-2", {
     name: "Alexander McQueen",
     variantGroup: "alexander-mcqueen-donna",
-    variantColor: "Bianco / Nero (tallone)",
+    variantColor: "Nera Classica",
     variantSwatch: "#202020",
     variantOrder: 3,
   }],
