@@ -286,6 +286,118 @@ Object.entries(checkoutAddressTranslations).forEach(([language, copy]) => {
   Object.assign(translations[language], copy);
 });
 
+const productShareTranslations = {
+  it: {
+    "share-product-action": "Condividi",
+    "share-product-title": "Condividi prodotto",
+    "share-product-description": "Invia il link diretto di {product}",
+    "share-product-text": "Guarda {product} su Haller Boutique",
+    "share-other-apps": "Altre app",
+    "share-copy-link": "Copia link",
+    "share-link-copied": "Link copiato.",
+    "share-select-app": "Seleziona {app} nel pannello di condivisione.",
+    "share-copy-for-app": "Link copiato: incollalo in {app}.",
+    "share-opened": "Condivisione aperta su {app}.",
+    "share-complete": "Prodotto condiviso.",
+    "share-close": "Chiudi condivisione",
+    "share-options-label": "Canali di condivisione",
+  },
+  en: {
+    "share-product-action": "Share",
+    "share-product-title": "Share product",
+    "share-product-description": "Send the direct link to {product}",
+    "share-product-text": "See {product} at Haller Boutique",
+    "share-other-apps": "Other apps",
+    "share-copy-link": "Copy link",
+    "share-link-copied": "Link copied.",
+    "share-select-app": "Select {app} in the share panel.",
+    "share-copy-for-app": "Link copied: paste it into {app}.",
+    "share-opened": "Sharing opened in {app}.",
+    "share-complete": "Product shared.",
+    "share-close": "Close sharing",
+    "share-options-label": "Sharing channels",
+  },
+  fr: {
+    "share-product-action": "Partager",
+    "share-product-title": "Partager le produit",
+    "share-product-description": "Envoyez le lien direct de {product}",
+    "share-product-text": "Decouvrez {product} chez Haller Boutique",
+    "share-other-apps": "Autres applis",
+    "share-copy-link": "Copier le lien",
+    "share-link-copied": "Lien copie.",
+    "share-select-app": "Selectionnez {app} dans le panneau de partage.",
+    "share-copy-for-app": "Lien copie : collez-le dans {app}.",
+    "share-opened": "Partage ouvert dans {app}.",
+    "share-complete": "Produit partage.",
+    "share-close": "Fermer le partage",
+    "share-options-label": "Canaux de partage",
+  },
+  de: {
+    "share-product-action": "Teilen",
+    "share-product-title": "Produkt teilen",
+    "share-product-description": "Direktlink zu {product} senden",
+    "share-product-text": "{product} bei Haller Boutique ansehen",
+    "share-other-apps": "Andere Apps",
+    "share-copy-link": "Link kopieren",
+    "share-link-copied": "Link kopiert.",
+    "share-select-app": "Wahlen Sie {app} im Teilen-Menu.",
+    "share-copy-for-app": "Link kopiert: in {app} einfugen.",
+    "share-opened": "Teilen in {app} geoffnet.",
+    "share-complete": "Produkt geteilt.",
+    "share-close": "Teilen schliessen",
+    "share-options-label": "Teilen-Kanale",
+  },
+  es: {
+    "share-product-action": "Compartir",
+    "share-product-title": "Compartir producto",
+    "share-product-description": "Envia el enlace directo de {product}",
+    "share-product-text": "Mira {product} en Haller Boutique",
+    "share-other-apps": "Otras apps",
+    "share-copy-link": "Copiar enlace",
+    "share-link-copied": "Enlace copiado.",
+    "share-select-app": "Selecciona {app} en el panel para compartir.",
+    "share-copy-for-app": "Enlace copiado: pegalo en {app}.",
+    "share-opened": "Compartir abierto en {app}.",
+    "share-complete": "Producto compartido.",
+    "share-close": "Cerrar compartir",
+    "share-options-label": "Canales para compartir",
+  },
+  sq: {
+    "share-product-action": "Shperndaje",
+    "share-product-title": "Shperndaje produktin",
+    "share-product-description": "Dergo lidhjen direkte te {product}",
+    "share-product-text": "Shiko {product} te Haller Boutique",
+    "share-other-apps": "Aplikacione te tjera",
+    "share-copy-link": "Kopjo lidhjen",
+    "share-link-copied": "Lidhja u kopjua.",
+    "share-select-app": "Zgjidh {app} ne panelin e shperndarjes.",
+    "share-copy-for-app": "Lidhja u kopjua: ngjite ne {app}.",
+    "share-opened": "Shperndarja u hap ne {app}.",
+    "share-complete": "Produkti u shpernda.",
+    "share-close": "Mbyll shperndarjen",
+    "share-options-label": "Kanalet e shperndarjes",
+  },
+  ro: {
+    "share-product-action": "Distribuie",
+    "share-product-title": "Distribuie produsul",
+    "share-product-description": "Trimite linkul direct pentru {product}",
+    "share-product-text": "Vezi {product} la Haller Boutique",
+    "share-other-apps": "Alte aplicatii",
+    "share-copy-link": "Copiaza linkul",
+    "share-link-copied": "Link copiat.",
+    "share-select-app": "Selecteaza {app} in panoul de distribuire.",
+    "share-copy-for-app": "Link copiat: lipeste-l in {app}.",
+    "share-opened": "Distribuirea a fost deschisa in {app}.",
+    "share-complete": "Produs distribuit.",
+    "share-close": "Inchide distribuirea",
+    "share-options-label": "Canale de distribuire",
+  },
+};
+
+Object.entries(productShareTranslations).forEach(([language, copy]) => {
+  Object.assign(translations[language], copy);
+});
+
 function translate(key) {
   return translations[siteLanguage]?.[key] || translations.it[key] || key;
 }
@@ -1705,6 +1817,10 @@ function productPageUrl(product) {
   return `product.html?id=${encodeURIComponent(product.id)}`;
 }
 
+function productAbsoluteUrl(product) {
+  return new URL(productPageUrl(product), window.location.origin).href;
+}
+
 function createProductMediaMarkup(product, detail = false) {
   const gallery = getProductGallery(product);
 
@@ -1764,6 +1880,165 @@ function createTryOnMarkup(product) {
   return `<button class="tryon-action" type="button" data-try-on="${escapeHtml(product.id)}">${translate("try-on")}</button>`;
 }
 
+function createProductShareMarkup(product) {
+  return `<button class="share-action" type="button" data-product-share-open="${escapeHtml(product.id)}" aria-label="${escapeHtml(translate("share-product-action"))}: ${escapeHtml(product.name)}"><i data-lucide="share-2"></i><span>${escapeHtml(translate("share-product-action"))}</span></button>`;
+}
+
+const productShareOptions = [
+  { id: "whatsapp", label: "WhatsApp", mark: "WA" },
+  { id: "telegram", label: "Telegram", mark: "TG" },
+  { id: "facebook", label: "Facebook", mark: "f" },
+  { id: "x", label: "X", mark: "X" },
+  { id: "pinterest", label: "Pinterest", mark: "P" },
+  { id: "linkedin", label: "LinkedIn", mark: "in" },
+  { id: "reddit", label: "Reddit", mark: "R" },
+  { id: "email", label: "Email", mark: "@" },
+];
+
+const productNativeShareOptions = [
+  { id: "instagram", label: "Instagram", mark: "IG" },
+  { id: "tiktok", label: "TikTok", mark: "TT" },
+  { id: "snapchat", label: "Snapchat", mark: "SC" },
+];
+
+function createProductShareOption(option, native = false) {
+  const dataAttribute = native
+    ? `data-product-share-native-app="${escapeHtml(option.label)}"`
+    : `data-product-share-channel="${escapeHtml(option.id)}"`;
+  return `
+    <button class="product-share-option" type="button" ${dataAttribute} data-share-brand="${escapeHtml(option.id)}">
+      <span class="product-share-option-mark" aria-hidden="true">${escapeHtml(option.mark)}</span>
+      <span>${escapeHtml(option.label)}</span>
+    </button>
+  `;
+}
+
+function createProductShareDialogMarkup(product) {
+  return `
+    <dialog class="product-share-dialog" data-product-share-dialog data-product-id="${escapeHtml(product.id)}" aria-label="${escapeHtml(translate("share-product-title"))}">
+      <section class="product-share-shell">
+        <button class="product-share-close" type="button" data-product-share-close aria-label="${escapeHtml(translate("share-close"))}" title="${escapeHtml(translate("share-close"))}"><i data-lucide="x"></i></button>
+        <header class="product-share-heading">
+          <span><i data-lucide="share-2"></i></span>
+          <div>
+            <p>${escapeHtml(translate("share-product-title"))}</p>
+            <h2>${escapeHtml(product.name)}</h2>
+            <small>${escapeHtml(translate("share-product-description").replace("{product}", product.name))}</small>
+          </div>
+        </header>
+        <div class="product-share-options" aria-label="${escapeHtml(translate("share-options-label"))}">
+          ${productShareOptions.map((option) => createProductShareOption(option)).join("")}
+          ${productNativeShareOptions.map((option) => createProductShareOption(option, true)).join("")}
+          <button class="product-share-option" type="button" data-product-share-native data-share-brand="native">
+            <span class="product-share-option-mark" aria-hidden="true"><i data-lucide="more-horizontal"></i></span>
+            <span>${escapeHtml(translate("share-other-apps"))}</span>
+          </button>
+        </div>
+        <button class="product-share-copy" type="button" data-product-share-copy>
+          <i data-lucide="link-2"></i>
+          <span>${escapeHtml(translate("share-copy-link"))}</span>
+        </button>
+        <p class="product-share-status" data-product-share-status aria-live="polite"></p>
+      </section>
+    </dialog>
+  `;
+}
+
+function openProductShareDialog(productId) {
+  const product = findProductById(productId);
+  if (!product) return;
+  document.querySelector("[data-product-share-dialog]")?.remove();
+  document.body.insertAdjacentHTML("beforeend", createProductShareDialogMarkup(product));
+  const dialog = document.querySelector("[data-product-share-dialog]");
+  if (window.lucide) window.lucide.createIcons();
+  if (dialog && !dialog.open) dialog.showModal();
+}
+
+function productShareData(product) {
+  const text = translate("share-product-text").replace("{product}", product.name);
+  return {
+    title: `${product.name} | Haller Boutique`,
+    text,
+    url: productAbsoluteUrl(product),
+  };
+}
+
+function productShareChannelUrl(channel, product) {
+  const data = productShareData(product);
+  const url = encodeURIComponent(data.url);
+  const text = encodeURIComponent(data.text);
+  const combined = encodeURIComponent(`${data.text}\n${data.url}`);
+  const image = productPrimaryImage(product);
+  const media = image ? encodeURIComponent(new URL(withProductImageVersion(image), window.location.origin).href) : "";
+
+  const destinations = {
+    whatsapp: `https://wa.me/?text=${combined}`,
+    telegram: `https://t.me/share/url?url=${url}&text=${text}`,
+    facebook: `https://www.facebook.com/sharer/sharer.php?u=${url}`,
+    x: `https://twitter.com/intent/tweet?url=${url}&text=${text}`,
+    pinterest: `https://pinterest.com/pin/create/button/?url=${url}${media ? `&media=${media}` : ""}&description=${text}`,
+    linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${url}`,
+    reddit: `https://www.reddit.com/submit?url=${url}&title=${encodeURIComponent(data.title)}`,
+    email: `mailto:?subject=${encodeURIComponent(data.title)}&body=${combined}`,
+  };
+  return destinations[channel] || "";
+}
+
+function updateProductShareStatus(message) {
+  const status = document.querySelector("[data-product-share-status]");
+  if (status) status.textContent = message;
+}
+
+async function copyProductShareLink(product, app = "") {
+  const url = productAbsoluteUrl(product);
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(url);
+    } else {
+      window.prompt(translate("copy-this-text"), url);
+    }
+    updateProductShareStatus(
+      app
+        ? translate("share-copy-for-app").replace("{app}", app)
+        : translate("share-link-copied")
+    );
+  } catch {
+    window.prompt(translate("copy-this-text"), url);
+    updateProductShareStatus(translate("share-link-copied"));
+  }
+}
+
+function shareProductThroughChannel(product, channel, label) {
+  const destination = productShareChannelUrl(channel, product);
+  if (!destination) return;
+  if (channel === "email") {
+    window.location.href = destination;
+  } else {
+    window.open(destination, "_blank", "noopener,noreferrer");
+  }
+  updateProductShareStatus(translate("share-opened").replace("{app}", label));
+}
+
+async function shareProductNatively(product, preferredApp = "") {
+  const data = productShareData(product);
+  if (preferredApp) {
+    updateProductShareStatus(translate("share-select-app").replace("{app}", preferredApp));
+  }
+  if (!navigator.share || (navigator.canShare && !navigator.canShare(data))) {
+    await copyProductShareLink(product, preferredApp || translate("share-other-apps"));
+    return;
+  }
+  try {
+    await navigator.share(data);
+    updateProductShareStatus(translate("share-complete"));
+    document.querySelector("[data-product-share-dialog]")?.close();
+  } catch (error) {
+    if (error?.name !== "AbortError") {
+      await copyProductShareLink(product, preferredApp);
+    }
+  }
+}
+
 function createProductImageZoomMarkup() {
   return `
     <dialog class="product-image-zoom" data-product-zoom-dialog aria-label="${translate("zoom-open")}">
@@ -1821,6 +2096,7 @@ function createProductCard(product, options = {}) {
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
+          ${createProductShareMarkup(product)}
         </div>
       </div>
     </article>
@@ -1933,6 +2209,7 @@ function renderProductDetail() {
           <button class="cart-action" type="button" data-add-to-cart="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("add-cart")}</button>
           <button class="buy-action" type="button" data-buy-now="${escapeHtml(product.name)}" data-product-id="${escapeHtml(product.id)}">${translate("buy-now")}</button>
           ${createTryOnMarkup(product)}
+          ${createProductShareMarkup(product)}
         </div>
       </section>
     </article>
@@ -4159,6 +4436,7 @@ if (window.lucide) {
 function applySiteLanguage(language) {
   siteLanguage = translations[language] ? language : "it";
   document.documentElement.lang = siteLanguage;
+  document.querySelector("[data-product-share-dialog]")?.remove();
   translatePage();
   const checkoutAddressInput = document.querySelector('input[name="address"]');
   if (checkoutAddressInput && !selectedCheckoutAddress) {
@@ -4233,10 +4511,42 @@ document.addEventListener("click", (event) => {
   const zoomReset = event.target.closest("[data-product-zoom-reset]");
   const zoomPrevious = event.target.closest("[data-product-zoom-previous]");
   const zoomNext = event.target.closest("[data-product-zoom-next]");
+  const shareOpen = event.target.closest("[data-product-share-open]");
+  const shareDialog = event.target.closest("[data-product-share-dialog]");
+  const shareClose = event.target.closest("[data-product-share-close]");
+  const shareChannel = event.target.closest("[data-product-share-channel]");
+  const shareNative = event.target.closest("[data-product-share-native], [data-product-share-native-app]");
+  const shareCopy = event.target.closest("[data-product-share-copy]");
   const productCard = event.target.closest("[data-product-url]");
 
   if (heroVideoSlide && !event.target.closest("a, button, input, select, textarea")) {
     playHeroCharacterVideo(heroVideoSlide);
+    return;
+  }
+
+  if (shareOpen) {
+    openProductShareDialog(shareOpen.dataset.productShareOpen);
+    return;
+  }
+
+  if (shareClose || (shareDialog && event.target === shareDialog)) {
+    shareDialog?.close();
+    return;
+  }
+
+  if (shareChannel || shareNative || shareCopy) {
+    const dialog = event.target.closest("[data-product-share-dialog]");
+    const product = findProductById(dialog?.dataset.productId || "");
+    if (!product) return;
+
+    if (shareChannel) {
+      const label = shareChannel.querySelector(":scope > span:last-child")?.textContent || "";
+      shareProductThroughChannel(product, shareChannel.dataset.productShareChannel, label);
+    } else if (shareCopy) {
+      copyProductShareLink(product);
+    } else {
+      shareProductNatively(product, shareNative.dataset.productShareNativeApp || "");
+    }
     return;
   }
 
