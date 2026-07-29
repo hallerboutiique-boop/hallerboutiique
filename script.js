@@ -1831,7 +1831,9 @@ function getAllProducts() {
   const defaults = catalogSections
     .flatMap((section) => section.categories.flatMap((category) => category.products))
     .map(applyProductOverride);
-  return [...customProducts, ...defaults].filter((product) => !deletedProductIds.has(product.id));
+  return [...customProducts, ...defaults]
+    .filter((product) => !deletedProductIds.has(product.id))
+    .filter((product) => !product.isSoldOut);
 }
 
 const homeFeaturedProductNames = [
@@ -1862,6 +1864,7 @@ function getHomeFeaturedProducts() {
     .filter(Boolean);
   const seen = new Set();
   return [...customProducts, ...defaultFeatured, ...allProducts]
+    .filter((product) => !product.isSoldOut)
     .filter((product) => !product.isLastAvailable)
     .filter((product) => getProductGallery(product).length > 0)
     .filter((product) => {

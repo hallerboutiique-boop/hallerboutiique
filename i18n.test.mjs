@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/tshirts-all-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -88,8 +88,12 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(styles, /\.catalog-search-result\s*\{[\s\S]*?overflow:\s*hidden/);
   assert.match(script, /function renderLastStockCatalog\(\)/);
   assert.match(script, /isLastAvailable/);
+  const allProductsStart = script.indexOf("function getAllProducts()");
+  const allProductsEnd = script.indexOf("const homeFeaturedProductNames", allProductsStart);
+  assert.match(script.slice(allProductsStart, allProductsEnd), /\.filter\(\(product\) => !product\.isSoldOut\)/);
   const featuredStart = script.indexOf("function getHomeFeaturedProducts()");
   const featuredEnd = script.indexOf("function findProduct", featuredStart);
+  assert.match(script.slice(featuredStart, featuredEnd), /\.filter\(\(product\) => !product\.isSoldOut\)/);
   assert.match(script.slice(featuredStart, featuredEnd), /\.filter\(\(product\) => !product\.isLastAvailable\)/);
   assert.match(script, /"scarpe donna": "Scarpe"/);
   assert.match(script, /"t-shirt": "T-Shirts"/);
@@ -100,7 +104,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(\(product\) => !product\.isLastAvailable\)/);
-  assert.match(index, /\/assets-v\/tshirts-all-2\/script\.js/);
+  assert.match(index, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -369,15 +373,10 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     readFile("index.html", "utf8"),
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
-  pages.forEach((html, index) => {
-    const expectedScript = scriptPages[index] === "ultimi-disponibili.html"
-      ? /\/assets-v\/last-stock-sizes-1\/script\.js/
-      : /\/assets-v\/tshirts-all-2\/script\.js/;
-    assert.match(html, expectedScript);
-  });
-  assert.match(index, /\/assets-v\/tshirts-all-2\/script\.js/);
+  pages.forEach((html) => assert.match(html, /\/assets-v\/hide-zero-stock-1\/script\.js/));
+  assert.match(index, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(index, /\/assets-v\/hero-videos-1\/styles\.css/);
-  assert.match(checkout, /\/assets-v\/tshirts-all-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
@@ -388,6 +387,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/tshirts-all-2\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/admin-original-price-5\/styles\.css", "\/styles\.css"/);
 });
@@ -398,7 +398,7 @@ test("last-stock cards show only inventory-confirmed sizes with a visible pulse"
     readFile("script.js", "utf8"),
     readFile("styles.css", "utf8"),
   ]);
-  assert.match(page, /\/assets-v\/last-stock-sizes-1\/script\.js/);
+  assert.match(page, /\/assets-v\/hide-zero-stock-1\/script\.js/);
   assert.match(page, /\/assets-v\/last-stock-sizes-1\/styles\.css/);
   assert.match(script, /const visibleSizes = onlyAvailable[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
   assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
