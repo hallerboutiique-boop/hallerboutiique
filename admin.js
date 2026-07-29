@@ -1723,6 +1723,10 @@ function fillProductForm(product) {
   syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = Number.isInteger(product.inventory) ? String(product.inventory) : "";
   productForm.elements.inventoryBySize.value = JSON.stringify(parseAdminInventoryBySize(product.inventoryBySize));
+  productForm.elements.variantGroup.value = product.variantGroup || "";
+  productForm.elements.variantColor.value = product.variantColor || "";
+  productForm.elements.variantSwatch.value = product.variantSwatch || "";
+  productForm.elements.variantOrder.value = Number.isInteger(product.variantOrder) ? String(product.variantOrder) : "";
   renderProductSizeInventory(product.inventoryBySize);
   setProductImageEntries(
     product.images || [],
@@ -1756,6 +1760,10 @@ function fillAiProductDraft(suggestion) {
   syncShoeSizeRangeVisibility();
   productForm.elements.inventory.value = "";
   productForm.elements.inventoryBySize.value = "{}";
+  productForm.elements.variantGroup.value = "";
+  productForm.elements.variantColor.value = "";
+  productForm.elements.variantSwatch.value = "";
+  productForm.elements.variantOrder.value = "";
   renderProductSizeInventory({});
   setProductImageEntries(
     suggestion.images || [],
@@ -1779,6 +1787,10 @@ function startNewProduct() {
   productForm.elements.sizeType.value = "clothing";
   syncShoeSizeRangeVisibility();
   productForm.elements.inventoryBySize.value = "{}";
+  productForm.elements.variantGroup.value = "";
+  productForm.elements.variantColor.value = "";
+  productForm.elements.variantSwatch.value = "";
+  productForm.elements.variantOrder.value = "";
   renderProductSizeInventory({});
   setProductImageEntries([], [], [], "original", {});
   if (productEditorTitle) productEditorTitle.textContent = "Nuovo prodotto";
@@ -1833,6 +1845,7 @@ function filteredAdminProducts() {
         product.category,
         product.description,
         product.discount,
+        product.variantColor,
         ...(Array.isArray(product.sizes) ? product.sizes : []),
       ].filter(Boolean).join(" "));
       return terms.every((term) => searchable.includes(term));
@@ -2051,7 +2064,7 @@ function renderAdminProducts() {
           </span>
           <span class="admin-product-text">
             <strong>${escapeHtml(product.name)}</strong>
-            <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}</span>
+            <span>${escapeHtml(product.brand || "Marca non indicata")} · ${escapeHtml(product.collection)} · ${escapeHtml(product.category)}${product.variantColor ? ` · Colore ${escapeHtml(product.variantColor)}` : ""}</span>
             <small>${escapeHtml(product.original)} → ${escapeHtml(product.finalPrice)} · ${escapeHtml(product.discount)} · ${escapeHtml(product.sizeType)} · ${escapeHtml(adminInventorySummary(product))}${product.custom ? " · custom" : ""}</small>
           </span>
         </button>

@@ -301,6 +301,7 @@ const productShareTranslations = {
     "share-complete": "Prodotto condiviso.",
     "share-close": "Chiudi condivisione",
     "share-options-label": "Canali di condivisione",
+    "product-color": "Colore",
   },
   en: {
     "share-product-action": "Share",
@@ -316,6 +317,7 @@ const productShareTranslations = {
     "share-complete": "Product shared.",
     "share-close": "Close sharing",
     "share-options-label": "Sharing channels",
+    "product-color": "Color",
   },
   fr: {
     "share-product-action": "Partager",
@@ -331,6 +333,7 @@ const productShareTranslations = {
     "share-complete": "Produit partage.",
     "share-close": "Fermer le partage",
     "share-options-label": "Canaux de partage",
+    "product-color": "Couleur",
   },
   de: {
     "share-product-action": "Teilen",
@@ -346,6 +349,7 @@ const productShareTranslations = {
     "share-complete": "Produkt geteilt.",
     "share-close": "Teilen schliessen",
     "share-options-label": "Teilen-Kanale",
+    "product-color": "Farbe",
   },
   es: {
     "share-product-action": "Compartir",
@@ -361,6 +365,7 @@ const productShareTranslations = {
     "share-complete": "Producto compartido.",
     "share-close": "Cerrar compartir",
     "share-options-label": "Canales para compartir",
+    "product-color": "Color",
   },
   sq: {
     "share-product-action": "Shperndaje",
@@ -376,6 +381,7 @@ const productShareTranslations = {
     "share-complete": "Produkti u shpernda.",
     "share-close": "Mbyll shperndarjen",
     "share-options-label": "Kanalet e shperndarjes",
+    "product-color": "Ngjyra",
   },
   ro: {
     "share-product-action": "Distribuie",
@@ -391,6 +397,7 @@ const productShareTranslations = {
     "share-complete": "Produs distribuit.",
     "share-close": "Inchide distribuirea",
     "share-options-label": "Canale de distribuire",
+    "product-color": "Culoare",
   },
 };
 
@@ -1741,6 +1748,12 @@ function normalizeCustomProduct(product) {
     availableSizes: Array.isArray(product.availableSizes) ? product.availableSizes : [],
     isSoldOut: Boolean(product.isSoldOut),
     isLastAvailable: !isBag && Boolean(product.isLastAvailable),
+    variantGroup: String(product.variantGroup || "").trim(),
+    variantColor: String(product.variantColor || "").trim(),
+    variantSwatch: /^#[0-9a-f]{6}$/i.test(String(product.variantSwatch || "").trim())
+      ? String(product.variantSwatch).trim().toLowerCase()
+      : "",
+    variantOrder: Number.isInteger(Number(product.variantOrder)) ? Number(product.variantOrder) : 0,
     images: Array.isArray(product.images) ? product.images : [],
     originalImages: Array.isArray(product.originalImages) ? product.originalImages : product.images || [],
     zoomImages: Array.isArray(product.zoomImages) ? product.zoomImages : product.images || [],
@@ -2094,6 +2107,50 @@ function ensureProductImageZoomDialog() {
   return dialog;
 }
 
+function productVariantOrder(product) {
+  const order = Number(product?.variantOrder);
+  return Number.isInteger(order) && order >= 0 ? order : 0;
+}
+
+function getProductVariants(product) {
+  const group = String(product?.variantGroup || "").trim();
+  if (!group) return [product];
+  return getAllProducts()
+    .filter((candidate) => String(candidate.variantGroup || "").trim() === group)
+    .sort((left, right) =>
+      productVariantOrder(left) - productVariantOrder(right)
+      || String(left.variantColor || left.name).localeCompare(String(right.variantColor || right.name), "it")
+    );
+}
+
+function productVariantSwatch(product) {
+  const swatch = String(product?.variantSwatch || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(swatch) ? swatch : "#b58b37";
+}
+
+function createProductVariantMarkup(product) {
+  const variants = getProductVariants(product);
+  if (variants.length < 2) return "";
+  const selectedColor = String(product.variantColor || "").trim();
+  return `
+    <section class="product-variants" aria-label="${escapeHtml(translate("product-color"))}">
+      <span class="product-variants-label">${escapeHtml(translate("product-color"))}: <strong>${escapeHtml(selectedColor)}</strong></span>
+      <div role="group" aria-label="${escapeHtml(translate("product-color"))}">
+        ${variants.map((variant) => {
+          const color = String(variant.variantColor || variant.name).trim();
+          const selected = variant.id === product.id;
+          return `
+            <button class="${selected ? "is-selected" : ""}" type="button" data-product-variant-id="${escapeHtml(variant.id)}" aria-pressed="${selected}" title="${escapeHtml(color)}">
+              <span class="product-variant-swatch" style="--variant-swatch: ${productVariantSwatch(variant)}" aria-hidden="true"></span>
+              <span>${escapeHtml(color)}</span>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </section>
+  `;
+}
+
 function createProductCard(product, options = {}) {
   const showOnlyAvailableSizes = options?.showOnlyAvailableSizes === true;
   return `
@@ -2110,6 +2167,7 @@ function createProductCard(product, options = {}) {
           <span class="price-original">${escapeHtml(product.original)}</span>
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
+        ${createProductVariantMarkup(product)}
         ${createSizesMarkup(product, { onlyAvailable: showOnlyAvailableSizes })}
         ${product.isLastAvailable ? `<p class="last-stock-notice"><i data-lucide="alert-circle"></i><span>${translate("last-stock-warning")}</span></p>` : ""}
         <div class="product-actions">
@@ -2132,6 +2190,27 @@ function getAllProducts() {
     .filter((product) => !product.isSoldOut);
 }
 
+function collapseProductVariants(products) {
+  const source = Array.isArray(products) ? products.filter(Boolean) : [];
+  const primaryByGroup = new Map();
+  source.forEach((product) => {
+    const group = String(product.variantGroup || "").trim();
+    if (!group) return;
+    const current = primaryByGroup.get(group);
+    if (!current || productVariantOrder(product) < productVariantOrder(current)) {
+      primaryByGroup.set(group, product);
+    }
+  });
+  const emittedGroups = new Set();
+  return source.flatMap((product) => {
+    const group = String(product.variantGroup || "").trim();
+    if (!group) return [product];
+    if (emittedGroups.has(group)) return [];
+    emittedGroups.add(group);
+    return [primaryByGroup.get(group) || product];
+  });
+}
+
 const homeFeaturedProductNames = [
   "Nike Air Force Louis Vuitton Red",
   "Louis Vuitton Skate Beige/White",
@@ -2149,17 +2228,17 @@ function getHomeFeaturedProducts() {
   const allProducts = getAllProducts();
   if (Array.isArray(homeProductIds)) {
     const productsById = new Map(allProducts.map((product) => [product.id, product]));
-    return homeProductIds
+    return collapseProductVariants(homeProductIds
       .map((id) => productsById.get(id))
       .filter(Boolean)
       .filter((product) => !product.isLastAvailable)
-      .filter((product) => getProductGallery(product).length > 0);
+      .filter((product) => getProductGallery(product).length > 0));
   }
   const defaultFeatured = homeFeaturedProductNames
     .map((productName) => allProducts.find((product) => product.baseName === productName || product.name === productName))
     .filter(Boolean);
   const seen = new Set();
-  return [...customProducts, ...defaultFeatured, ...allProducts]
+  return collapseProductVariants([...customProducts, ...defaultFeatured, ...allProducts]
     .filter((product) => !product.isSoldOut)
     .filter((product) => !product.isLastAvailable)
     .filter((product) => getProductGallery(product).length > 0)
@@ -2167,18 +2246,18 @@ function getHomeFeaturedProducts() {
       if (seen.has(product.id)) return false;
       seen.add(product.id);
       return true;
-    })
+    }))
     .slice(0, 10);
 }
 
 function getNewArrivalProducts() {
   if (!Array.isArray(newArrivalProductIds)) return getHomeFeaturedProducts();
   const productsById = new Map(getAllProducts().map((product) => [product.id, product]));
-  return newArrivalProductIds
+  return collapseProductVariants(newArrivalProductIds
     .map((id) => productsById.get(id))
     .filter(Boolean)
     .filter((product) => !product.isLastAvailable)
-    .filter((product) => getProductGallery(product).length > 0);
+    .filter((product) => getProductGallery(product).length > 0));
 }
 
 function findProduct(productName) {
@@ -2219,6 +2298,7 @@ function renderProductDetail() {
           ${product.original ? `<span class="price-original">${escapeHtml(product.original)}</span>` : ""}
           <strong>${escapeHtml(product.finalPrice)}</strong>
         </div>
+        ${createProductVariantMarkup(product)}
         <div class="product-detail-copy">
           <h2>${translate("product-details")}</h2>
           <p>${escapeHtml(description)}</p>
@@ -2248,9 +2328,11 @@ function saveCheckoutItem(productId, size = "") {
     return null;
   }
 
+  const variantColor = String(product.variantColor || "").trim();
   const item = {
     id: product.id,
-    name: product.name,
+    name: variantColor ? `${product.name} – ${variantColor}` : product.name,
+    variantColor,
     price: product.finalPrice,
     original: product.original,
     category: product.category,
@@ -2298,7 +2380,7 @@ function getGenderProducts(gender) {
 }
 
 function getCatalogGenderProducts(gender) {
-  return getGenderProducts(gender).filter((product) => !product.isLastAvailable);
+  return collapseProductVariants(getGenderProducts(gender).filter((product) => !product.isLastAvailable));
 }
 
 function getCategoryProducts(gender, category) {
@@ -2395,7 +2477,7 @@ function renderCatalog() {
   }
 
   const baseProducts = catalogState.productIds.length
-    ? getAllProducts().filter((product) => catalogState.productIds.includes(product.id))
+    ? collapseProductVariants(getAllProducts().filter((product) => catalogState.productIds.includes(product.id)))
     : getCatalogGenderProducts(catalogState.gender);
   const categoryProducts = catalogState.category ? baseProducts.filter((product) => product.category === catalogState.category) : baseProducts;
   const products = catalogState.brand ? categoryProducts.filter((product) => getProductBrand(product) === catalogState.brand) : categoryProducts;
@@ -2439,7 +2521,7 @@ function renderLastStockCatalog() {
     return;
   }
 
-  const products = getGenderProducts(lastStockGender).filter((product) => product.isLastAvailable);
+  const products = collapseProductVariants(getGenderProducts(lastStockGender).filter((product) => product.isLastAvailable));
   const categories = [...new Set(products.map((product) => product.category))];
   const section = products.length ? `<section class="last-stock-gender"><header class="catalog-browse-heading"><p>${translate("catalog-last-title")}</p><h2>${lastStockGender === "donna" ? translate("women") : translate("men")}</h2></header>${categories.map((category) => {
     const categoryProducts = products.filter((product) => product.category === category);
@@ -2486,7 +2568,7 @@ function renderCatalogSearchResults(query = "") {
   const root = document.querySelector("[data-catalog-search-results]");
   if (!root) return;
   const value = String(query).trim().toLowerCase();
-  const availableProducts = getAllProducts().filter((product) => !product.isLastAvailable);
+  const availableProducts = collapseProductVariants(getAllProducts().filter((product) => !product.isLastAvailable));
   const products = value
     ? availableProducts.filter((product) => `${product.name} ${product.category} ${product.collection} ${getProductBrand(product)}`.toLowerCase().includes(value)).slice(0, 18)
     : getHomeFeaturedProducts();
@@ -4537,10 +4619,33 @@ document.addEventListener("click", (event) => {
   const shareChannel = event.target.closest("[data-product-share-channel]");
   const shareNative = event.target.closest("[data-product-share-native], [data-product-share-native-app]");
   const shareCopy = event.target.closest("[data-product-share-copy]");
+  const productVariant = event.target.closest("[data-product-variant-id]");
   const productCard = event.target.closest("[data-product-url]");
 
   if (heroVideoSlide && !event.target.closest("a, button, input, select, textarea")) {
     playHeroCharacterVideo(heroVideoSlide);
+    return;
+  }
+
+  if (productVariant) {
+    const nextProduct = findProductById(productVariant.dataset.productVariantId);
+    if (!nextProduct) return;
+    if (productVariant.closest("[data-product-detail]")) {
+      window.history.replaceState(null, "", productPageUrl(nextProduct));
+      renderProductDetail();
+      return;
+    }
+    const currentCard = productVariant.closest("[data-product-card]");
+    if (!currentCard) return;
+    const template = document.createElement("template");
+    template.innerHTML = createProductCard(nextProduct, {
+      showOnlyAvailableSizes: Boolean(currentCard.closest("[data-last-stock-catalog]")),
+    }).trim();
+    const nextCard = template.content.firstElementChild;
+    currentCard.replaceWith(nextCard);
+    observeProductImages(nextCard);
+    refreshScrollReveals(nextCard);
+    if (window.lucide) window.lucide.createIcons();
     return;
   }
 

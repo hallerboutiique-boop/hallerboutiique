@@ -253,6 +253,9 @@ const versionedPublicFiles = new Map([
   ["/assets-v/product-share-2/styles.css", "/styles.css"],
   ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
   ["/assets-v/home-image-drag-1/styles.css", "/styles.css"],
+  ["/assets-v/product-variants-1/script.js", "/script.js"],
+  ["/assets-v/product-variants-1/styles.css", "/styles.css"],
+  ["/assets-v/product-variants-1/admin.js", "/admin.js"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
 const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);
@@ -1788,6 +1791,16 @@ function cleanProductInventory(inventory) {
   return Number.isInteger(value) && value >= 0 ? value : null;
 }
 
+function cleanProductVariantSwatch(value) {
+  const swatch = String(value || "").trim();
+  return /^#[0-9a-f]{6}$/i.test(swatch) ? swatch.toLowerCase() : "";
+}
+
+function cleanProductVariantOrder(value) {
+  const order = Number(value);
+  return Number.isInteger(order) && order >= 0 && order <= 99 ? order : 0;
+}
+
 function cleanProductPatch(body) {
   const name = cleanTrackingString(body.name, 180) || "Prodotto";
   const collection = cleanTrackingString(body.collection, 80);
@@ -1823,6 +1836,10 @@ function cleanProductPatch(body) {
     sizes,
     inventory: sizeInventoryTotal === null ? cleanProductInventory(body.inventory) : sizeInventoryTotal,
     inventoryBySize,
+    variantGroup: cleanTrackingString(body.variantGroup, 120),
+    variantColor: cleanTrackingString(body.variantColor, 80),
+    variantSwatch: cleanProductVariantSwatch(body.variantSwatch),
+    variantOrder: cleanProductVariantOrder(body.variantOrder),
     images,
     originalImages: cleanProductImages(body.originalImages),
     zoomImages: cleanProductImages(body.zoomImages).length
