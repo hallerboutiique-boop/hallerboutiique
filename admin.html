@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/home-image-drag-1/styles.css">
+    <link rel="stylesheet" href="/assets-v/admin-discount-codes-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header admin-site-header">
@@ -74,6 +74,7 @@
           <div class="admin-tabs" role="tablist" aria-label="Sezioni dashboard">
             <button class="is-active" type="button" data-admin-tab="overview">Metriche</button>
             <button type="button" data-admin-tab="orders">Ordini</button>
+            <button type="button" data-admin-tab="discounts">Codici sconto</button>
             <button type="button" data-admin-tab="home">Home</button>
             <button type="button" data-admin-tab="arrivals">Nuovi arrivi</button>
             <button type="button" data-admin-tab="products">Prodotti</button>
@@ -146,6 +147,63 @@
                 </thead>
                 <tbody data-orders-table></tbody>
               </table>
+            </div>
+          </section>
+
+          <section class="admin-tab-panel" data-admin-panel-tab="discounts">
+            <div class="product-section-heading">
+              <div>
+                <span>Codici monouso</span>
+                <h2>Referral e codici Admin</h2>
+                <p>Ogni codice mostra il cliente associato e la persona che ha referenziato, con ordine, stato e scadenza.</p>
+              </div>
+            </div>
+            <div class="admin-discount-grid">
+              <section class="dashboard-card">
+                <h2>Genera codice</h2>
+                <form class="admin-discount-form" data-admin-discount-form>
+                  <label>
+                    <span>Persona associata</span>
+                    <input name="customerName" placeholder="Nome e cognome cliente" required>
+                  </label>
+                  <label>
+                    <span>Email cliente</span>
+                    <input type="email" name="customerEmail" placeholder="cliente@email.it">
+                  </label>
+                  <label>
+                    <span>Referenziato da</span>
+                    <input name="referralName" placeholder="Nome e cognome (facoltativo)">
+                  </label>
+                  <label>
+                    <span>Sconto (%)</span>
+                    <input type="number" name="percentage" min="1" max="100" step="1" value="10" required>
+                  </label>
+                  <button class="admin-new-product-button" type="submit">
+                    <i data-lucide="ticket"></i>
+                    <span>Genera codice 24 ore</span>
+                  </button>
+                  <p class="auth-message" data-admin-discount-message aria-live="polite"></p>
+                </form>
+              </section>
+              <section class="dashboard-card dashboard-card-wide">
+                <h2>Registro codici</h2>
+                <div class="users-table-wrap">
+                  <table class="users-table admin-discount-table">
+                    <thead>
+                      <tr>
+                        <th>Codice</th>
+                        <th>Associato a</th>
+                        <th>Referenziato da</th>
+                        <th>Origine</th>
+                        <th>Scadenza</th>
+                        <th>Ordine</th>
+                        <th>Stato</th>
+                      </tr>
+                    </thead>
+                    <tbody data-admin-discount-codes></tbody>
+                  </table>
+                </div>
+              </section>
             </div>
           </section>
 
@@ -515,6 +573,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=admin-products-2"></script>
-    <script src="/assets-v/product-variants-1/admin.js"></script>
+    <script src="/assets-v/admin-discount-codes-1/admin.js"></script>
   </body>
 </html>

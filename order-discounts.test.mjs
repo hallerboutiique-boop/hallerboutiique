@@ -6,6 +6,7 @@ import {
   discountCodeIsUsable,
   extractReferralName,
   isTenPercentDiscountRequest,
+  maximumDiscountCodePercentage,
   normalizeDiscountCode,
 } from "./order-discounts.mjs";
 
@@ -29,6 +30,17 @@ test("combines the automatic and referral discounts on the entire order", () => 
     referralPercentage: 10,
     referralDiscount: 50,
     total: 375,
+  });
+});
+
+test("caps administrator-generated discount codes at one hundred percent", () => {
+  assert.deepEqual(calculateOrderDiscounts(100, 150), {
+    subtotal: 100,
+    automaticPercentage: 0,
+    automaticDiscount: 0,
+    referralPercentage: maximumDiscountCodePercentage,
+    referralDiscount: 100,
+    total: 0,
   });
 });
 

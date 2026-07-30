@@ -396,6 +396,91 @@
   grid-column: 1 / -1;
 }
 
+.admin-discount-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.8fr) minmax(0, 2fr);
+  gap: 14px;
+}
+
+.admin-discount-form {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-discount-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text-strong);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-discount-form input {
+  min-height: 46px;
+  padding: 0 13px;
+  color: var(--text-strong);
+  border: 1px solid var(--panel-line);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.42);
+  font: inherit;
+}
+
+.admin-discount-form .admin-new-product-button {
+  justify-content: center;
+}
+
+.admin-discount-form .auth-message {
+  margin-top: 0;
+}
+
+.admin-discount-table {
+  min-width: 1080px;
+}
+
+.admin-discount-code {
+  color: var(--gold);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.admin-discount-table small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.admin-discount-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border: 1px solid var(--panel-line);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.admin-discount-status.is-issued {
+  color: var(--gold);
+}
+
+.admin-discount-status.is-reserved,
+.admin-discount-status.is-confirmed {
+  color: #8de0ae;
+}
+
+.admin-discount-status.is-expired {
+  color: #ff9a9a;
+}
+
+@media (max-width: 860px) {
+  .admin-discount-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .dashboard-card h2 {
   margin: 0 0 14px;
 }

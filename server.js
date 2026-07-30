@@ -52,6 +52,7 @@ import {
   discountCodeIsUsable,
   extractReferralName,
   isTenPercentDiscountRequest,
+  maximumDiscountCodePercentage,
   normalizeDiscountCode,
   referralCodeLength,
   referralCodeOrderExpiryMs,
@@ -277,6 +278,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/hide-zero-stock-1/script.js", "/script.js"],
   ["/assets-v/checkout-discounts-1/script.js", "/script.js"],
   ["/assets-v/checkout-discounts-1/styles.css", "/styles.css"],
+  ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
+  ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
   ["/assets-v/product-share-2/styles.css", "/styles.css"],
   ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
@@ -2613,6 +2616,35 @@ async function handleAdminUsers(req, res) {
   });
 }
 
+async function handleAdminDiscountCodes(req, res) {
+  if (!isAdmin(req)) return json(res, 401, { ok: false, message: "Accesso admin richiesto." });
+
+  if (req.method === "GET") {
+    const [discountCodes, orders] = await Promise.all([readDiscountCodes(), readOrders()]);
+    const ordersById = new Map(orders.map((order) => [order.id, order]));
+    return json(res, 200, {
+      ok: true,
+      codes: discountCodes.codes
+        .map((record) => publicAdminDiscountCode(record, ordersById))
+        .sort((a, b) => String(b.issuedAt).localeCompare(String(a.issuedAt))),
+    });
+  }
+
+  if (req.method !== "POST") return notFound(res);
+  const body = await parseBody(req);
+  const customerName = cleanTrackingString(body.customerName, 120);
+  if (!customerName) return badRequest(res, "Indica la persona a cui associare il codice sconto.");
+  const customerEmail = cleanEmail(body.customerEmail);
+  const referralName = cleanTrackingString(body.referralName, 120);
+  const record = await issueAdminDiscountCode({
+    customerName,
+    customerEmail,
+    referralName,
+    percentage: body.percentage,
+  });
+  return json(res, 201, { ok: true, discountCode: publicAdminDiscountCode(record) });
+}
+
 async function handleMobileAdminLogin(req, res) {
   const body = await parseBody(req);
   if (!adminPassword) return json(res, 503, { ok: false, message: "Password admin non configurata." });
@@ -4073,7 +4105,10 @@ async function createOrderQuote(products, discountCode, now = new Date()) {
   const normalizedCode = normalizeDiscountCode(discountCode);
   const discountCodes = normalizedCode ? await readDiscountCodes() : null;
   const referralCode = discountCodes ? referralDiscountRecord(discountCodes, normalizedCode, now) : null;
-  const discounts = calculateOrderDiscounts(subtotal, referralCode ? referralDiscountPercentage : 0);
+  const discountPercentage = referralCode
+    ? cleanDiscountCodePercentage(referralCode.percentage, referralDiscountPercentage)
+    : 0;
+  const discounts = calculateOrderDiscounts(subtotal, discountPercentage);
   return {
     products: pricedProducts,
     discounts,
@@ -4088,7 +4123,7 @@ function reserveReferralDiscountCode(discountCodes, discountCode, orderId, now) 
   record.status = "reserved";
   record.orderId = orderId;
   record.orderedAt = now.toISOString();
-  record.expiresAt = new Date(now.getTime() + referralCodeOrderExpiryMs).toISOString();
+  if (!record.expiresAt) record.expiresAt = new Date(now.getTime() + referralCodeOrderExpiryMs).toISOString();
 }
 
 async function confirmReferralDiscountCode(order, now = new Date()) {
@@ -4121,6 +4156,7 @@ async function issueReferralDiscountCode({ firstName, lastName, email, referralN
       code,
       percentage: referralDiscountPercentage,
       status: "issued",
+      source: "aurora",
       issuedAt: new Date().toISOString(),
       customerName: `${firstName} ${lastName}`,
       customerEmail: email,
@@ -4128,6 +4164,59 @@ async function issueReferralDiscountCode({ firstName, lastName, email, referralN
     });
     await writeDiscountCodes(discountCodes);
     return code;
+  });
+}
+
+function cleanDiscountCodePercentage(value, fallback = referralDiscountPercentage) {
+  const percentage = Number(value);
+  if (!Number.isFinite(percentage) || percentage <= 0) return fallback;
+  return Math.max(1, Math.min(maximumDiscountCodePercentage, Math.round(percentage * 100) / 100));
+}
+
+function adminDiscountCodeStatus(record, now = new Date()) {
+  const status = String(record?.status || "issued").toLowerCase();
+  const expiresAt = new Date(record?.expiresAt || "").getTime();
+  if (status === "issued" && Number.isFinite(expiresAt) && expiresAt <= now.getTime()) return "expired";
+  return ["issued", "reserved", "confirmed"].includes(status) ? status : "issued";
+}
+
+function publicAdminDiscountCode(record, ordersById = new Map(), now = new Date()) {
+  const order = ordersById.get(record?.orderId);
+  return {
+    code: normalizeDiscountCode(record?.code),
+    percentage: cleanDiscountCodePercentage(record?.percentage),
+    source: record?.source === "admin" ? "admin" : "aurora",
+    customerName: cleanTrackingString(record?.customerName, 120),
+    customerEmail: cleanEmail(record?.customerEmail),
+    referralName: cleanTrackingString(record?.referralName, 120),
+    issuedAt: record?.issuedAt || "",
+    expiresAt: record?.expiresAt || "",
+    orderedAt: record?.orderedAt || "",
+    confirmedAt: record?.confirmedAt || "",
+    status: adminDiscountCodeStatus(record, now),
+    orderId: cleanTrackingString(record?.orderId, 120),
+    orderCode: cleanTrackingString(order?.orderCode, 80),
+  };
+}
+
+async function issueAdminDiscountCode({ customerName, customerEmail, referralName, percentage }) {
+  return enqueueOrderMutation(async () => {
+    const discountCodes = await readDiscountCodes();
+    const now = new Date();
+    const record = {
+      code: generateReferralDiscountCode(discountCodes),
+      percentage: cleanDiscountCodePercentage(percentage),
+      status: "issued",
+      source: "admin",
+      issuedAt: now.toISOString(),
+      expiresAt: new Date(now.getTime() + referralCodeOrderExpiryMs).toISOString(),
+      customerName,
+      customerEmail,
+      referralName,
+    };
+    discountCodes.codes.push(record);
+    await writeDiscountCodes(discountCodes);
+    return record;
   });
 }
 
@@ -4742,6 +4831,7 @@ async function handleApi(req, res, url) {
     return json(res, 200, { ok: true }, { "Set-Cookie": clearCookie("hb_admin") });
   }
   if (req.method === "GET" && url.pathname === "/api/admin/users") return handleAdminUsers(req, res);
+  if (url.pathname === "/api/admin/discount-codes") return handleAdminDiscountCodes(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/metrics") return handleAdminMetrics(req, res);
   if (req.method === "GET" && url.pathname === "/api/admin/replay") return handleAdminReplay(req, res, url);
   if (url.pathname === "/api/admin/try-on") return handleAdminTryOnArchive(req, res);

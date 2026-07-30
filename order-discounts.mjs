@@ -1,6 +1,7 @@
 export const automaticDiscountThreshold = 399;
 export const automaticDiscountPercentage = 15;
 export const referralDiscountPercentage = 10;
+export const maximumDiscountCodePercentage = 100;
 export const referralCodeLength = 7;
 export const referralCodeOrderExpiryMs = 24 * 60 * 60 * 1000;
 
@@ -18,7 +19,7 @@ export function calculateOrderDiscounts(subtotal, referralPercentage = 0) {
   const automaticDiscount = safeSubtotal > automaticDiscountThreshold
     ? money(safeSubtotal * automaticDiscountPercentage / 100)
     : 0;
-  const safeReferralPercentage = Math.max(0, Math.min(referralDiscountPercentage, Number(referralPercentage) || 0));
+  const safeReferralPercentage = Math.max(0, Math.min(maximumDiscountCodePercentage, Number(referralPercentage) || 0));
   const referralDiscount = safeReferralPercentage > 0
     ? money(safeSubtotal * safeReferralPercentage / 100)
     : 0;

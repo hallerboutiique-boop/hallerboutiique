@@ -350,7 +350,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   ]);
   pages.forEach((html, index) => {
     const expectedStyles = pageNames[index] === "admin.html"
-      ? /\/assets-v\/home-image-drag-1\/styles\.css/
+      ? /\/assets-v\/admin-discount-codes-1\/styles\.css/
       : pageNames[index] === "checkout.html"
         ? /\/assets-v\/checkout-discounts-1\/styles\.css/
         : ["index.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
@@ -517,7 +517,7 @@ test("color variants stay grouped while preserving their own gallery, price and 
     assert.match(page, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
     assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   }
-  assert.match(admin, /\/assets-v\/product-variants-1\/admin\.js/);
+  assert.match(admin, /\/assets-v\/admin-discount-codes-1\/admin\.js/);
   for (const field of ["variantGroup", "variantColor", "variantSwatch", "variantOrder"]) {
     assert.match(admin, new RegExp(`name="${field}"`));
     assert.match(adminJs, new RegExp(`productForm\\.elements\\.${field}`));
@@ -658,7 +658,7 @@ test("admin can publish the original or cropped product image while preserving t
   assert.match(admin, /formData\.append\("directUploads"/);
   assert.match(admin, /return uploadProductImagesThroughServer\(entries, productId, \{ signal \}\)/);
   assert.match(adminHtml, /name="zoomImages"/);
-  assert.match(adminHtml, /\/assets-v\/product-variants-1\/admin\.js/);
+  assert.match(adminHtml, /\/assets-v\/admin-discount-codes-1\/admin\.js/);
 });
 
 test("admin can choose exactly which catalog products appear on the home page", async () => {
@@ -689,7 +689,7 @@ test("admin can choose exactly which catalog products appear on the home page", 
   assert.match(styles, /\.home-products-grid/);
   assert.match(styles, /\.home-product-position/);
   assert.match(styles, /\.home-product-drag-handle/);
-  assert.match(adminHtml, /\/assets-v\/home-image-drag-1\/styles\.css/);
+  assert.match(adminHtml, /\/assets-v\/admin-discount-codes-1\/styles\.css/);
   assert.match(server, /"\/assets-v\/home-image-drag-1\/admin\.js", "\/admin\.js"/);
   assert.match(server, /"\/assets-v\/home-image-drag-1\/styles\.css", "\/styles\.css"/);
 });

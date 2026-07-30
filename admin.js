@@ -3,6 +3,9 @@ const adminPanel = document.querySelector("[data-admin-panel]");
 const adminMessage = document.querySelector("[data-admin-message]");
 const usersTable = document.querySelector("[data-users-table]");
 const ordersTable = document.querySelector("[data-orders-table]");
+const adminDiscountForm = document.querySelector("[data-admin-discount-form]");
+const adminDiscountMessage = document.querySelector("[data-admin-discount-message]");
+const adminDiscountCodesRoot = document.querySelector("[data-admin-discount-codes]");
 const adminTotal = document.querySelector("[data-admin-total]");
 const metricGrid = document.querySelector("[data-metric-grid]");
 const replaySessionsRoot = document.querySelector("[data-replay-sessions]");
@@ -66,6 +69,7 @@ const productCropOriginal = document.querySelector("[data-product-crop-original]
 const productCropConfirm = document.querySelector("[data-product-crop-confirm]");
 let replayTimers = [];
 let adminProducts = [];
+let adminDiscountCodes = [];
 let homeProductIds = [];
 let homeProductDrag = null;
 let newArrivalProductIds = new Set();
@@ -237,6 +241,12 @@ function setAdminMessage(message, type = "") {
   if (!adminMessage) return;
   adminMessage.textContent = message || "";
   adminMessage.dataset.type = type;
+}
+
+function setAdminDiscountMessage(message, type = "") {
+  if (!adminDiscountMessage) return;
+  adminDiscountMessage.textContent = message || "";
+  adminDiscountMessage.dataset.type = type;
 }
 
 async function api(path, options = {}) {
@@ -2147,6 +2157,45 @@ function renderOrders(orders) {
     .join("");
 }
 
+function discountCodeStatusLabel(status) {
+  return {
+    issued: "Attivo",
+    reserved: "Usato nell'ordine",
+    confirmed: "Confermato",
+    expired: "Scaduto",
+  }[status] || "Attivo";
+}
+
+function renderAdminDiscountCodes(codes) {
+  if (!adminDiscountCodesRoot) return;
+  if (!Array.isArray(codes) || codes.length === 0) {
+    adminDiscountCodesRoot.innerHTML = `<tr><td colspan="7">Nessun codice sconto generato.</td></tr>`;
+    return;
+  }
+  adminDiscountCodesRoot.innerHTML = codes
+    .map((discountCode) => {
+      const customer = [discountCode.customerName, discountCode.customerEmail]
+        .filter(Boolean)
+        .map(escapeHtml)
+        .join("<br>") || "-";
+      const status = String(discountCode.status || "issued").toLowerCase();
+      const expiry = discountCode.expiresAt ? formatDate(discountCode.expiresAt) : "Senza scadenza";
+      const order = discountCode.orderCode || discountCode.orderId || "-";
+      return `
+        <tr>
+          <td><strong class="admin-discount-code">${escapeHtml(discountCode.code)}</strong><small>${escapeHtml(discountCode.percentage)}% di sconto</small></td>
+          <td>${customer}</td>
+          <td>${escapeHtml(discountCode.referralName || "Non indicato")}</td>
+          <td>${discountCode.source === "admin" ? "Admin" : "Aurora"}</td>
+          <td>${escapeHtml(expiry)}<small>Creato ${escapeHtml(formatDate(discountCode.issuedAt))}</small></td>
+          <td>${escapeHtml(order)}</td>
+          <td><span class="admin-discount-status is-${escapeHtml(status)}">${escapeHtml(discountCodeStatusLabel(status))}</span></td>
+        </tr>
+      `;
+    })
+    .join("");
+}
+
 function renderUsers(users) {
   if (!usersTable) return;
   if (!users || users.length === 0) {
@@ -2389,14 +2438,17 @@ function renderDashboard(metrics) {
 }
 
 async function loadDashboard() {
-  const [usersData, metricsData] = await Promise.all([
+  const [usersData, metricsData, discountCodesData] = await Promise.all([
     api("/api/admin/users"),
     api("/api/admin/metrics"),
+    api("/api/admin/discount-codes"),
   ]);
   adminLogin.hidden = true;
   adminPanel.hidden = false;
   renderUsers(usersData.users);
   renderDashboard(metricsData.metrics);
+  adminDiscountCodes = Array.isArray(discountCodesData.codes) ? discountCodesData.codes : [];
+  renderAdminDiscountCodes(adminDiscountCodes);
   await loadProducts();
 }
 
@@ -2416,6 +2468,36 @@ adminLogin?.addEventListener("submit", async (event) => {
 });
 
 document.querySelector("[data-admin-refresh]")?.addEventListener("click", loadDashboard);
+
+adminDiscountForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const submitButton = adminDiscountForm.querySelector("button[type='submit']");
+  if (submitButton) submitButton.disabled = true;
+  setAdminDiscountMessage("Generazione codice in corso...");
+  try {
+    const data = await api("/api/admin/discount-codes", {
+      method: "POST",
+      body: JSON.stringify(Object.fromEntries(new FormData(adminDiscountForm))),
+    });
+    const discountCode = data.discountCode;
+    adminDiscountCodes = [discountCode, ...adminDiscountCodes.filter((entry) => entry.code !== discountCode.code)];
+    renderAdminDiscountCodes(adminDiscountCodes);
+    adminDiscountForm.reset();
+    adminDiscountForm.elements.percentage.value = "10";
+    let copied = "";
+    try {
+      await navigator.clipboard?.writeText(discountCode.code);
+      copied = " Copiato negli appunti.";
+    } catch {
+      copied = "";
+    }
+    setAdminDiscountMessage(`Codice ${discountCode.code} creato: scade tra 24 ore.${copied}`, "success");
+  } catch (error) {
+    setAdminDiscountMessage(error.message, "error");
+  } finally {
+    if (submitButton) submitButton.disabled = false;
+  }
+});
 
 document.addEventListener("click", (event) => {
   const replayButton = event.target.closest("[data-replay-session]");
