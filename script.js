@@ -5271,9 +5271,11 @@ setupCheckoutAddressAutocomplete();
 setupBundleTryOn();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";
+const chatHistoryKey = "hallerBoutiqueChatHistory";
+const chatPanelOpenKey = "hallerBoutiqueChatOpen";
+const chatDraftKey = "hallerBoutiqueChatDraft";
 const chatHistoryLimit = 8;
 const chatVisibleMessageLimit = 40;
-let chatHistory = [];
 
 function readChatProfile() {
   try {
@@ -5283,6 +5285,42 @@ function readChatProfile() {
     return null;
   }
 }
+
+function readStoredChatHistory() {
+  try {
+    const history = JSON.parse(localStorage.getItem(chatHistoryKey));
+    if (!Array.isArray(history)) return [];
+    return history
+      .map((item) => ({
+        role: item?.role === "assistant" ? "assistant" : "user",
+        content: String(item?.content || "").trim().slice(0, 900),
+      }))
+      .filter((item) => item.content)
+      .slice(-chatHistoryLimit);
+  } catch {
+    return [];
+  }
+}
+
+function storeChatHistory(history) {
+  localStorage.setItem(chatHistoryKey, JSON.stringify(history.slice(-chatHistoryLimit)));
+}
+
+function storeChatPanelOpen(open) {
+  localStorage.setItem(chatPanelOpenKey, open ? "1" : "0");
+}
+
+function readChatDraft() {
+  return String(localStorage.getItem(chatDraftKey) || "").slice(0, 900);
+}
+
+function storeChatDraft(value) {
+  const draft = String(value || "").slice(0, 900);
+  if (draft) localStorage.setItem(chatDraftKey, draft);
+  else localStorage.removeItem(chatDraftKey);
+}
+
+let chatHistory = readStoredChatHistory();
 
 function scrollChatMessages(messages) {
   window.requestAnimationFrame(() => {
@@ -5364,10 +5402,12 @@ function setupSiteChat() {
   const promptButtons = [...root.querySelectorAll("[data-chat-prompt-key]")];
   let profile = readChatProfile();
   let activeChatRequest = null;
+  input.value = readChatDraft();
   translatePage();
 
   const rememberChatMessage = (role, content) => {
     chatHistory = [...chatHistory, { role, content }].slice(-chatHistoryLimit);
+    storeChatHistory(chatHistory);
   };
 
   const setChatBusy = (busy) => {
@@ -5382,13 +5422,18 @@ function setupSiteChat() {
     profileForm.hidden = true;
     conversation.hidden = false;
     if (!messages.children.length) {
-      appendChatMessage(messages, "assistant", translate("chat-greeting").replace("{name}", profile.firstName));
+      if (chatHistory.length > 0) {
+        chatHistory.forEach((item) => appendChatMessage(messages, item.role, item.content));
+      } else {
+        appendChatMessage(messages, "assistant", translate("chat-greeting").replace("{name}", profile.firstName));
+      }
     }
     scrollChatMessages(messages);
   };
 
   const openChat = () => {
     panel.hidden = false;
+    storeChatPanelOpen(true);
     root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", "true");
     if (profile) showConversation();
     if (!activeChatRequest) setChatBusy(false);
@@ -5401,6 +5446,7 @@ function setupSiteChat() {
       if (isOpen) openChat();
       else {
         panel.hidden = true;
+        storeChatPanelOpen(false);
         root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", "false");
       }
     });
@@ -5424,6 +5470,7 @@ function setupSiteChat() {
     };
     localStorage.setItem(chatProfileKey, JSON.stringify(profile));
     chatHistory = [];
+    storeChatHistory(chatHistory);
     messages.replaceChildren();
     showConversation();
     input.focus();
@@ -5435,6 +5482,7 @@ function setupSiteChat() {
     appendChatMessage(messages, "user", text);
     rememberChatMessage("user", text);
     input.value = "";
+    storeChatDraft("");
     setChatBusy(true);
     appendChatMessage(messages, "assistant", translate("chat-thinking"));
     const pending = messages.lastElementChild;
@@ -5462,7 +5510,10 @@ function setupSiteChat() {
       rememberChatMessage("assistant", data.reply);
     } catch (error) {
       const latestChatMessage = chatHistory[chatHistory.length - 1];
-      if (latestChatMessage?.role === "user" && latestChatMessage?.content === text) chatHistory.pop();
+      if (latestChatMessage?.role === "user" && latestChatMessage?.content === text) {
+        chatHistory.pop();
+        storeChatHistory(chatHistory);
+      }
       pending.textContent = error.message || translate("chat-error");
     } finally {
       window.clearTimeout(timeout);
@@ -5477,6 +5528,7 @@ function setupSiteChat() {
     event.preventDefault();
     sendMessage(input.value);
   });
+  input.addEventListener("input", () => storeChatDraft(input.value));
   root.querySelectorAll("[data-chat-prompt-key]").forEach((button) => {
     button.addEventListener("click", () => sendMessage(translate(button.dataset.chatPromptKey)));
   });
@@ -5487,7 +5539,7 @@ function setupSiteChat() {
   window.addEventListener("resize", () => {
     if (!panel.hidden) scrollChatMessages(messages);
   });
-  if (new URLSearchParams(window.location.search).get("chat") === "1") openChat();
+  if (new URLSearchParams(window.location.search).get("chat") === "1" || localStorage.getItem(chatPanelOpenKey) === "1") openChat();
   if (window.lucide) window.lucide.createIcons();
 }
 

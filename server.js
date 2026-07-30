@@ -286,6 +286,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/aurora-chat-safari-1/styles.css", "/styles.css"],
   ["/assets-v/checkout-discount-visibility-1/script.js", "/script.js"],
   ["/assets-v/checkout-discount-visibility-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-session-1/script.js", "/script.js"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
