@@ -6062,6 +6062,14 @@ body.motion-enabled .product-actions .buy-action:hover {
   align-items: end;
 }
 
+.checkout-auto-discount-notice {
+  margin: -2px 0 16px;
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .discount-code button {
   display: inline-flex;
   align-items: center;
@@ -6689,6 +6697,20 @@ body.motion-enabled .product-actions .buy-action:hover {
   text-align: right;
   text-transform: uppercase;
   overflow-wrap: anywhere;
+}
+
+.summary-row-discount strong {
+  color: #76cf98;
+}
+
+.summary-row-total {
+  padding-top: 2px;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.summary-row-total strong {
+  font-size: 19px;
 }
 
 .bundle-tryon {

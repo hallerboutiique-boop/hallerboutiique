@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -171,7 +171,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   assert.match(server, /isLastAvailable:\s*inventoryTotal === 1/);
   assert.match(server, /"Cache-Control": "private, no-store"/);
   assert.match(server, /async function reduceProductInventory/);
-  assert.match(server, /enqueueProductMutation\(\(\) => reduceProductInventory\(products\)\)/);
+  assert.match(server, /enqueueProductMutation\(\(\) => reduceProductInventory\(nextOrder\.products\)\)/);
 });
 
 test("catalog categories, product pages and galleries follow the storefront flow", async () => {
@@ -331,7 +331,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -351,7 +351,9 @@ test("mobile logos use collision-free layouts on every storefront page", async (
   pages.forEach((html, index) => {
     const expectedStyles = pageNames[index] === "admin.html"
       ? /\/assets-v\/home-image-drag-1\/styles\.css/
-      : ["index.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
+      : pageNames[index] === "checkout.html"
+        ? /\/assets-v\/checkout-discounts-1\/styles\.css/
+        : ["index.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
         ? /\/assets-v\/catalog-stock-variants-2\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
@@ -387,8 +389,8 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   });
   assert.match(index, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
   assert.match(index, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
-  assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/admin\.js", "\/admin\.js"/);
@@ -399,6 +401,8 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/last-stock-sizes-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-discounts-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-discounts-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/catalog-last-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-stock-variants-2\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);

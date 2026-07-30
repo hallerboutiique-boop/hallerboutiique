@@ -4276,6 +4276,7 @@ function setupCheckoutPayments() {
 
   function refreshCheckoutProducts() {
     renderCheckoutProductSummary();
+    refreshCheckoutDiscountSummary();
     if (orderProduct) orderProduct.textContent = getCheckoutProductText();
     updatePaymentPacket();
   }
@@ -4402,6 +4403,62 @@ function setupCheckoutPayments() {
   setPaymentMethod(paymentInputs.find((input) => input.checked)?.value || "cod");
   refreshCheckoutProducts();
   window.addEventListener("haller-cart-change", refreshCheckoutProducts);
+}
+
+let appliedCheckoutDiscount = null;
+
+function checkoutEuroValue(value) {
+  const normalized = String(value || "")
+    .replace(/[^\d,.-]/g, "")
+    .replace(".", "")
+    .replace(",", ".");
+  const number = Number.parseFloat(normalized);
+  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
+
+function checkoutMoney(value) {
+  return Math.round(Number(value || 0) * 100) / 100;
+}
+
+function checkoutCurrency(value) {
+  return `${checkoutMoney(value).toLocaleString(siteLanguage === "it" ? "it-IT" : undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`;
+}
+
+function checkoutDiscountFingerprint(products) {
+  return products.map((product) => [product.id, product.price, product.size, product.quantity].join("|")).join(";");
+}
+
+function checkoutLocalQuote(products) {
+  const subtotal = checkoutMoney(products.reduce((sum, product) => sum + checkoutEuroValue(product.price) * Number(product.quantity || 1), 0));
+  const automaticDiscount = subtotal > 399 ? checkoutMoney(subtotal * 0.15) : 0;
+  return {
+    subtotal,
+    automaticPercentage: automaticDiscount > 0 ? 15 : 0,
+    automaticDiscount,
+    referralPercentage: 0,
+    referralDiscount: 0,
+    total: checkoutMoney(subtotal - automaticDiscount),
+  };
+}
+
+function setCheckoutSummaryRow(selector, visible, value) {
+  const row = document.querySelector(selector);
+  if (!row) return;
+  row.hidden = !visible;
+  const strong = row.querySelector("strong");
+  if (strong) strong.textContent = value;
+}
+
+function refreshCheckoutDiscountSummary() {
+  const products = collectCheckoutProducts();
+  const fingerprint = checkoutDiscountFingerprint(products);
+  if (appliedCheckoutDiscount?.fingerprint !== fingerprint) appliedCheckoutDiscount = null;
+  const quote = appliedCheckoutDiscount?.quote || checkoutLocalQuote(products);
+  const hasProducts = products.length > 0;
+  setCheckoutSummaryRow("[data-checkout-subtotal-row]", hasProducts, checkoutCurrency(quote.subtotal));
+  setCheckoutSummaryRow("[data-checkout-automatic-discount-row]", hasProducts && quote.automaticDiscount > 0, `-${checkoutCurrency(quote.automaticDiscount)}`);
+  setCheckoutSummaryRow("[data-checkout-referral-discount-row]", hasProducts && quote.referralDiscount > 0, `-${checkoutCurrency(quote.referralDiscount)}`);
+  setCheckoutSummaryRow("[data-checkout-total-row]", hasProducts, checkoutCurrency(quote.total));
 }
 
 function collectCheckoutProducts() {
@@ -5070,12 +5127,41 @@ const discountInput = document.querySelector("input[name='discount-code']");
 const discountMessage = document.querySelector(".discount-message");
 
 if (discountButton && discountInput && discountMessage) {
-  discountButton.addEventListener("click", () => {
+  discountButton.addEventListener("click", async () => {
     const code = discountInput.value.trim();
+    if (!code) {
+      appliedCheckoutDiscount = null;
+      refreshCheckoutDiscountSummary();
+      discountMessage.textContent = translate("discount-empty");
+      return;
+    }
 
-    discountMessage.textContent = code
-      ? translate("discount-applied")
-      : translate("discount-empty");
+    discountButton.disabled = true;
+    try {
+      const response = await fetch("/api/discounts/preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ discountCode: code, products: collectCheckoutProducts() }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || translate("discount-empty"));
+      appliedCheckoutDiscount = {
+        fingerprint: checkoutDiscountFingerprint(collectCheckoutProducts()),
+        quote: data.quote,
+      };
+      refreshCheckoutDiscountSummary();
+      discountMessage.textContent = `Codice applicato: -${checkoutCurrency(data.quote.referralDiscount)}.`;
+    } catch (error) {
+      appliedCheckoutDiscount = null;
+      refreshCheckoutDiscountSummary();
+      discountMessage.textContent = error.message || translate("discount-empty");
+    } finally {
+      discountButton.disabled = false;
+    }
+  });
+  discountInput.addEventListener("input", () => {
+    appliedCheckoutDiscount = null;
+    refreshCheckoutDiscountSummary();
   });
 }
 

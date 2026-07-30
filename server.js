@@ -48,6 +48,16 @@ import {
 } from "./product-inventory.mjs";
 import { applyProductStockOverwrite } from "./product-stock-overwrite.mjs";
 import {
+  calculateOrderDiscounts,
+  discountCodeIsUsable,
+  extractReferralName,
+  isTenPercentDiscountRequest,
+  normalizeDiscountCode,
+  referralCodeLength,
+  referralCodeOrderExpiryMs,
+  referralDiscountPercentage,
+} from "./order-discounts.mjs";
+import {
   cleanLikeProductId,
   normalizeProductLikes,
   setProductLike,
@@ -63,6 +73,7 @@ const dataDir = process.env.DATA_DIR || path.join(__dirname, "data");
 const usersFile = path.join(dataDir, "users.json");
 const analyticsFile = path.join(dataDir, "analytics.json");
 const ordersFile = path.join(dataDir, "orders.json");
+const discountCodesFile = path.join(dataDir, "discount-codes.json");
 const pushSubscriptionsFile = path.join(dataDir, "push-subscriptions.json");
 const productsFile = path.join(dataDir, "products.json");
 const productLikesFile = path.join(dataDir, "product-likes.json");
@@ -264,6 +275,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/last-stock-sizes-1/script.js", "/script.js"],
   ["/assets-v/last-stock-sizes-1/styles.css", "/styles.css"],
   ["/assets-v/hide-zero-stock-1/script.js", "/script.js"],
+  ["/assets-v/checkout-discounts-1/script.js", "/script.js"],
+  ["/assets-v/checkout-discounts-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
   ["/assets-v/product-share-2/styles.css", "/styles.css"],
   ["/assets-v/home-image-drag-1/admin.js", "/admin.js"],
@@ -310,6 +323,7 @@ async function ensureStorage() {
   await ensureJsonFile(usersFile, []);
   await ensureJsonFile(analyticsFile, { sessions: {}, events: [] });
   await ensureJsonFile(ordersFile, []);
+  await ensureJsonFile(discountCodesFile, { codes: [] });
   await ensureJsonFile(pushSubscriptionsFile, []);
   await ensureJsonFile(productsFile, { items: {}, custom: [] });
   await ensureJsonFile(productLikesFile, { products: {} });
@@ -362,6 +376,19 @@ async function readOrders() {
 
 async function writeOrders(orders) {
   return writeJson(ordersFile, orders);
+}
+
+async function readDiscountCodes() {
+  const data = await readJson(discountCodesFile, { codes: [] });
+  data.codes = Array.isArray(data.codes) ? data.codes : [];
+  return data;
+}
+
+async function writeDiscountCodes(data) {
+  return writeJson(discountCodesFile, {
+    updatedAt: new Date().toISOString(),
+    codes: Array.isArray(data?.codes) ? data.codes : [],
+  });
 }
 
 async function readPushSubscriptions() {
@@ -2647,6 +2674,9 @@ async function handleMobileAdminOrder(req, res, orderId) {
       }
       orders[index] = result.order;
       await writeOrders(orders);
+      if (result.changed && targetStatus === ORDER_STATUS.CONFIRMED) {
+        await confirmReferralDiscountCode(result.order);
+      }
       return result.order;
     });
     if (!updatedOrder) return json(res, 404, { ok: false, message: "Ordine non trovato." });
@@ -2851,13 +2881,13 @@ function cleanChatMessage(value) {
 }
 
 const siteChatLanguages = {
-  it: { name: "italiano", locale: "it-IT", invalidProfile: "Inserisci nome, cognome e un indirizzo email valido per continuare.", emptyMessage: "Scrivi un messaggio per iniziare la conversazione.", unavailable: "Assistente virtuale temporaneamente non disponibile.", fallback: "Mi e sfuggito un dettaglio. Puoi riscriverlo un attimo?" },
-  en: { name: "English", locale: "en-GB", invalidProfile: "Enter your first name, last name and a valid email address to continue.", emptyMessage: "Write a message to start the conversation.", unavailable: "The virtual assistant is temporarily unavailable.", fallback: "I missed a detail. Could you rephrase that?" },
-  fr: { name: "francais", locale: "fr-FR", invalidProfile: "Saisissez votre prenom, votre nom et une adresse e-mail valide pour continuer.", emptyMessage: "Ecrivez un message pour commencer la conversation.", unavailable: "L'assistante virtuelle est temporairement indisponible.", fallback: "Un detail m'a echappe. Pouvez-vous reformuler ?" },
-  de: { name: "Deutsch", locale: "de-DE", invalidProfile: "Geben Sie Vorname, Nachname und eine gultige E-Mail-Adresse ein.", emptyMessage: "Schreiben Sie eine Nachricht, um das Gesprach zu beginnen.", unavailable: "Der virtuelle Assistent ist vorubergehend nicht verfugbar.", fallback: "Mir ist ein Detail entgangen. Konnen Sie das bitte anders formulieren?" },
-  es: { name: "espanol", locale: "es-ES", invalidProfile: "Introduce tu nombre, apellidos y un correo valido para continuar.", emptyMessage: "Escribe un mensaje para iniciar la conversacion.", unavailable: "La asistente virtual no esta disponible temporalmente.", fallback: "Se me ha escapado un detalle. Puedes reformularlo?" },
-  sq: { name: "shqip", locale: "sq-AL", invalidProfile: "Vendosni emrin, mbiemrin dhe nje adrese email te vlefshme per te vazhduar.", emptyMessage: "Shkruani nje mesazh per te filluar biseden.", unavailable: "Asistentja virtuale nuk eshte perkohesisht e disponueshme.", fallback: "Me shpetoi nje detaj. Mund ta riformuloni?" },
-  ro: { name: "română", locale: "ro-RO", invalidProfile: "Introdu prenumele, numele si o adresa de e-mail valida pentru a continua.", emptyMessage: "Scrie un mesaj pentru a incepe conversatia.", unavailable: "Asistenta virtuala este temporar indisponibila.", fallback: "Mi-a scapat un detaliu. Poti reformula?" },
+  it: { name: "italiano", locale: "it-IT", invalidProfile: "Inserisci nome, cognome e un indirizzo email valido per continuare.", emptyMessage: "Scrivi un messaggio per iniziare la conversazione.", unavailable: "Assistente virtuale temporaneamente non disponibile.", fallback: "Mi e sfuggito un dettaglio. Puoi riscriverlo un attimo?", referralRequired: "Per ricevere il 10% di sconto, dimmi prima nome e cognome dell'amico che ti ha parlato di Haller Boutique.", referralCode: "Perfetto: il tuo codice sconto del 10% è {code}. Vale per un solo ordine; dopo la conferma resta inutilizzabile e l'ordine ha una scadenza di 24 ore." },
+  en: { name: "English", locale: "en-GB", invalidProfile: "Enter your first name, last name and a valid email address to continue.", emptyMessage: "Write a message to start the conversation.", unavailable: "The virtual assistant is temporarily unavailable.", fallback: "I missed a detail. Could you rephrase that?", referralRequired: "To receive the 10% discount, first tell me the full name of the friend who told you about Haller Boutique.", referralCode: "Perfect: your 10% discount code is {code}. It can be used for one order only; after confirmation it becomes unusable and the order expires after 24 hours." },
+  fr: { name: "francais", locale: "fr-FR", invalidProfile: "Saisissez votre prenom, votre nom et une adresse e-mail valide pour continuer.", emptyMessage: "Ecrivez un message pour commencer la conversation.", unavailable: "L'assistante virtuelle est temporairement indisponible.", fallback: "Un detail m'a echappe. Pouvez-vous reformuler ?", referralRequired: "Pour recevoir la remise de 10 %, indiquez d'abord le nom et le prenom de l'ami qui vous a parle de Haller Boutique.", referralCode: "Parfait : votre code de reduction de 10 % est {code}. Il est valable pour une seule commande ; apres confirmation, il devient inutilisable et la commande expire apres 24 heures." },
+  de: { name: "Deutsch", locale: "de-DE", invalidProfile: "Geben Sie Vorname, Nachname und eine gultige E-Mail-Adresse ein.", emptyMessage: "Schreiben Sie eine Nachricht, um das Gesprach zu beginnen.", unavailable: "Der virtuelle Assistent ist vorubergehend nicht verfugbar.", fallback: "Mir ist ein Detail entgangen. Konnen Sie das bitte anders formulieren?", referralRequired: "Um den 10%-Rabatt zu erhalten, nennen Sie mir zuerst den Vor- und Nachnamen der Person, die Ihnen Haller Boutique empfohlen hat.", referralCode: "Perfekt: Ihr 10%-Rabattcode lautet {code}. Er gilt nur für eine Bestellung; nach der Bestatigung ist er nicht mehr nutzbar und die Bestellung lauft nach 24 Stunden ab." },
+  es: { name: "espanol", locale: "es-ES", invalidProfile: "Introduce tu nombre, apellidos y un correo valido para continuar.", emptyMessage: "Escribe un mensaje para iniciar la conversacion.", unavailable: "La asistente virtual no esta disponible temporalmente.", fallback: "Se me ha escapado un detalle. Puedes reformularlo?", referralRequired: "Para recibir el 10 % de descuento, primero indícame el nombre y los apellidos del amigo que te habló de Haller Boutique.", referralCode: "Perfecto: tu codigo de descuento del 10 % es {code}. Solo vale para un pedido; tras la confirmacion queda inutilizable y el pedido caduca a las 24 horas." },
+  sq: { name: "shqip", locale: "sq-AL", invalidProfile: "Vendosni emrin, mbiemrin dhe nje adrese email te vlefshme per te vazhduar.", emptyMessage: "Shkruani nje mesazh per te filluar biseden.", unavailable: "Asistentja virtuale nuk eshte perkohesisht e disponueshme.", fallback: "Me shpetoi nje detaj. Mund ta riformuloni?", referralRequired: "Per te marre uljen 10%, fillimisht me tregoni emrin dhe mbiemrin e mikut qe ju foli per Haller Boutique.", referralCode: "Shkelqyeshem: kodi juaj i uljes 10% eshte {code}. Vlen vetem per nje porosi; pas konfirmimit behet i paperserdorshem dhe porosia skadon pas 24 oresh." },
+  ro: { name: "română", locale: "ro-RO", invalidProfile: "Introdu prenumele, numele si o adresa de e-mail valida pentru a continua.", emptyMessage: "Scrie un mesaj pentru a incepe conversatia.", unavailable: "Asistenta virtuala este temporar indisponibila.", fallback: "Mi-a scapat un detaliu. Poti reformula?", referralRequired: "Pentru reducerea de 10%, spune-mi mai intai numele si prenumele prietenului care ti-a vorbit despre Haller Boutique.", referralCode: "Perfect: codul tau de reducere de 10% este {code}. Poate fi folosit o singura data; dupa confirmare devine inutilizabil, iar comanda expira dupa 24 de ore." },
 };
 
 const tryOnLanguages = {
@@ -3041,6 +3071,19 @@ async function handleSiteChat(req, res) {
         .map((item) => ({ role: item?.role === "assistant" ? "assistant" : "user", content: cleanChatMessage(item?.content) }))
         .filter((item) => item.content)
     : [];
+  if (isTenPercentDiscountRequest(message)) {
+    const referralName = extractReferralName([
+      ...history.filter((item) => item.role === "user").map((item) => item.content),
+      message,
+    ]);
+    if (!referralName) return json(res, 200, { ok: true, reply: languageConfig.referralRequired, language });
+    const code = await issueReferralDiscountCode({ firstName, lastName, email, referralName });
+    return json(res, 200, {
+      ok: true,
+      reply: languageConfig.referralCode.replace("{code}", code),
+      language,
+    });
+  }
   const orderCode = message.match(/\bHB-[A-Z0-9-]{5,80}\b/i)?.[0];
   let orderContext = "Nessun codice ordine fornito.";
   if (orderCode) {
@@ -3978,6 +4021,129 @@ function cleanProducts(products) {
   });
 }
 
+function orderError(message, code) {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function orderTotalLabel(value) {
+  return `${formatEuroValue(value).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`;
+}
+
+async function priceCheckoutProducts(products) {
+  const requestedProducts = cleanProducts(products);
+  if (!requestedProducts.length) throw orderError("Il carrello è vuoto.", "EMPTY_CART");
+
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  const catalog = [
+    ...defaults.map((product) => mergeProduct(product, overrides.items)),
+    ...overrides.custom.map(mergeCustomProduct),
+  ];
+  const productsById = new Map(catalog.map((product) => [product.id, product]));
+
+  return requestedProducts.map((requested) => {
+    const product = productsById.get(requested.id);
+    const unitPrice = parseEuro(product?.finalPrice);
+    if (!product || unitPrice <= 0) throw orderError("Uno dei prodotti nel carrello non è più disponibile.", "INVALID_PRODUCT");
+    const value = formatEuroValue(unitPrice * requested.quantity);
+    return {
+      id: product.id,
+      name: product.name,
+      price: product.finalPrice,
+      size: requested.size,
+      quantity: requested.quantity,
+      value,
+    };
+  });
+}
+
+function referralDiscountRecord(codes, discountCode, now = new Date()) {
+  if (!discountCode) return null;
+  const record = codes.codes.find((entry) => normalizeDiscountCode(entry?.code) === discountCode);
+  if (!discountCodeIsUsable(record, now)) {
+    throw orderError("Codice sconto non valido, già utilizzato o scaduto.", "INVALID_DISCOUNT_CODE");
+  }
+  return record;
+}
+
+async function createOrderQuote(products, discountCode, now = new Date()) {
+  const pricedProducts = await priceCheckoutProducts(products);
+  const subtotal = formatEuroValue(pricedProducts.reduce((sum, product) => sum + product.value, 0));
+  const normalizedCode = normalizeDiscountCode(discountCode);
+  const discountCodes = normalizedCode ? await readDiscountCodes() : null;
+  const referralCode = discountCodes ? referralDiscountRecord(discountCodes, normalizedCode, now) : null;
+  const discounts = calculateOrderDiscounts(subtotal, referralCode ? referralDiscountPercentage : 0);
+  return {
+    products: pricedProducts,
+    discounts,
+    discountCode: referralCode ? normalizedCode : "",
+    discountCodes,
+  };
+}
+
+function reserveReferralDiscountCode(discountCodes, discountCode, orderId, now) {
+  if (!discountCode) return;
+  const record = referralDiscountRecord(discountCodes, discountCode, now);
+  record.status = "reserved";
+  record.orderId = orderId;
+  record.orderedAt = now.toISOString();
+  record.expiresAt = new Date(now.getTime() + referralCodeOrderExpiryMs).toISOString();
+}
+
+async function confirmReferralDiscountCode(order, now = new Date()) {
+  const discountCode = normalizeDiscountCode(order?.discounts?.referralCode || order?.discountCode);
+  if (!discountCode) return;
+  const discountCodes = await readDiscountCodes();
+  const record = discountCodes.codes.find((entry) => normalizeDiscountCode(entry?.code) === discountCode);
+  if (!record || record.orderId !== order.id || record.status !== "reserved") return;
+  record.status = "confirmed";
+  record.confirmedAt = now.toISOString();
+  record.invalidatedAt = now.toISOString();
+  await writeDiscountCodes(discountCodes);
+}
+
+function generateReferralDiscountCode(discountCodes) {
+  const existingCodes = new Set(discountCodes.codes.map((entry) => normalizeDiscountCode(entry?.code)));
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+  do {
+    code = Array.from(randomBytes(referralCodeLength), (byte) => alphabet[byte % alphabet.length]).join("");
+  } while (existingCodes.has(code));
+  return code;
+}
+
+async function issueReferralDiscountCode({ firstName, lastName, email, referralName }) {
+  return enqueueOrderMutation(async () => {
+    const discountCodes = await readDiscountCodes();
+    const code = generateReferralDiscountCode(discountCodes);
+    discountCodes.codes.push({
+      code,
+      percentage: referralDiscountPercentage,
+      status: "issued",
+      issuedAt: new Date().toISOString(),
+      customerName: `${firstName} ${lastName}`,
+      customerEmail: email,
+      referralName,
+    });
+    await writeDiscountCodes(discountCodes);
+    return code;
+  });
+}
+
+async function handleDiscountPreview(req, res) {
+  const body = await parseBody(req);
+  try {
+    const quote = await createOrderQuote(body.products || body.items, body.discountCode);
+    return json(res, 200, { ok: true, quote: quote.discounts });
+  } catch (error) {
+    if (["EMPTY_CART", "INVALID_PRODUCT", "INVALID_DISCOUNT_CODE"].includes(error?.code)) {
+      return badRequest(res, error.message);
+    }
+    throw error;
+  }
+}
+
 async function reduceProductInventory(products) {
   const overrides = await readProductOverrides();
   let changed = false;
@@ -4121,77 +4287,91 @@ async function handleCreateOrder(req, res) {
   const body = await parseBody(req);
   const validation = validateCheckoutOrder(body);
   if (!validation.ok) return badRequest(res, validation.message);
-  const now = new Date().toISOString();
+  const now = new Date();
+  const createdAt = now.toISOString();
   const sessionId = cleanSessionId(body.sessionId);
-  const products = cleanProducts(body.products || body.items);
-  const productsTotal = products.reduce((sum, product) => sum + product.value, 0);
-  const totalValue = productsTotal || parseEuro(body.total);
   const clientInfo = cleanClientDeviceInfo(body.deviceInfo);
   const ua = parseUserAgent(req.headers["user-agent"] || "", clientInfo);
   const ip = clientIp(req);
   const ipAddress = cleanIp(ip);
   const ipLocation = await lookupIpLocation(ip);
   const preciseLocation = cleanPreciseLocation(body.preciseLocation);
-  const order = {
-    id: `ord_${randomBytes(10).toString("hex")}`,
-    orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
-    createdAt: now,
-    status: "Nuovo",
-    statusUpdatedAt: now,
-    statusHistory: [{ status: ORDER_STATUS.NEW, at: now }],
-    sessionId,
-    visitorId: cleanTrackingString(body.visitorId, 80),
-    customer: {
-      name: cleanTrackingString(body.customer?.name, 120),
-      email: cleanEmail(body.customer?.email),
-      phone: cleanTrackingString(body.customer?.phone, 60),
-      city: cleanTrackingString(body.customer?.city, 80),
-      postalCode: cleanTrackingString(body.customer?.postalCode, 20),
-      province: cleanTrackingString(body.customer?.province, 80),
-      country: cleanTrackingString(body.customer?.country, 80),
-      countryCode: cleanTrackingString(body.customer?.countryCode, 8).toUpperCase(),
-      address: cleanTrackingString(body.customer?.address, 180),
-      addressId: cleanTrackingString(body.customer?.addressId, 80),
-      addressVerified: body.customer?.addressVerified === true,
-    },
-    paymentMethod: cleanTrackingString(body.paymentMethod, 80) || "Contrassegno",
-    txHash: cleanTrackingString(body.txHash, 180),
-    discountCode: cleanTrackingString(body.discountCode, 60),
-    products,
-    totalValue: formatEuroValue(totalValue),
-    total: `${formatEuroValue(totalValue).toLocaleString("it-IT", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}€`,
-    ipAddress,
-    ipMasked: maskIp(ip),
-    ipHash: hashIp(ip),
-    ipLocation,
-    preciseLocation,
-    userAgent: ua,
-    deviceInfo: clientInfo,
-    mobilePushNotification: {
-      status: "pending",
-      attempts: 0,
-      nextAttemptAt: now,
-    },
-  };
-
-  const inventoryReservation = await enqueueProductMutation(() => reduceProductInventory(products));
-  if (!inventoryReservation.ok) {
-    const unavailable = inventoryReservation.product;
-    const size = unavailable?.size ? `, taglia ${unavailable.size}` : "";
-    return json(res, 409, {
-      ok: false,
-      message: `${unavailable?.name || "Il prodotto"}${size} non è più disponibile nella quantità richiesta.`,
-    });
-  }
-
+  const orderId = `ord_${randomBytes(10).toString("hex")}`;
+  let order;
   try {
-    await enqueueOrderMutation(async () => {
-      const orders = await readOrders();
-      orders.push(order);
-      await writeOrders(orders.slice(-2000));
+    order = await enqueueOrderMutation(async () => {
+      const quote = await createOrderQuote(body.products || body.items, body.discountCode, now);
+      const nextOrder = {
+        id: orderId,
+        orderCode: cleanTrackingString(body.orderCode, 80) || `HB-${Date.now()}`,
+        createdAt,
+        status: "Nuovo",
+        statusUpdatedAt: createdAt,
+        statusHistory: [{ status: ORDER_STATUS.NEW, at: createdAt }],
+        sessionId,
+        visitorId: cleanTrackingString(body.visitorId, 80),
+        customer: {
+          name: cleanTrackingString(body.customer?.name, 120),
+          email: cleanEmail(body.customer?.email),
+          phone: cleanTrackingString(body.customer?.phone, 60),
+          city: cleanTrackingString(body.customer?.city, 80),
+          postalCode: cleanTrackingString(body.customer?.postalCode, 20),
+          province: cleanTrackingString(body.customer?.province, 80),
+          country: cleanTrackingString(body.customer?.country, 80),
+          countryCode: cleanTrackingString(body.customer?.countryCode, 8).toUpperCase(),
+          address: cleanTrackingString(body.customer?.address, 180),
+          addressId: cleanTrackingString(body.customer?.addressId, 80),
+          addressVerified: body.customer?.addressVerified === true,
+        },
+        paymentMethod: cleanTrackingString(body.paymentMethod, 80) || "Contrassegno",
+        txHash: cleanTrackingString(body.txHash, 180),
+        discountCode: quote.discountCode,
+        discounts: {
+          ...quote.discounts,
+          referralCode: quote.discountCode,
+        },
+        products: quote.products,
+        subtotalValue: quote.discounts.subtotal,
+        subtotal: orderTotalLabel(quote.discounts.subtotal),
+        totalValue: quote.discounts.total,
+        total: orderTotalLabel(quote.discounts.total),
+        ipAddress,
+        ipMasked: maskIp(ip),
+        ipHash: hashIp(ip),
+        ipLocation,
+        preciseLocation,
+        userAgent: ua,
+        deviceInfo: clientInfo,
+        mobilePushNotification: {
+          status: "pending",
+          attempts: 0,
+          nextAttemptAt: createdAt,
+        },
+      };
+      const inventoryReservation = await enqueueProductMutation(() => reduceProductInventory(nextOrder.products));
+      if (!inventoryReservation.ok) {
+        const unavailable = inventoryReservation.product;
+        const size = unavailable?.size ? `, taglia ${unavailable.size}` : "";
+        throw orderError(`${unavailable?.name || "Il prodotto"}${size} non è più disponibile nella quantità richiesta.`, "OUT_OF_STOCK");
+      }
+
+      try {
+        if (quote.discountCode) {
+          reserveReferralDiscountCode(quote.discountCodes, quote.discountCode, nextOrder.id, now);
+          await writeDiscountCodes(quote.discountCodes);
+        }
+        const orders = await readOrders();
+        orders.push(nextOrder);
+        await writeOrders(orders.slice(-2000));
+      } catch (error) {
+        await enqueueProductMutation(() => restoreProductInventory(nextOrder.products));
+        throw error;
+      }
+      return nextOrder;
     });
   } catch (error) {
-    await enqueueProductMutation(() => restoreProductInventory(products));
+    if (error?.code === "OUT_OF_STOCK") return json(res, 409, { ok: false, message: error.message });
+    if (["EMPTY_CART", "INVALID_PRODUCT", "INVALID_DISCOUNT_CODE"].includes(error?.code)) return badRequest(res, error.message);
     throw error;
   }
 
@@ -4199,22 +4379,22 @@ async function handleCreateOrder(req, res) {
     const session = analytics.sessions[sessionId];
     if (session) {
       session.orderPlaced = true;
-      session.orderAt = now;
-      session.lastSeenAt = now;
+      session.orderAt = createdAt;
+      session.lastSeenAt = createdAt;
     }
     analytics.events.push({
       id: `evt_${randomBytes(8).toString("hex")}`,
-      at: now,
+      at: createdAt,
       type: "order_confirmed",
       sessionId,
       visitorId: order.visitorId,
       path: "/checkout.html",
-      product: products.map((product) => product.name).join("; ").slice(0, 180),
+      product: order.products.map((product) => product.name).join("; ").slice(0, 180),
       method: order.paymentMethod,
     });
   });
 
-  json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total } });
+  json(res, 201, { ok: true, order: { id: order.id, orderCode: order.orderCode, total: order.total, discounts: order.discounts } });
   setTimeout(() => processMobilePushNotifications().catch((error) => {
     console.error(`[push] Notification queue failed: ${error.message}`);
   }), 0);
@@ -4527,6 +4707,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/track") return handleTrack(req, res);
   if (req.method === "GET" && url.pathname === "/api/address-suggestions") return handleAddressSuggestions(req, res, url);
   if (req.method === "POST" && url.pathname === "/api/delivery-estimate") return handleDeliveryEstimate(req, res);
+  if (req.method === "POST" && url.pathname === "/api/discounts/preview") return handleDiscountPreview(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
   const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);

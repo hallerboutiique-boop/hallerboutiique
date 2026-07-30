@@ -80,12 +80,17 @@ test("checkout markup and server expose required autocomplete flow", async () =>
   for (const field of ["city", "postal-code", "province", "country"]) {
     assert.match(checkout, new RegExp(`name="${field}"[^>]*readonly required`));
   }
-  assert.match(checkout, /\/assets-v\/hide-zero-stock-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/admin-original-price-5\/styles\.css/);
+  assert.match(checkout, /Spendi oltre 399€ e ricevi automaticamente il 15% di sconto/);
+  assert.match(checkout, /data-checkout-automatic-discount/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/styles\.css/);
   assert.match(script, /function setupCheckoutAddressAutocomplete/);
   assert.match(script, /\/api\/address-suggestions\?q=/);
   assert.match(script, /addressVerified: Boolean\(selectedCheckoutAddress\)/);
   assert.match(server, /validateCheckoutOrder\(body\)/);
+  assert.match(server, /\/api\/discounts\/preview/);
+  assert.match(server, /calculateOrderDiscounts/);
+  assert.match(server, /confirmReferralDiscountCode/);
   assert.match(server, /url\.pathname === "\/api\/address-suggestions"/);
   assert.match(server, /countrycode", "IT"/);
   assert.match(styles, /\.address-suggestions\s*\{/);

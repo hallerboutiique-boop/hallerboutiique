@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/assets-v/admin-original-price-5/styles.css">
+    <link rel="stylesheet" href="/assets-v/checkout-discounts-1/styles.css">
   </head>
   <body>
     <header class="site-header utility-site-header checkout-site-header">
@@ -106,6 +106,7 @@
 
           <fieldset>
             <legend>Codice sconto</legend>
+            <p class="checkout-auto-discount-notice">Spendi oltre 399€ e ricevi automaticamente il 15% di sconto sull'intero ordine.</p>
             <div class="discount-code">
               <label>
                 <span>Inserisci codice</span>
@@ -259,6 +260,22 @@
             <a href="index.html#arrivi">Continua lo shopping</a>
           </div>
           <div class="checkout-summary-products" data-checkout-summary-products aria-live="polite"></div>
+          <div class="summary-row" data-checkout-subtotal-row hidden>
+            <span>Subtotale</span>
+            <strong data-checkout-subtotal>0,00€</strong>
+          </div>
+          <div class="summary-row summary-row-discount" data-checkout-automatic-discount-row hidden>
+            <span>Sconto automatico 15%</span>
+            <strong data-checkout-automatic-discount>-0,00€</strong>
+          </div>
+          <div class="summary-row summary-row-discount" data-checkout-referral-discount-row hidden>
+            <span>Codice sconto 10%</span>
+            <strong data-checkout-referral-discount>-0,00€</strong>
+          </div>
+          <div class="summary-row summary-row-total" data-checkout-total-row hidden>
+            <span>Totale</span>
+            <strong data-checkout-total>0,00€</strong>
+          </div>
           <div class="summary-row">
             <span>Codice ordine</span>
             <strong data-order-code>HB-000000</strong>
@@ -326,6 +343,6 @@
 
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="i18n.js?v=restore-latest-ui-1"></script>
-    <script src="/assets-v/hide-zero-stock-1/script.js"></script>
+    <script src="/assets-v/checkout-discounts-1/script.js"></script>
   </body>
 </html>
