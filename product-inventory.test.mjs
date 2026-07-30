@@ -91,18 +91,61 @@ test("rejects a size or quantity that is not available", () => {
   assert.equal(product.inventory, 1);
 });
 
-test("overwrites the supplied stock once without creating duplicate products", () => {
-  const customNike = { id: "custom-nike-air-force-ms0glv9y", inventory: 9 };
+test("overwrites every supplied stock batch once without creating duplicate products", () => {
+  const customProducts = [
+    { id: "custom-nike-air-force-ms0glv9y", inventory: 9 },
+    { id: "custom-tuta-nike-nocta-mrz9w944" },
+    { id: "custom-jeans-dsquared-mrzczehr" },
+    { id: "custom-jeans-dsquared-mrzc7nvg" },
+    { id: "custom-jeans-dsquared-mrzgmoxb" },
+    { id: "custom-t-shirt-canada-goose-mrtge42v" },
+    { id: "custom-t-shirt-stone-island-mrzchege", variantGroup: "t-shirt-stone-island" },
+    { id: "custom-t-shirt-louis-vuitton-mrzbggz2" },
+    { id: "custom-t-shirt-louis-vuitton-mrzbsol6" },
+    { id: "custom-t-shirt-gucci-mrzceahi", collection: "Catalogo Uomo", variantGroup: "t-shirt-gucci" },
+    { id: "custom-t-shirt-off-white-mrzdiyqt" },
+  ];
   const data = {
     items: { "balenciaga-track-full-black": { inventory: 99 } },
-    custom: [customNike],
+    custom: customProducts,
   };
 
   assert.equal(applyProductStockOverwrite(data), true);
   assert.deepEqual(data.items["balenciaga-track-full-black"].inventoryBySize, { 40: 1, 41: 2, 43: 2, 44: 1, 45: 1 });
   assert.equal(data.items["balenciaga-track-full-black"].inventory, 7);
-  assert.deepEqual(customNike.inventoryBySize, { 44: 1 });
-  assert.deepEqual(customNike.sizes, ["44"]);
-  assert.deepEqual(data.appliedStockOverwriteIds, [productStockOverwriteId]);
+  assert.deepEqual(customProducts[0].inventoryBySize, { 44: 1 });
+  assert.deepEqual(customProducts[0].sizes, ["44"]);
+
+  const expectedInventory = {
+    "custom-tuta-nike-nocta-mrz9w944": { XS: 2, S: 2, L: 2 },
+    "tracksuit-nike-nocta": { S: 1, M: 1, L: 1 },
+    "custom-jeans-dsquared-mrzczehr": { 44: 1, 46: 1, 50: 1 },
+    "custom-jeans-dsquared-mrzc7nvg": { 50: 1 },
+    "custom-jeans-dsquared-mrzgmoxb": { 48: 1, 50: 1, 54: 1 },
+    "t-shirt-moncler": { S: 1, M: 1, XL: 1 },
+    "custom-t-shirt-canada-goose-mrtge42v": { S: 1, M: 1, XL: 1, XXL: 1 },
+    "t-shirt-off-white-tom-jerry": { M: 1, L: 1, XL: 1, XXL: 1 },
+    "custom-t-shirt-stone-island-mrzchege": { S: 1, M: 1, L: 1, XL: 1, XXL: 1 },
+    "t-shirt-stone-island": { M: 1, L: 1, XL: 1, XXL: 1 },
+    "custom-t-shirt-louis-vuitton-mrzbggz2": { M: 1, L: 1, XL: 1, XXL: 1 },
+    "custom-t-shirt-louis-vuitton-mrzbsol6": { M: 1, L: 1, XXL: 1 },
+    "t-shirt-louis-vuitton": { S: 1, M: 1, L: 1, XL: 1, XXL: 1 },
+    "t-shirt-gucci": { L: 1, XL: 1, XXL: 1 },
+    "t-shirt-balenciaga": { L: 1, XL: 1, XXL: 1 },
+    "custom-t-shirt-off-white-mrzdiyqt": { S: 1, M: 1, L: 1, XXL: 1 },
+    "t-shirt-givenchy": { S: 1, L: 1, XL: 1, XXL: 1 },
+  };
+  const customById = new Map(customProducts.map((product) => [product.id, product]));
+  Object.entries(expectedInventory).forEach(([id, inventoryBySize]) => {
+    assert.deepEqual((customById.get(id) || data.items[id]).inventoryBySize, inventoryBySize, id);
+  });
+  assert.equal(data.items["t-shirt-stone-island"].variantGroup, "");
+  assert.equal(customById.get("custom-t-shirt-stone-island-mrzchege").variantGroup, "");
+  assert.equal(data.items["t-shirt-gucci"].variantGroup, "");
+  assert.equal(customById.get("custom-t-shirt-gucci-mrzceahi").variantGroup, "");
+  assert.equal(customById.get("custom-t-shirt-gucci-mrzceahi").collection, "Catalogo Donna");
+  assert.equal(customById.get("custom-t-shirt-gucci-mrzceahi").category, "T-Shirts");
+  assert.equal(data.custom.length, customProducts.length);
+  assert.equal(data.appliedStockOverwriteIds.at(-1), productStockOverwriteId);
   assert.equal(applyProductStockOverwrite(data), false);
 });
