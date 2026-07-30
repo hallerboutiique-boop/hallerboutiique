@@ -5536,7 +5536,7 @@ function setupSiteChat() {
   const voiceAudio = root.querySelector("[data-chat-voice-audio]");
   const VoiceRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const recordedVoiceSupported = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
-  const useRecordedVoice = recordedVoiceSupported && (!VoiceRecognition || /firefox/i.test(navigator.userAgent));
+  const useRecordedVoice = recordedVoiceSupported;
   const voiceConversationSupported = Boolean(
     (VoiceRecognition || useRecordedVoice) && voiceAudio
   );
@@ -5566,6 +5566,11 @@ function setupSiteChat() {
   let voiceMediaRecorder = null;
   let voiceMediaChunks = [];
   let voiceRecordingTimer = 0;
+  let voiceInputAudioContext = null;
+  let voiceInputSource = null;
+  let voiceInputAnalyser = null;
+  let voiceInputSamples = null;
+  let voiceActivityFrame = 0;
   let activeTranscriptionRequest = null;
   let auroraFaceAnimationFrame = 0;
   let auroraIdleBlinkTimer = 0;
@@ -5734,11 +5739,26 @@ function setupSiteChat() {
     }
   };
 
+  const stopVoiceActivityDetection = () => {
+    if (voiceActivityFrame) window.cancelAnimationFrame(voiceActivityFrame);
+    voiceActivityFrame = 0;
+    try {
+      voiceInputSource?.disconnect();
+      voiceInputAnalyser?.disconnect();
+    } catch {
+      // The input graph may already be disconnected.
+    }
+    voiceInputSource = null;
+    voiceInputAnalyser = null;
+    voiceInputSamples = null;
+  };
+
   const stopVoiceRecognition = ({ discard = true } = {}) => {
     discardRecognitionResult = discard;
     voiceRecognitionTranscript = "";
     window.clearTimeout(voiceRecordingTimer);
     voiceRecordingTimer = 0;
+    stopVoiceActivityDetection();
     if (activeTranscriptionRequest) {
       activeTranscriptionRequest.abort();
       activeTranscriptionRequest = null;
@@ -5756,10 +5776,13 @@ function setupSiteChat() {
   };
 
   const releaseVoiceMediaStream = () => {
+    stopVoiceActivityDetection();
     voiceMediaStream?.getTracks().forEach((track) => track.stop());
     voiceMediaStream = null;
     voiceMediaRecorder = null;
     voiceMediaChunks = [];
+    if (voiceInputAudioContext) void voiceInputAudioContext.close().catch(() => {});
+    voiceInputAudioContext = null;
   };
 
   const stopVoiceConversation = ({ hideStage = true } = {}) => {
@@ -5903,10 +5926,65 @@ function setupSiteChat() {
     }
   };
 
+  const startVoiceActivityDetection = () => {
+    if (!voiceInputAudioContext || !voiceMediaStream?.active) return false;
+    stopVoiceActivityDetection();
+    try {
+      voiceInputSource = voiceInputAudioContext.createMediaStreamSource(voiceMediaStream);
+      voiceInputAnalyser = voiceInputAudioContext.createAnalyser();
+      voiceInputAnalyser.fftSize = 1024;
+      voiceInputAnalyser.smoothingTimeConstant = 0.18;
+      voiceInputSamples = new Float32Array(voiceInputAnalyser.fftSize);
+      voiceInputSource.connect(voiceInputAnalyser);
+    } catch {
+      stopVoiceActivityDetection();
+      return false;
+    }
+    const listeningStartedAt = window.performance.now();
+    let noiseFloor = 0.008;
+    let speechDetected = false;
+    let voicedFrames = 0;
+    let lastSpeechAt = 0;
+    const monitorVoice = (now) => {
+      if (!voiceMediaRecorder || voiceMediaRecorder.state !== "recording" || !voiceInputAnalyser || !voiceInputSamples) {
+        stopVoiceActivityDetection();
+        return;
+      }
+      voiceInputAnalyser.getFloatTimeDomainData(voiceInputSamples);
+      let energy = 0;
+      for (const sample of voiceInputSamples) energy += sample * sample;
+      const volume = Math.sqrt(energy / voiceInputSamples.length);
+      const elapsed = now - listeningStartedAt;
+      if (!speechDetected && elapsed < 550 && volume < 0.04) {
+        noiseFloor = noiseFloor * 0.82 + volume * 0.18;
+      }
+      const speechThreshold = Math.max(0.014, noiseFloor * 2.45);
+      if (volume >= speechThreshold) {
+        voicedFrames += 1;
+        if (voicedFrames >= 2) {
+          speechDetected = true;
+          lastSpeechAt = now;
+        }
+      } else {
+        voicedFrames = 0;
+      }
+      if (speechDetected && now - lastSpeechAt >= 3200 && elapsed >= 3800) {
+        voiceMediaRecorder.stop();
+        return;
+      }
+      voiceActivityFrame = window.requestAnimationFrame(monitorVoice);
+    };
+    voiceActivityFrame = window.requestAnimationFrame(monitorVoice);
+    return true;
+  };
+
   const startRecordedVoiceListening = async () => {
     if (!voiceConversationActive || voiceRecognitionStarted || activeTranscriptionRequest) return;
     voiceRecognitionStarted = true;
     try {
+      const InputAudioContext = window.AudioContext || window.webkitAudioContext;
+      if (InputAudioContext && !voiceInputAudioContext) voiceInputAudioContext = new InputAudioContext();
+      if (voiceInputAudioContext?.state === "suspended") await voiceInputAudioContext.resume();
       if (!voiceMediaStream?.active) {
         voiceMediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
@@ -5938,6 +6016,7 @@ function setupSiteChat() {
       voiceMediaRecorder.addEventListener("stop", () => {
         window.clearTimeout(voiceRecordingTimer);
         voiceRecordingTimer = 0;
+        stopVoiceActivityDetection();
         voiceRecognitionStarted = false;
         const shouldDiscard = discardRecognitionResult;
         discardRecognitionResult = false;
@@ -5954,9 +6033,10 @@ function setupSiteChat() {
       discardRecognitionResult = false;
       setVoiceState("listening");
       voiceMediaRecorder.start(250);
+      startVoiceActivityDetection();
       voiceRecordingTimer = window.setTimeout(() => {
         if (voiceMediaRecorder?.state === "recording") voiceMediaRecorder.stop();
-      }, 8000);
+      }, 75000);
     } catch (error) {
       voiceRecognitionStarted = false;
       releaseVoiceMediaStream();
@@ -5985,7 +6065,7 @@ function setupSiteChat() {
     }
     if (!voiceRecognition) {
       voiceRecognition = new VoiceRecognition();
-      voiceRecognition.continuous = false;
+      voiceRecognition.continuous = true;
       voiceRecognition.interimResults = true;
       voiceRecognition.maxAlternatives = 1;
       voiceRecognition.onstart = () => {
