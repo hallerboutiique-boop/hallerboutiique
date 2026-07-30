@@ -205,6 +205,7 @@ const contentTypes = {
   ".ico": "image/x-icon",
   ".webp": "image/webp",
   ".mp4": "video/mp4",
+  ".wav": "audio/wav",
 };
 const publicFiles = new Set([
   "/index.html",
@@ -333,7 +334,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/catalog-stock-variants-2/styles.css", "/styles.css"],
 ]);
 const publicAssetExtensions = new Set([".png", ".jpg", ".jpeg", ".svg", ".ico", ".webp"]);
-const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4"]);
+const staticAssetExtensions = new Set([...publicAssetExtensions, ".mp4", ".wav"]);
 
 const oauthProviders = {
   google: {
@@ -5359,7 +5360,7 @@ async function serveStatic(req, res, url) {
     const stat = await fs.stat(filePath);
     if (!stat.isFile()) return notFound(res);
     const ext = path.extname(filePath).toLowerCase();
-    const immutableAsset = [".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico", ".mp4"].includes(ext);
+    const immutableAsset = [".png", ".jpg", ".jpeg", ".svg", ".webp", ".ico", ".mp4", ".wav"].includes(ext);
     res.writeHead(200, {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,

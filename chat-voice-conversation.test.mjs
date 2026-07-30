@@ -59,6 +59,8 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(server, /OPENAI_TRANSCRIBE_MODEL \|\| "gpt-4o-mini-transcribe"/);
   assert.match(server, /url\.pathname === "\/api\/chat\/transcribe"/);
   assert.match(server, /microphone=\(self\)/);
+  assert.match(server, /"\.wav": "audio\/wav"/);
+  assert.match(server, /staticAssetExtensions = new Set\(\[\.\.\.publicAssetExtensions, "\.mp4", "\.wav"\]\)/);
   assert.match(server, /instructions: auroraSpeechInstructions\[language\]/);
   assert.match(server, /speed: 0\.91/);
   assert.match(server, /function canRequestAuroraSpeech\(ip\)/);
