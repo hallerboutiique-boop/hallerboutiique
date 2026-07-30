@@ -6200,14 +6200,6 @@ body.motion-enabled .product-actions .buy-action:hover {
   align-items: end;
 }
 
-.checkout-auto-discount-notice {
-  margin: -2px 0 16px;
-  color: var(--gold);
-  font-size: 14px;
-  font-weight: 700;
-  line-height: 1.5;
-}
-
 .discount-code button {
   display: inline-flex;
   align-items: center;
@@ -6823,6 +6815,10 @@ body.motion-enabled .product-actions .buy-action:hover {
   border-bottom: 1px solid var(--panel-line);
   color: var(--text);
   font-size: 15px;
+}
+
+.summary-row[hidden] {
+  display: none !important;
 }
 
 .summary-row span {

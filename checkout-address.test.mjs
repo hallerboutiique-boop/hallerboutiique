@@ -80,11 +80,17 @@ test("checkout markup and server expose required autocomplete flow", async () =>
   for (const field of ["city", "postal-code", "province", "country"]) {
     assert.match(checkout, new RegExp(`name="${field}"[^>]*readonly required`));
   }
-  assert.match(checkout, /Spendi oltre 399€ e ricevi automaticamente il 15% di sconto/);
+  assert.doesNotMatch(checkout, /Spendi oltre 399€ e ricevi automaticamente il 15% di sconto/);
+  assert.doesNotMatch(checkout, /Sconto automatico 15%/);
+  assert.doesNotMatch(checkout, /Codice sconto 10%/);
+  assert.doesNotMatch(checkout, /placeholder="HALLER10"/);
   assert.match(checkout, /data-checkout-automatic-discount/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   assert.match(script, /function setupCheckoutAddressAutocomplete/);
+  assert.match(script, /`Sconto automatico \$\{quote\.automaticPercentage\}%`/);
+  assert.match(script, /`Codice sconto \$\{quote\.referralPercentage\}%`/);
+  assert.match(styles, /\.summary-row\[hidden\]\s*\{[\s\S]*?display:\s*none !important/);
   assert.match(script, /\/api\/address-suggestions\?q=/);
   assert.match(script, /addressVerified: Boolean\(selectedCheckoutAddress\)/);
   assert.match(server, /validateCheckoutOrder\(body\)/);

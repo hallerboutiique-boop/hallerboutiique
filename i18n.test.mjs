@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -106,7 +106,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(isNormalCatalogProduct\)/);
-  assert.match(index, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
+  assert.match(index, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -331,7 +331,7 @@ test("try-on uses an asynchronous job so proxies cannot break a long image reque
 test("checkout keeps the home logo size inline with the header icons", async () => {
   const [checkout, styles] = await Promise.all([readFile("checkout.html", "utf8"), readFile("styles.css", "utf8")]);
   assert.match(checkout, /class="site-header utility-site-header checkout-site-header"/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-columns:\s*36px minmax\(0, 1fr\) 76px/);
   assert.match(styles, /\.checkout-site-header \.header-bar\s*\{[\s\S]*?grid-template-rows:\s*76px/);
   assert.match(styles, /\.checkout-site-header \.logo\s*\{[\s\S]*?position:\s*absolute[\s\S]*?top:\s*50%[\s\S]*?left:\s*50%/);
@@ -352,7 +352,7 @@ test("mobile logos use collision-free layouts on every storefront page", async (
     const expectedStyles = pageNames[index] === "admin.html"
       ? /\/assets-v\/admin-discount-codes-1\/styles\.css/
       : ["index.html", "account.html", "checkout.html", "product.html", "ultimi-disponibili.html"].includes(pageNames[index])
-        ? /\/assets-v\/aurora-chat-safari-1\/styles\.css/
+        ? /\/assets-v\/checkout-discount-visibility-1\/styles\.css/
         : /\/assets-v\/admin-original-price-5\/styles\.css/;
     assert.match(html, expectedStyles, pageNames[index]);
   });
@@ -380,12 +380,12 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, pageIndex) => {
-    assert.match(html, /\/assets-v\/aurora-chat-safari-1\/script\.js/, scriptPages[pageIndex]);
+    assert.match(html, /\/assets-v\/checkout-discount-visibility-1\/script\.js/, scriptPages[pageIndex]);
   });
-  assert.match(index, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-  assert.match(index, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-  assert.match(checkout, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+  assert.match(index, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+  assert.match(index, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/admin\.js", "\/admin\.js"/);
@@ -398,8 +398,8 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-discounts-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-discounts-1\/styles\.css", "\/styles\.css"/);
-  assert.match(server, /"\/assets-v\/aurora-chat-safari-1\/script\.js", "\/script\.js"/);
-  assert.match(server, /"\/assets-v\/aurora-chat-safari-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/checkout-discount-visibility-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/checkout-discount-visibility-1\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/catalog-last-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-stock-variants-2\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
@@ -412,8 +412,8 @@ test("last-stock cards show available sizes with a visible pulse", async () => {
     readFile("script.js", "utf8"),
     readFile("styles.css", "utf8"),
   ]);
-  assert.match(page, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-  assert.match(page, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+  assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+  assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   assert.match(script, /const visibleSizes = onlyAvailable && inventoryTrackedBySize[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
   assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
   assert.match(script, /is-last-stock-available/);
@@ -432,8 +432,8 @@ test("every product can share its direct page through social and native apps", a
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-    assert.match(page, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+    assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   }
   assert.match(script, /function productAbsoluteUrl\(product\)[\s\S]*?new URL\(productPageUrl\(product\), window\.location\.origin\)\.href/);
   assert.equal((script.match(/\$\{createProductShareMarkup\(product\)\}/g) || []).length, 2);
@@ -511,8 +511,8 @@ test("color variants stay grouped while preserving their own gallery, price and 
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/aurora-chat-safari-1\/script\.js/);
-    assert.match(page, /\/assets-v\/aurora-chat-safari-1\/styles\.css/);
+    assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/script\.js/);
+    assert.match(page, /\/assets-v\/checkout-discount-visibility-1\/styles\.css/);
   }
   assert.match(admin, /\/assets-v\/admin-discount-codes-1\/admin\.js/);
   for (const field of ["variantGroup", "variantColor", "variantSwatch", "variantOrder"]) {

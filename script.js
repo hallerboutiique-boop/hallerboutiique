@@ -4495,6 +4495,16 @@ function setCheckoutSummaryRow(selector, visible, value) {
   if (strong) strong.textContent = value;
 }
 
+function setCheckoutDiscountSummaryRow(selector, visible, value, label) {
+  const row = document.querySelector(selector);
+  if (!row) return;
+  row.hidden = !visible;
+  const strong = row.querySelector("strong");
+  const span = row.querySelector("span");
+  if (strong) strong.textContent = value;
+  if (span && visible) span.textContent = label;
+}
+
 function refreshCheckoutDiscountSummary() {
   const products = collectCheckoutProducts();
   const fingerprint = checkoutDiscountFingerprint(products);
@@ -4502,8 +4512,18 @@ function refreshCheckoutDiscountSummary() {
   const quote = appliedCheckoutDiscount?.quote || checkoutLocalQuote(products);
   const hasProducts = products.length > 0;
   setCheckoutSummaryRow("[data-checkout-subtotal-row]", hasProducts, checkoutCurrency(quote.subtotal));
-  setCheckoutSummaryRow("[data-checkout-automatic-discount-row]", hasProducts && quote.automaticDiscount > 0, `-${checkoutCurrency(quote.automaticDiscount)}`);
-  setCheckoutSummaryRow("[data-checkout-referral-discount-row]", hasProducts && quote.referralDiscount > 0, `-${checkoutCurrency(quote.referralDiscount)}`);
+  setCheckoutDiscountSummaryRow(
+    "[data-checkout-automatic-discount-row]",
+    hasProducts && quote.automaticDiscount > 0,
+    `-${checkoutCurrency(quote.automaticDiscount)}`,
+    `Sconto automatico ${quote.automaticPercentage}%`
+  );
+  setCheckoutDiscountSummaryRow(
+    "[data-checkout-referral-discount-row]",
+    hasProducts && quote.referralDiscount > 0,
+    `-${checkoutCurrency(quote.referralDiscount)}`,
+    `Codice sconto ${quote.referralPercentage}%`
+  );
   setCheckoutSummaryRow("[data-checkout-total-row]", hasProducts, checkoutCurrency(quote.total));
 }
 
