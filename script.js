@@ -5458,13 +5458,13 @@ function setupSiteChat() {
     `
       <section class="site-chat" data-site-chat aria-label="Assistente virtuale Haller Boutique" data-i18n-aria-label="chat-label">
         <button class="site-chat-launcher" type="button" data-chat-toggle aria-expanded="false" aria-controls="site-chat-panel" aria-label="Apri assistente virtuale" data-i18n-aria-label="chat-open">
-          <img src="/assets/chat-assistant-avatar-voice.jpg" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+          <img src="/assets/chat-assistant-avatar-live-smile.jpg" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
           <span class="site-chat-online-copy"><strong>Aurora</strong><small data-i18n="chat-online">Online</small></span>
           <i class="site-chat-online-dot" aria-hidden="true"></i>
         </button>
         <div class="site-chat-panel" id="site-chat-panel" data-chat-panel hidden>
           <header class="site-chat-header">
-            <img src="/assets/chat-assistant-avatar-voice.jpg" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
+            <img src="/assets/chat-assistant-avatar-live-smile.jpg" alt="Ritratto di Aurora, assistente virtuale" data-i18n-alt="chat-avatar-alt" draggable="false">
             <div><strong>Aurora</strong><span data-i18n="chat-status">Assistente online</span></div>
             <button type="button" data-chat-toggle aria-label="Chiudi assistente virtuale" data-i18n-aria-label="chat-close"><i data-lucide="x"></i></button>
           </header>
@@ -5482,7 +5482,13 @@ function setupSiteChat() {
           <div class="site-chat-conversation" data-chat-conversation hidden>
             <div class="site-chat-voice-stage" data-chat-voice-stage hidden>
               <div class="site-chat-voice-avatar" aria-hidden="true">
-                <img src="/assets/chat-assistant-avatar-voice.jpg" alt="" draggable="false">
+                <span class="site-chat-voice-portrait" data-chat-voice-portrait>
+                  <img class="site-chat-voice-frame is-active" data-chat-face-frame="smile" src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false">
+                  <img class="site-chat-voice-frame" data-chat-face-frame="talk-small" src="/assets/chat-assistant-avatar-live-talk-small.jpg" alt="" draggable="false">
+                  <img class="site-chat-voice-frame" data-chat-face-frame="talk-wide" src="/assets/chat-assistant-avatar-live-talk-wide.jpg" alt="" draggable="false">
+                  <img class="site-chat-voice-frame" data-chat-face-frame="blink" src="/assets/chat-assistant-avatar-live-blink.jpg" alt="" draggable="false">
+                  <span class="site-chat-voice-torso"><img src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false"></span>
+                </span>
                 <i class="site-chat-voice-ring"></i>
                 <span class="site-chat-voice-wave"><i></i><i></i><i></i><i></i></span>
               </div>
@@ -5522,6 +5528,8 @@ function setupSiteChat() {
   const voiceToggleLabel = root.querySelector("[data-chat-voice-toggle-label]");
   const voiceStatus = root.querySelector("[data-chat-voice-status]");
   const voiceStopButton = root.querySelector("[data-chat-voice-stop]");
+  const voicePortrait = root.querySelector("[data-chat-voice-portrait]");
+  const voiceFaceFrames = [...root.querySelectorAll("[data-chat-face-frame]")];
   const VoiceRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   const voiceConversationSupported = Boolean(
     VoiceRecognition && window.speechSynthesis && window.SpeechSynthesisUtterance
@@ -5548,6 +5556,14 @@ function setupSiteChat() {
   let voiceRecognitionTranscript = "";
   let discardRecognitionResult = false;
   let recognitionHadError = false;
+  let auroraFaceAnimationFrame = 0;
+  let auroraIdleBlinkTimer = 0;
+  let auroraBlinkResetTimer = 0;
+  let auroraAudioContext = null;
+  let auroraAudioSource = null;
+  let auroraAudioAnalyser = null;
+  let auroraAudioSamples = null;
+  let auroraCurrentFaceFrame = "smile";
   let sendMessage;
   input.value = readChatDraft();
   translatePage();
@@ -5565,6 +5581,109 @@ function setupSiteChat() {
     });
   };
 
+  const setAuroraFaceFrame = (frameName) => {
+    if (auroraCurrentFaceFrame === frameName) return;
+    auroraCurrentFaceFrame = frameName;
+    voiceFaceFrames.forEach((frame) => {
+      frame.classList.toggle("is-active", frame.dataset.chatFaceFrame === frameName);
+    });
+  };
+
+  const clearAuroraAudioGraph = () => {
+    try {
+      auroraAudioSource?.disconnect();
+      auroraAudioAnalyser?.disconnect();
+    } catch {
+      // The audio graph may already be disconnected.
+    }
+    auroraAudioSource = null;
+    auroraAudioAnalyser = null;
+    auroraAudioSamples = null;
+  };
+
+  const scheduleAuroraIdleBlink = () => {
+    window.clearTimeout(auroraIdleBlinkTimer);
+    window.clearTimeout(auroraBlinkResetTimer);
+    if (voiceStage.hidden || voiceStage.classList.contains("is-speaking") || auroraFaceAnimationFrame) return;
+    auroraIdleBlinkTimer = window.setTimeout(() => {
+      if (voiceStage.hidden || voiceStage.classList.contains("is-speaking") || auroraFaceAnimationFrame) return;
+      setAuroraFaceFrame("blink");
+      auroraBlinkResetTimer = window.setTimeout(() => {
+        setAuroraFaceFrame("smile");
+        scheduleAuroraIdleBlink();
+      }, 145);
+    }, 2200 + Math.random() * 2600);
+  };
+
+  const stopAuroraFaceAnimation = ({ reset = true } = {}) => {
+    if (auroraFaceAnimationFrame) window.cancelAnimationFrame(auroraFaceAnimationFrame);
+    auroraFaceAnimationFrame = 0;
+    voicePortrait.classList.remove("is-lip-syncing");
+    clearAuroraAudioGraph();
+    if (reset) setAuroraFaceFrame("smile");
+    scheduleAuroraIdleBlink();
+  };
+
+  const prepareAuroraAudioAnalyser = async (audio) => {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContext) return false;
+    try {
+      if (!auroraAudioContext) auroraAudioContext = new AudioContext();
+      if (auroraAudioContext.state !== "running") await auroraAudioContext.resume();
+      if (auroraAudioContext.state !== "running") return false;
+      clearAuroraAudioGraph();
+      auroraAudioSource = auroraAudioContext.createMediaElementSource(audio);
+      auroraAudioAnalyser = auroraAudioContext.createAnalyser();
+      auroraAudioAnalyser.fftSize = 256;
+      auroraAudioAnalyser.smoothingTimeConstant = 0.58;
+      auroraAudioSamples = new Uint8Array(auroraAudioAnalyser.fftSize);
+      auroraAudioSource.connect(auroraAudioAnalyser);
+      auroraAudioAnalyser.connect(auroraAudioContext.destination);
+      return true;
+    } catch {
+      clearAuroraAudioGraph();
+      return false;
+    }
+  };
+
+  const startAuroraFaceAnimation = (audio = null) => {
+    if (auroraFaceAnimationFrame) window.cancelAnimationFrame(auroraFaceAnimationFrame);
+    window.clearTimeout(auroraIdleBlinkTimer);
+    window.clearTimeout(auroraBlinkResetTimer);
+    voicePortrait.classList.add("is-lip-syncing");
+    const startedAt = window.performance.now();
+    let nextBlinkAt = startedAt + 1900 + Math.random() * 2400;
+    let blinkUntil = 0;
+    const renderFrame = (now) => {
+      if (!voiceConversationActive || voiceStage.hidden || !voiceStage.classList.contains("is-speaking")) {
+        stopAuroraFaceAnimation();
+        return;
+      }
+      if (now >= nextBlinkAt) {
+        blinkUntil = now + 135;
+        nextBlinkAt = now + 2400 + Math.random() * 3000;
+      }
+      if (now < blinkUntil) {
+        setAuroraFaceFrame("blink");
+      } else if (auroraAudioAnalyser && auroraAudioSamples) {
+        auroraAudioAnalyser.getByteTimeDomainData(auroraAudioSamples);
+        let energy = 0;
+        for (const sample of auroraAudioSamples) {
+          const normalized = (sample - 128) / 128;
+          energy += normalized * normalized;
+        }
+        const volume = Math.sqrt(energy / auroraAudioSamples.length);
+        setAuroraFaceFrame(volume > 0.16 ? "talk-wide" : volume > 0.045 ? "talk-small" : "smile");
+      } else {
+        const elapsed = audio ? audio.currentTime * 1000 : now - startedAt;
+        const phase = Math.floor(elapsed / 105) % 9;
+        setAuroraFaceFrame(["talk-small", "talk-wide", "talk-small", "smile", "talk-small", "talk-wide", "talk-small", "smile", "smile"][phase]);
+      }
+      auroraFaceAnimationFrame = window.requestAnimationFrame(renderFrame);
+    };
+    auroraFaceAnimationFrame = window.requestAnimationFrame(renderFrame);
+  };
+
   const setVoiceState = (state, customText = "") => {
     voiceStage.classList.remove("is-ready", "is-listening", "is-processing", "is-speaking", "is-error");
     voiceStage.classList.add(`is-${state}`);
@@ -5576,6 +5695,10 @@ function setupSiteChat() {
       error: "chat-voice-unsupported",
     }[state] || "chat-voice-ready";
     voiceStatus.textContent = customText || translate(key);
+    if (state !== "speaking") {
+      if (auroraFaceAnimationFrame) stopAuroraFaceAnimation();
+      else scheduleAuroraIdleBlink();
+    }
   };
 
   const updateVoiceToggle = () => {
@@ -5604,6 +5727,7 @@ function setupSiteChat() {
       activeAuroraAudioResolve = null;
       resolve();
     }
+    stopAuroraFaceAnimation();
     window.speechSynthesis?.cancel();
     if (activeBrowserSpeechResolve) {
       const resolve = activeBrowserSpeechResolve;
@@ -5646,20 +5770,23 @@ function setupSiteChat() {
       || voices.find((voice) => voice.lang?.toLowerCase().startsWith(languageCode))
       || null;
     utterance.lang = locale;
-    utterance.rate = 0.92;
-    utterance.pitch = 1.06;
+    utterance.rate = 0.9;
+    utterance.pitch = 1;
     utterance.volume = 1;
     utterance.onend = () => {
+      stopAuroraFaceAnimation();
       activeBrowserSpeechResolve = null;
       resolve();
     };
     utterance.onerror = (event) => {
+      stopAuroraFaceAnimation();
       activeBrowserSpeechResolve = null;
       if (event.error === "canceled" || event.error === "interrupted") resolve();
       else reject(new Error(translate("chat-error")));
     };
     activeBrowserSpeechResolve = resolve;
     window.speechSynthesis.cancel();
+    startAuroraFaceAnimation();
     window.speechSynthesis.speak(utterance);
   });
 
@@ -5687,6 +5814,8 @@ function setupSiteChat() {
       const audio = new Audio(activeAuroraAudioUrl);
       activeAuroraAudio = audio;
       setVoiceState("speaking");
+      await prepareAuroraAudioAnalyser(audio);
+      startAuroraFaceAnimation(audio);
       await new Promise((resolve, reject) => {
         activeAuroraAudioResolve = resolve;
         audio.addEventListener("ended", resolve, { once: true });
@@ -5702,6 +5831,7 @@ function setupSiteChat() {
         setVoiceState("error", translate("chat-error"));
       }
     } finally {
+      stopAuroraFaceAnimation();
       if (activeSpeechRequest === controller) activeSpeechRequest = null;
       activeAuroraAudioResolve = null;
       if (activeAuroraAudio) {

@@ -5744,7 +5744,7 @@ body.motion-enabled .product-actions .buy-action:hover {
 
 .site-chat-voice-stage {
   display: grid;
-  grid-template-columns: 84px minmax(0, 1fr) 34px;
+  grid-template-columns: 142px minmax(0, 1fr) 34px;
   align-items: center;
   gap: 11px;
   min-width: 0;
@@ -5762,19 +5762,57 @@ body.motion-enabled .product-actions .buy-action:hover {
 .site-chat-voice-avatar {
   position: relative;
   display: grid;
-  width: 80px;
-  height: 92px;
+  width: 138px;
+  height: 154px;
   place-items: center;
 }
 
-.site-chat-voice-avatar img {
+.site-chat-voice-portrait {
+  position: relative;
   z-index: 2;
-  width: 74px;
-  height: 86px;
-  object-fit: cover;
+  display: block;
+  width: 132px;
+  height: 148px;
+  overflow: hidden;
   border: 2px solid var(--gold);
   border-radius: 16px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
+  transform-origin: 50% 72%;
+  animation: aurora-body-idle 5.8s ease-in-out infinite;
+}
+
+.site-chat-voice-frame,
+.site-chat-voice-torso,
+.site-chat-voice-torso img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.site-chat-voice-frame,
+.site-chat-voice-torso img {
+  object-fit: cover;
+}
+
+.site-chat-voice-frame {
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 85ms linear;
+}
+
+.site-chat-voice-frame.is-active {
+  opacity: 1;
+}
+
+.site-chat-voice-torso {
+  z-index: 2;
+  overflow: hidden;
+  pointer-events: none;
+  transform-origin: 50% 68%;
+  animation: aurora-torso-breath 3.8s ease-in-out infinite;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 34%, rgba(0, 0, 0, 0.28) 47%, #000 62%);
+  mask-image: linear-gradient(to bottom, transparent 34%, rgba(0, 0, 0, 0.28) 47%, #000 62%);
 }
 
 .site-chat-voice-ring {
@@ -5878,8 +5916,16 @@ body.motion-enabled .product-actions .buy-action:hover {
   animation-delay: 330ms;
 }
 
-.site-chat-voice-stage.is-speaking .site-chat-voice-avatar img {
-  animation: aurora-speaking 1.7s ease-in-out infinite;
+.site-chat-voice-stage.is-speaking .site-chat-voice-portrait {
+  animation: aurora-speaking 2.45s ease-in-out infinite;
+}
+
+.site-chat-voice-stage.is-speaking .site-chat-voice-torso {
+  animation: aurora-torso-speaking 2.6s ease-in-out infinite;
+}
+
+.site-chat-voice-stage.is-listening .site-chat-voice-portrait {
+  animation-duration: 4.6s;
 }
 
 .site-chat-voice-stage.is-error .site-chat-voice-copy strong {
@@ -5887,8 +5933,26 @@ body.motion-enabled .product-actions .buy-action:hover {
 }
 
 @keyframes aurora-speaking {
-  0%, 100% { transform: scale(1) rotate(-0.5deg); }
-  50% { transform: scale(1.045) rotate(0.7deg); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(-0.35deg); }
+  28% { transform: translate3d(0.7px, -0.9px, 0) scale(1.012) rotate(0.45deg); }
+  55% { transform: translate3d(-0.5px, -0.25px, 0) scale(1.006) rotate(-0.12deg); }
+  78% { transform: translate3d(0.35px, -0.65px, 0) scale(1.01) rotate(0.28deg); }
+}
+
+@keyframes aurora-body-idle {
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(-0.18deg); }
+  50% { transform: translate3d(0, -0.7px, 0) scale(1.008) rotate(0.2deg); }
+}
+
+@keyframes aurora-torso-breath {
+  0%, 100% { transform: translate3d(0, 0, 0) scaleX(1) scaleY(1); }
+  50% { transform: translate3d(0, -0.75px, 0) scaleX(1.008) scaleY(1.014); }
+}
+
+@keyframes aurora-torso-speaking {
+  0%, 100% { transform: translate3d(0, 0, 0) scaleX(1) scaleY(1); }
+  34% { transform: translate3d(0.2px, -0.8px, 0) scaleX(1.01) scaleY(1.016); }
+  68% { transform: translate3d(-0.2px, -0.35px, 0) scaleX(1.005) scaleY(1.008); }
 }
 
 @keyframes aurora-voice-ring {
@@ -6097,7 +6161,8 @@ body.motion-enabled .product-actions .buy-action:hover {
 @media (prefers-reduced-motion: reduce) {
   .site-chat-voice-stage .site-chat-voice-ring,
   .site-chat-voice-stage .site-chat-voice-wave i,
-  .site-chat-voice-stage .site-chat-voice-avatar img {
+  .site-chat-voice-stage .site-chat-voice-portrait,
+  .site-chat-voice-stage .site-chat-voice-torso {
     animation: none;
   }
 }
@@ -6204,19 +6269,19 @@ body.motion-enabled .product-actions .buy-action:hover {
   }
 
   .site-chat-voice-stage {
-    grid-template-columns: 72px minmax(0, 1fr) 34px;
+    grid-template-columns: 112px minmax(0, 1fr) 34px;
     gap: 8px;
     padding: 9px 11px;
   }
 
   .site-chat-voice-avatar {
-    width: 68px;
-    height: 78px;
+    width: 108px;
+    height: 124px;
   }
 
-  .site-chat-voice-avatar img {
-    width: 62px;
-    height: 72px;
+  .site-chat-voice-portrait {
+    width: 102px;
+    height: 118px;
   }
 }
 

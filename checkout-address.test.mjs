@@ -85,8 +85,8 @@ test("checkout markup and server expose required autocomplete flow", async () =>
   assert.doesNotMatch(checkout, /Codice sconto 10%/);
   assert.doesNotMatch(checkout, /placeholder="HALLER10"/);
   assert.match(checkout, /data-checkout-automatic-discount/);
-  assert.match(checkout, /\/assets-v\/aurora-voice-2\/script\.js/);
-  assert.match(checkout, /\/assets-v\/aurora-voice-2\/styles\.css/);
+  assert.match(checkout, /\/assets-v\/aurora-live-2\/script\.js/);
+  assert.match(checkout, /\/assets-v\/aurora-live-2\/styles\.css/);
   assert.match(script, /function setupCheckoutAddressAutocomplete/);
   assert.match(script, /`Sconto automatico \$\{quote\.automaticPercentage\}%`/);
   assert.match(script, /`Codice sconto \$\{quote\.referralPercentage\}%`/);

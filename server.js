@@ -95,7 +95,7 @@ const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
 const openaiTtsModel = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
-const openaiTtsVoice = process.env.OPENAI_TTS_VOICE || "marin";
+const openaiTtsVoice = process.env.OPENAI_TTS_VOICE || "shimmer";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
@@ -299,6 +299,10 @@ const versionedPublicFiles = new Map([
   ["/assets-v/aurora-voice-1/styles.css", "/styles.css"],
   ["/assets-v/aurora-voice-2/script.js", "/script.js"],
   ["/assets-v/aurora-voice-2/styles.css", "/styles.css"],
+  ["/assets-v/aurora-live-1/script.js", "/script.js"],
+  ["/assets-v/aurora-live-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-live-2/script.js", "/script.js"],
+  ["/assets-v/aurora-live-2/styles.css", "/styles.css"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -2964,13 +2968,13 @@ const siteChatDiscountMessages = {
 };
 
 const auroraSpeechInstructions = {
-  it: "Parla in italiano con una voce femminile adulta, calda, sicura e naturalmente seducente ma sempre elegante e professionale. Mantieni un ritmo leggermente lento, sorridi spesso mentre parli e usa un tono accogliente da consulente di una boutique di lusso.",
-  en: "Speak in English with a warm, confident adult feminine voice that is subtly alluring, elegant and professional. Use a slightly relaxed pace, smile often while speaking and sound like a welcoming luxury boutique adviser.",
-  fr: "Parlez en français avec une voix féminine adulte, chaleureuse, assurée, subtilement séduisante, élégante et professionnelle. Gardez un rythme légèrement détendu et souriez souvent en parlant.",
-  de: "Sprechen Sie Deutsch mit einer warmen, selbstbewussten erwachsenen weiblichen Stimme, dezent verführerisch, elegant und professionell. Sprechen Sie leicht entspannt und lächeln Sie häufig hörbar.",
-  es: "Habla en español con una voz femenina adulta, cálida y segura, sutilmente seductora, elegante y profesional. Mantén un ritmo ligeramente relajado y sonríe a menudo al hablar.",
-  sq: "Fol në shqip me një zë femëror të rritur, të ngrohtë dhe të sigurt, lehtësisht tërheqës, elegant dhe profesional. Mbaj një ritëm të qetë dhe buzëqesh shpesh gjatë të folurit.",
-  ro: "Vorbește în română cu o voce feminină adultă, caldă și sigură, subtil seducătoare, elegantă și profesională. Păstrează un ritm ușor relaxat și zâmbește des în timp ce vorbești.",
+  it: "Parla in italiano come una donna adulta reale, con una voce vellutata, intima, calda, sicura e naturalmente sensuale, sempre elegante. Usa intonazione spontanea, micro-pause naturali, respiri leggerissimi e un sorriso percepibile nella voce. Varia ritmo ed enfasi come in una conversazione dal vivo. Evita totalmente cadenza da speaker, pronuncia scandita, monotonia o tono robotico. Sii accogliente e coinvolgente come una consulente personale di una boutique di lusso.",
+  en: "Speak like a real adult woman with a velvety, intimate, warm, confident and naturally alluring voice that remains elegant. Use spontaneous intonation, natural micro-pauses, very subtle breaths and an audible smile. Vary pacing and emphasis like a live conversation. Never sound like an announcer, scripted assistant or robot.",
+  fr: "Parlez comme une femme adulte réelle avec une voix veloutée, intime, chaleureuse, assurée, naturellement séduisante et élégante. Utilisez une intonation spontanée, des micro-pauses naturelles, de très légères respirations et un sourire audible. Évitez toute diction de présentatrice ou tonalité robotique.",
+  de: "Sprechen Sie wie eine echte erwachsene Frau mit einer samtigen, intimen, warmen, selbstbewussten, natürlich verführerischen und eleganten Stimme. Nutzen Sie spontane Intonation, natürliche Mikropausen, sehr dezente Atemzüge und ein hörbares Lächeln. Klingen Sie niemals wie eine Sprecherin oder ein Roboter.",
+  es: "Habla como una mujer adulta real con una voz aterciopelada, íntima, cálida, segura, naturalmente sensual y elegante. Usa entonación espontánea, micropausas naturales, respiraciones muy sutiles y una sonrisa audible. Evita por completo la cadencia de locutora o el tono robótico.",
+  sq: "Fol si një grua e rritur reale, me zë të butë, intim, të ngrohtë, të sigurt, natyrshëm tërheqës dhe elegant. Përdor intonacion spontan, mikro-pauza natyrale, frymëmarrje shumë të lehta dhe një buzëqeshje që dëgjohet. Mos tingëllo si prezantuese apo robot.",
+  ro: "Vorbește ca o femeie adultă reală, cu o voce catifelată, intimă, caldă, sigură, natural senzuală și elegantă. Folosește intonație spontană, micropauze naturale, respirații foarte discrete și un zâmbet perceptibil. Evită complet ritmul de prezentatoare sau tonul robotic.",
 };
 
 const tryOnLanguages = {
@@ -3119,7 +3123,7 @@ async function requestAuroraSpeech(text, language) {
         input: text,
         instructions: auroraSpeechInstructions[language],
         response_format: "mp3",
-        speed: 0.94,
+        speed: 0.91,
       }),
       signal: controller.signal,
     });
