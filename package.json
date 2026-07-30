@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test i18n.test.mjs product-image-zoom.test.mjs try-on-image.test.mjs mobile-admin.test.mjs checkout-address.test.mjs product-inventory.test.mjs product-likes.test.mjs delivery-estimate.test.mjs order-discounts.test.mjs admin-discount-codes.test.mjs chat-referrals.test.mjs chat-checkout.test.mjs aurora-checkout-actions.test.mjs chat-safari-layout.test.mjs chat-session-persistence.test.mjs chat-product-previews.test.mjs",
+    "test": "node --test i18n.test.mjs product-image-zoom.test.mjs try-on-image.test.mjs mobile-admin.test.mjs checkout-address.test.mjs product-inventory.test.mjs product-likes.test.mjs delivery-estimate.test.mjs order-discounts.test.mjs admin-discount-codes.test.mjs chat-referrals.test.mjs chat-checkout.test.mjs aurora-checkout-actions.test.mjs chat-safari-layout.test.mjs chat-session-persistence.test.mjs chat-product-previews.test.mjs chat-voice-conversation.test.mjs",
     "mobile:assets": "node scripts/generate-mobile-assets.mjs",
     "bunny:purge": "node scripts/purge-bunny-cache.mjs"
   },

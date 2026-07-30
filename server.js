@@ -94,6 +94,8 @@ const adminPassword = process.env.ADMIN_PASSWORD || "";
 const openaiApiKey = process.env.OPENAI_API_KEY || "";
 const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
+const openaiTtsModel = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
+const openaiTtsVoice = process.env.OPENAI_TTS_VOICE || "marin";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
@@ -161,6 +163,7 @@ const addressSuggestionCache = new Map();
 const addressSuggestionRateLimits = new Map();
 const deliveryEstimateCache = new Map();
 const deliveryEstimateRateLimits = new Map();
+const auroraSpeechRateLimits = new Map();
 const tryOnJobs = new Map();
 const tryOnRequestJobs = new Map();
 
@@ -292,6 +295,10 @@ const versionedPublicFiles = new Map([
   ["/assets-v/aurora-session-1/script.js", "/script.js"],
   ["/assets-v/aurora-product-previews-1/script.js", "/script.js"],
   ["/assets-v/aurora-product-previews-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-voice-1/script.js", "/script.js"],
+  ["/assets-v/aurora-voice-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-voice-2/script.js", "/script.js"],
+  ["/assets-v/aurora-voice-2/styles.css", "/styles.css"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -2956,6 +2963,16 @@ const siteChatDiscountMessages = {
   ro: { applied: "Gata: am aplicat codul {code} la checkout.", unavailable: "Nu găsesc un cod valid de aplicat. Trimite codul de 7 caractere sau cere reducerea de 10% cu numele complet al persoanei care te-a recomandat." },
 };
 
+const auroraSpeechInstructions = {
+  it: "Parla in italiano con una voce femminile adulta, calda, sicura e naturalmente seducente ma sempre elegante e professionale. Mantieni un ritmo leggermente lento, sorridi spesso mentre parli e usa un tono accogliente da consulente di una boutique di lusso.",
+  en: "Speak in English with a warm, confident adult feminine voice that is subtly alluring, elegant and professional. Use a slightly relaxed pace, smile often while speaking and sound like a welcoming luxury boutique adviser.",
+  fr: "Parlez en français avec une voix féminine adulte, chaleureuse, assurée, subtilement séduisante, élégante et professionnelle. Gardez un rythme légèrement détendu et souriez souvent en parlant.",
+  de: "Sprechen Sie Deutsch mit einer warmen, selbstbewussten erwachsenen weiblichen Stimme, dezent verführerisch, elegant und professionell. Sprechen Sie leicht entspannt und lächeln Sie häufig hörbar.",
+  es: "Habla en español con una voz femenina adulta, cálida y segura, sutilmente seductora, elegante y profesional. Mantén un ritmo ligeramente relajado y sonríe a menudo al hablar.",
+  sq: "Fol në shqip me një zë femëror të rritur, të ngrohtë dhe të sigurt, lehtësisht tërheqës, elegant dhe profesional. Mbaj një ritëm të qetë dhe buzëqesh shpesh gjatë të folurit.",
+  ro: "Vorbește în română cu o voce feminină adultă, caldă și sigură, subtil seducătoare, elegantă și profesională. Păstrează un ritm ușor relaxat și zâmbește des în timp ce vorbești.",
+};
+
 const tryOnLanguages = {
   it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", bundleRules: "Il try-on accetta tutti gli articoli, con massimo 2 prodotti.", billing: "Credito API OpenAI esaurito: ricarica il saldo o aumenta il limite di spesa per riattivare il try-on.", received: "Foto ricevuta", prepared: "Prodotto reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "I prodotti selezionati sono pronti", bundleGenerating: "Generazione try-on in corso", bundlePreview: "Try-on ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
   en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", bundleRules: "Try-on accepts every product, with a maximum of 2 products.", billing: "OpenAI API credit is exhausted. Add credit or raise the spending limit to reactivate try-on.", received: "Photo received", prepared: "Real catalog product prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "The selected products are ready", bundleGenerating: "Generating the try-on", bundlePreview: "Try-on received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
@@ -3069,6 +3086,96 @@ function handleTryOnJob(req, res, jobId) {
 function siteChatLanguage(value) {
   const code = cleanTrackingString(value, 8).toLowerCase();
   return Object.hasOwn(siteChatLanguages, code) ? code : "it";
+}
+
+function canRequestAuroraSpeech(ip) {
+  const key = cleanIp(ip) || "unknown";
+  const now = Date.now();
+  const current = auroraSpeechRateLimits.get(key);
+  if (!current || current.expiresAt <= now) {
+    auroraSpeechRateLimits.set(key, { count: 1, expiresAt: now + 60 * 1000 });
+    if (auroraSpeechRateLimits.size > 2000) {
+      auroraSpeechRateLimits.delete(auroraSpeechRateLimits.keys().next().value);
+    }
+    return true;
+  }
+  current.count += 1;
+  return current.count <= 20;
+}
+
+async function requestAuroraSpeech(text, language) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
+  try {
+    const response = await fetch("https://api.openai.com/v1/audio/speech", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: openaiTtsModel,
+        voice: openaiTtsVoice,
+        input: text,
+        instructions: auroraSpeechInstructions[language],
+        response_format: "mp3",
+        speed: 0.94,
+      }),
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      const errorBody = await response.text();
+      let message = errorBody || `OpenAI HTTP ${response.status}`;
+      try {
+        message = JSON.parse(errorBody)?.error?.message || message;
+      } catch {
+        // Keep the raw response message.
+      }
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return Buffer.from(await response.arrayBuffer());
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function handleSiteChatSpeech(req, res) {
+  if (req.method !== "POST") return notFound(res);
+  let body;
+  try {
+    const payload = await readRequestBuffer(req, 8192);
+    body = payload.length ? JSON.parse(payload.toString("utf8")) : {};
+  } catch {
+    return badRequest(res, "Richiesta vocale non valida.");
+  }
+  const profile = body.profile && typeof body.profile === "object" ? body.profile : {};
+  const firstName = cleanTrackingString(profile.firstName, 80);
+  const lastName = cleanTrackingString(profile.lastName, 80);
+  const email = cleanEmail(profile.email);
+  const text = cleanChatMessage(body.text);
+  const language = siteChatLanguage(body.language);
+  if (!firstName || !lastName || !/^\S+@\S+\.\S+$/.test(email) || !text) {
+    return badRequest(res, "Profilo o testo vocale non valido.");
+  }
+  if (!openaiApiKey) return json(res, 503, { ok: false, message: "Voce di Aurora non disponibile." });
+  if (!canRequestAuroraSpeech(clientIp(req))) {
+    return json(res, 429, { ok: false, message: "Troppe richieste vocali. Attendi qualche secondo." });
+  }
+  try {
+    const audio = await requestAuroraSpeech(text, language);
+    res.writeHead(200, {
+      "Content-Type": "audio/mpeg",
+      "Content-Length": audio.length,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+    res.end(audio);
+  } catch (error) {
+    console.error(`[aurora-voice] Speech generation failed: ${cleanTrackingString(error?.message, 220)}`);
+    json(res, 502, { ok: false, message: "Voce di Aurora temporaneamente non disponibile." });
+  }
 }
 
 function cleanTryOnBundleItems(value) {
@@ -5041,6 +5148,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/discounts/preview") return handleDiscountPreview(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
+  if (req.method === "POST" && url.pathname === "/api/chat/speech") return handleSiteChatSpeech(req, res);
   const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);
   if (tryOnJobMatch) return handleTryOnJob(req, res, tryOnJobMatch[1]);
   if (url.pathname === "/api/try-on") {

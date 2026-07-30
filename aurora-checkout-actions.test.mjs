@@ -29,5 +29,5 @@ test("Aurora checkout actions are validated server-side and applied client-side"
   assert.match(script, /checkout: auroraCheckoutState\(\)/);
   assert.match(script, /const checkoutUpdated = await applyAuroraCheckoutAction\(data\.checkout\)/);
   assert.match(script, /const checkoutDiscountCodeKey = "hallerBoutiqueCheckoutDiscountCode"/);
-  assert.match(checkout, /\/assets-v\/aurora-product-previews-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/aurora-voice-2\/script\.js/);
 });
