@@ -2674,7 +2674,7 @@ async function handleMobileAdminOrder(req, res, orderId) {
       }
       orders[index] = result.order;
       await writeOrders(orders);
-      if (result.changed && targetStatus === ORDER_STATUS.CONFIRMED) {
+      if (targetStatus === ORDER_STATUS.CONFIRMED) {
         await confirmReferralDiscountCode(result.order);
       }
       return result.order;
