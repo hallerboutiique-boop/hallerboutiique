@@ -5752,6 +5752,22 @@ body.motion-enabled .product-actions .buy-action:hover {
   background: var(--gold);
 }
 
+.site-chat-checkout-link {
+  justify-self: start;
+  padding: 8px 10px;
+  color: #090909;
+  border-radius: 5px;
+  background: var(--gold);
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.site-chat-checkout-link:hover,
+.site-chat-checkout-link:focus-visible {
+  background: #ffe38c;
+}
+
 .site-chat-actions {
   display: flex;
   gap: 7px;

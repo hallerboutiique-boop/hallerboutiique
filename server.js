@@ -47,6 +47,7 @@ import {
   resolveProductSizeType,
 } from "./product-inventory.mjs";
 import { applyProductStockOverwrite } from "./product-stock-overwrite.mjs";
+import { normalizeAuroraCheckoutAction } from "./chat-checkout.mjs";
 import { findRegisteredReferrer } from "./chat-referrals.mjs";
 import {
   calculateOrderDiscounts,
@@ -280,6 +281,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/checkout-discounts-1/script.js", "/script.js"],
   ["/assets-v/checkout-discounts-1/styles.css", "/styles.css"],
   ["/assets-v/chat-referral-auth-1/script.js", "/script.js"],
+  ["/assets-v/aurora-checkout-actions-1/script.js", "/script.js"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -3082,22 +3084,123 @@ function cleanChatCatalog(catalog) {
   return catalog
     .slice(0, 80)
     .map((product) => ({
+      id: cleanTrackingString(product?.id, 120),
       name: cleanTrackingString(product?.name, 120),
       category: cleanTrackingString(product?.category, 80),
       collection: cleanTrackingString(product?.collection, 100),
       description: cleanTrackingString(product?.description, 300),
       price: cleanTrackingString(product?.finalPrice, 40),
       sizes: Array.isArray(product?.sizes) ? product.sizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12) : [],
+      availableSizes: Array.isArray(product?.availableSizes)
+        ? product.availableSizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12)
+        : [],
+      isSoldOut: product?.isSoldOut === true,
     }))
-    .filter((product) => product.name);
+    .filter((product) => product.id && product.name);
 }
 
 async function readChatCatalog() {
   const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
-  return cleanChatCatalog([
-    ...defaults.map((product) => mergeProduct(product, overrides.items)),
-    ...overrides.custom.map(mergeCustomProduct),
-  ]);
+  const products = [
+    ...defaults
+      .filter((product) => !overrides.deletedProductIds.includes(product.id))
+      .map((product) => mergeProduct(product, overrides.items)),
+    ...overrides.custom
+      .filter((product) => !overrides.deletedProductIds.includes(product.id))
+      .map(mergeCustomProduct),
+  ].map((product) => {
+    const sizeType = resolveProductSizeType(product);
+    const sizes = sizeType === "none"
+      ? []
+      : cleanProductSizes(product.sizes).filter((size) => sizeType !== "clothing" || size.toUpperCase() !== "XXXL");
+    const inventoryBySize = sizeType === "none"
+      ? {}
+      : normalizeInventoryBySize(product.inventoryBySize, sizes.length ? sizes : defaultProductSizes[sizeType]);
+    const inventoryTotal = productInventoryTotal({ inventory: product.inventory, inventoryBySize });
+    return {
+      ...product,
+      sizes,
+      availableSizes: Object.keys(inventoryBySize).length ? availableInventorySizes({ inventoryBySize }) : [],
+      isSoldOut: inventoryTotal === 0,
+    };
+  });
+  return cleanChatCatalog(products);
+}
+
+const auroraCheckoutResponseSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["reply", "checkout"],
+  properties: {
+    reply: { type: "string" },
+    checkout: {
+      type: "object",
+      additionalProperties: false,
+      required: ["mode", "items", "discountCode"],
+      properties: {
+        mode: { type: "string", enum: ["unchanged", "replace"] },
+        items: {
+          type: "array",
+          items: {
+            type: "object",
+            additionalProperties: false,
+            required: ["id", "size"],
+            properties: {
+              id: { type: "string" },
+              size: { type: "string" },
+            },
+          },
+        },
+        discountCode: { type: "string" },
+      },
+    },
+  },
+};
+
+function cleanChatCheckoutItems(items, catalog) {
+  const normalized = normalizeAuroraCheckoutAction({ mode: "replace", items }, catalog);
+  return normalized?.items || [];
+}
+
+function chatDiscountApplicationRequested(message) {
+  const text = String(message || "").toLocaleLowerCase("it");
+  return /\b(?:applica|usa|inserisci|attiva)\b/u.test(text)
+    && /\b(?:codice|coupon|promo|sconto)\b/u.test(text);
+}
+
+async function usableChatDiscountCode(value) {
+  const discountCode = normalizeDiscountCode(value);
+  if (!discountCode) return "";
+  const discountCodes = await readDiscountCodes();
+  return discountCodes.codes.some((record) => normalizeDiscountCode(record?.code) === discountCode && discountCodeIsUsable(record))
+    ? discountCode
+    : "";
+}
+
+async function generateAuroraChatResponse(input) {
+  const structuredPayload = {
+    model: openaiProductModel,
+    input,
+    max_output_tokens: 450,
+    text: {
+      format: {
+        type: "json_schema",
+        name: "haller_aurora_checkout",
+        schema: auroraCheckoutResponseSchema,
+        strict: true,
+      },
+    },
+  };
+  try {
+    const data = await callOpenAiResponse(structuredPayload);
+    return parseAiJson(responseOutputText(data));
+  } catch (error) {
+    const structuredOutputUnsupported = error?.status === 400;
+    const structuredOutputUnreadable = error?.message === "Risposta AI non leggibile.";
+    if (!structuredOutputUnsupported && !structuredOutputUnreadable) throw error;
+    const data = await callOpenAiResponse({ model: openaiProductModel, input, max_output_tokens: 350 });
+    return { reply: responseOutputText(data), checkout: { mode: "unchanged", items: [], discountCode: "" } };
+  }
 }
 
 async function handleSiteChat(req, res) {
@@ -3122,7 +3225,7 @@ async function handleSiteChat(req, res) {
         .map((item) => ({ role: item?.role === "assistant" ? "assistant" : "user", content: cleanChatMessage(item?.content) }))
         .filter((item) => item.content)
     : [];
-  if (isTenPercentDiscountRequest(message)) {
+  if (isTenPercentDiscountRequest(message) && !chatDiscountApplicationRequested(message)) {
     const referralName = extractReferralName([
       ...history.filter((item) => item.role === "user").map((item) => item.content),
       message,
@@ -3139,6 +3242,7 @@ async function handleSiteChat(req, res) {
     return json(res, 200, {
       ok: true,
       reply: languageConfig.referralCode.replace("{code}", code).replace("{referral}", referralUser.name),
+      checkout: { mode: "unchanged", items: [], discountCode: code },
       language,
     });
   }
@@ -3153,36 +3257,42 @@ async function handleSiteChat(req, res) {
   }
 
   const catalog = await readChatCatalog();
+  const currentCheckoutItems = cleanChatCheckoutItems(body.checkout?.items, catalog);
   const catalogText = catalog.length
-    ? catalog.map((product) => `- ${product.name} | ${product.category} | ${product.collection} | ${product.price} | taglie: ${product.sizes.join(", ") || "da verificare"} | ${product.description}`).join("\n")
+    ? catalog.map((product) => `- ID: ${product.id} | ${product.name} | ${product.category} | ${product.collection} | ${product.price} | taglie disponibili: ${product.availableSizes.join(", ") || product.sizes.join(", ") || "nessuna"} | ${product.description}`).join("\n")
     : "Catalogo momentaneamente non disponibile.";
+  const checkoutText = currentCheckoutItems.length
+    ? currentCheckoutItems.map((item) => `ID: ${item.id}, taglia: ${item.size || "nessuna"}`).join("; ")
+    : "Carrello vuoto.";
 
   if (!openaiApiKey) {
     return json(res, 503, { ok: false, message: languageConfig.unavailable, language });
   }
 
   try {
-    const data = await callOpenAiResponse({
-      model: openaiProductModel,
-      input: [
-        {
-          role: "system",
-          content: [
-            "Sei Aurora, assistente virtuale di Haller Boutique. Dichiara in modo naturale che sei l'assistente virtuale se ti viene chiesto chi sei; non fingere mai di essere una persona.",
-            `Rispondi esclusivamente in ${languageConfig.name}, anche se il catalogo o il contesto ordine sono scritti in italiano. Mantieni un tono caldo, brillante e leggermente spiritoso, senza errori volontari. Risposte molto concise e concrete: massimo 2 frasi brevi, salvo richiesta esplicita di dettagli.`,
-            "Usa esclusivamente le informazioni del catalogo e dell'ordine qui sotto. Non inventare disponibilita, spedizioni, promesse o sconti. Per le taglie dai indicazioni generali e invita a contattare WhatsApp quando serve conferma.",
-            `Cliente: ${firstName} ${lastName}; email: ${email}; telefono facoltativo: ${phone || "non fornito"}.`,
-            `Contesto ordine: ${orderContext}`,
-            `Catalogo Haller Boutique:\n${catalogText}`,
-          ].join("\n\n"),
-        },
-        ...history.map((item) => ({ role: item.role, content: item.content })),
-        { role: "user", content: message },
-      ],
-      max_output_tokens: 350,
-    });
-    const reply = cleanChatMessage(responseOutputText(data)) || languageConfig.fallback;
-    json(res, 200, { ok: true, reply, language });
+    const response = await generateAuroraChatResponse([
+      {
+        role: "system",
+        content: [
+          "Sei Aurora, assistente virtuale di Haller Boutique. Dichiara in modo naturale che sei l'assistente virtuale se ti viene chiesto chi sei; non fingere mai di essere una persona.",
+          `Rispondi esclusivamente in ${languageConfig.name}, anche se il catalogo o il contesto ordine sono scritti in italiano. Mantieni un tono caldo, brillante e leggermente spiritoso, senza errori volontari. Risposte molto concise e concrete: massimo 2 frasi brevi, salvo richiesta esplicita di dettagli.`,
+          "Usa esclusivamente le informazioni del catalogo e dell'ordine qui sotto. Non inventare disponibilita, spedizioni, promesse o sconti. Per le taglie dai indicazioni generali e invita a contattare WhatsApp quando serve conferma.",
+          "Puoi aggiornare il checkout soltanto se il cliente chiede esplicitamente di aggiungere, rimuovere, sostituire o cambiare prodotti/taglie. In quel caso imposta checkout.mode a replace e inserisci l'intero carrello desiderato, usando esclusivamente gli ID e le taglie disponibili indicati nel catalogo. Se manca la taglia, chiedila e lascia unchanged. Non aggiornare mai il checkout per una semplice richiesta informativa.",
+          "Puoi applicare un codice sconto soltanto se il cliente chiede esplicitamente di usare un codice e lo comunica nel messaggio. Riporta quel codice in checkout.discountCode; altrimenti usa una stringa vuota. Non dire mai che un codice e valido prima della verifica del sito.",
+          `Cliente: ${firstName} ${lastName}; email: ${email}; telefono facoltativo: ${phone || "non fornito"}.`,
+          `Contesto ordine: ${orderContext}`,
+          `Checkout attuale: ${checkoutText}`,
+          `Catalogo Haller Boutique:\n${catalogText}`,
+        ].join("\n\n"),
+      },
+      ...history.map((item) => ({ role: item.role, content: item.content })),
+      { role: "user", content: message },
+    ]);
+    const checkout = normalizeAuroraCheckoutAction(response.checkout, catalog) || { mode: "unchanged", items: [] };
+    const discountCode = await usableChatDiscountCode(response.checkout?.discountCode);
+    if (discountCode) checkout.discountCode = discountCode;
+    const reply = cleanChatMessage(response.reply) || languageConfig.fallback;
+    json(res, 200, { ok: true, reply, checkout, language });
   } catch (error) {
     json(res, 502, { ok: false, message: languageConfig.unavailable, language });
   }

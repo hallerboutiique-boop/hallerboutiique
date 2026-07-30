@@ -509,6 +509,7 @@ let lastStockGender = "";
 const cartKey = "hallerBoutiqueCartCount";
 const cartItemsKey = "hallerBoutiqueCartItems";
 const checkoutItemKey = "hallerBoutiqueCheckoutItem";
+const checkoutDiscountCodeKey = "hallerBoutiqueCheckoutDiscountCode";
 const orderCodeKey = "hallerBoutiqueOrderCode";
 const visitorIdKey = "hallerBoutiqueVisitorId";
 const serverVisitorIdKey = "hallerBoutiqueServerVisitorId";
@@ -2508,10 +2509,10 @@ function renderProductDetail() {
   if (window.lucide) window.lucide.createIcons();
 }
 
-function saveCheckoutItem(productId, size = "") {
+function createCheckoutItem(productId, size = "") {
   const product = findProductById(productId);
 
-  if (!product) {
+  if (!product || product.isSoldOut) {
     return null;
   }
 
@@ -2532,7 +2533,12 @@ function saveCheckoutItem(productId, size = "") {
     savedAt: new Date().toISOString(),
   };
 
-  window.localStorage.setItem(checkoutItemKey, JSON.stringify(item));
+  return item;
+}
+
+function saveCheckoutItem(productId, size = "") {
+  const item = createCheckoutItem(productId, size);
+  if (item) window.localStorage.setItem(checkoutItemKey, JSON.stringify(item));
   return item;
 }
 
@@ -3441,6 +3447,46 @@ function readCartItems() {
   } catch {
     return [];
   }
+}
+
+function readStoredCheckoutDiscountCode() {
+  return String(window.localStorage.getItem(checkoutDiscountCodeKey) || "").trim().toUpperCase();
+}
+
+function storeCheckoutDiscountCode(code) {
+  const normalizedCode = String(code || "").trim().toUpperCase();
+  if (normalizedCode) window.localStorage.setItem(checkoutDiscountCodeKey, normalizedCode);
+  else window.localStorage.removeItem(checkoutDiscountCodeKey);
+}
+
+function auroraCheckoutState() {
+  const cartItems = readCartItems();
+  if (cartItems.length > 0) {
+    return { items: cartItems.map((item) => ({ id: String(item.id || ""), size: String(item.size || "") })).filter((item) => item.id) };
+  }
+  const checkoutItem = readCheckoutItem();
+  return checkoutItem?.id ? { items: [{ id: String(checkoutItem.id), size: String(checkoutItem.size || "") }] } : { items: [] };
+}
+
+function replaceCheckoutItems(items) {
+  if (!Array.isArray(items) || items.length > 20) return false;
+  const nextItems = items.map((item) => createCheckoutItem(item?.id, item?.size || ""));
+  if (nextItems.some((item) => !item)) return false;
+
+  if (nextItems.length > 0) {
+    window.localStorage.setItem(cartItemsKey, JSON.stringify(nextItems));
+    window.localStorage.setItem(checkoutItemKey, JSON.stringify(nextItems[nextItems.length - 1]));
+    window.localStorage.setItem(cartKey, String(nextItems.length));
+  } else {
+    window.localStorage.removeItem(cartItemsKey);
+    window.localStorage.removeItem(checkoutItemKey);
+    window.localStorage.removeItem(cartKey);
+  }
+
+  updateCartCount(nextItems.length);
+  renderBundleTryOn();
+  window.dispatchEvent(new Event("haller-cart-change"));
+  return true;
 }
 
 function addCheckoutItem(productId, size = "") {
@@ -4758,6 +4804,7 @@ async function confirmCheckoutOrder(button) {
 
     window.localStorage.removeItem(cartItemsKey);
     window.localStorage.removeItem(cartKey);
+    storeCheckoutDiscountCode("");
     updateCartCount(0);
     renderBundleTryOn();
 
@@ -5126,43 +5173,77 @@ const discountButton = document.querySelector("[data-discount-apply]");
 const discountInput = document.querySelector("input[name='discount-code']");
 const discountMessage = document.querySelector(".discount-message");
 
+async function applyCheckoutDiscountCode(value, { showMessage = true } = {}) {
+  const code = String(value || "").trim().toUpperCase();
+  if (!code) {
+    appliedCheckoutDiscount = null;
+    storeCheckoutDiscountCode("");
+    refreshCheckoutDiscountSummary();
+    if (showMessage && discountMessage) discountMessage.textContent = translate("discount-empty");
+    return false;
+  }
+
+  if (discountInput) discountInput.value = code;
+  const products = collectCheckoutProducts();
+  if (!discountInput || !discountMessage || products.length === 0) {
+    storeCheckoutDiscountCode(code);
+    return true;
+  }
+
+  try {
+    const response = await fetch("/api/discounts/preview", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ discountCode: code, products }),
+    });
+    const data = await response.json();
+    if (!response.ok || !data.ok) throw new Error(data.message || translate("discount-empty"));
+    appliedCheckoutDiscount = {
+      fingerprint: checkoutDiscountFingerprint(collectCheckoutProducts()),
+      quote: data.quote,
+    };
+    storeCheckoutDiscountCode(code);
+    refreshCheckoutDiscountSummary();
+    if (showMessage) discountMessage.textContent = `Codice applicato: -${checkoutCurrency(data.quote.referralDiscount)}.`;
+    return true;
+  } catch (error) {
+    appliedCheckoutDiscount = null;
+    storeCheckoutDiscountCode("");
+    refreshCheckoutDiscountSummary();
+    if (showMessage) discountMessage.textContent = error.message || translate("discount-empty");
+    return false;
+  }
+}
+
+async function applyAuroraCheckoutAction(checkout) {
+  if (!checkout || typeof checkout !== "object") return false;
+  let checkoutChanged = false;
+  if (checkout.mode === "replace" && Array.isArray(checkout.items)) {
+    checkoutChanged = replaceCheckoutItems(checkout.items);
+    if (checkoutChanged) refreshCheckoutDiscountSummary();
+  }
+
+  const discountCode = String(checkout.discountCode || "").trim().toUpperCase();
+  if (/^[A-Z0-9]{7}$/.test(discountCode)) {
+    const discountApplied = await applyCheckoutDiscountCode(discountCode, { showMessage: Boolean(discountMessage) });
+    checkoutChanged = checkoutChanged || discountApplied;
+  }
+  return checkoutChanged;
+}
+
 if (discountButton && discountInput && discountMessage) {
   discountButton.addEventListener("click", async () => {
-    const code = discountInput.value.trim();
-    if (!code) {
-      appliedCheckoutDiscount = null;
-      refreshCheckoutDiscountSummary();
-      discountMessage.textContent = translate("discount-empty");
-      return;
-    }
-
     discountButton.disabled = true;
-    try {
-      const response = await fetch("/api/discounts/preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ discountCode: code, products: collectCheckoutProducts() }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.ok) throw new Error(data.message || translate("discount-empty"));
-      appliedCheckoutDiscount = {
-        fingerprint: checkoutDiscountFingerprint(collectCheckoutProducts()),
-        quote: data.quote,
-      };
-      refreshCheckoutDiscountSummary();
-      discountMessage.textContent = `Codice applicato: -${checkoutCurrency(data.quote.referralDiscount)}.`;
-    } catch (error) {
-      appliedCheckoutDiscount = null;
-      refreshCheckoutDiscountSummary();
-      discountMessage.textContent = error.message || translate("discount-empty");
-    } finally {
-      discountButton.disabled = false;
-    }
+    await applyCheckoutDiscountCode(discountInput.value);
+    discountButton.disabled = false;
   });
   discountInput.addEventListener("input", () => {
     appliedCheckoutDiscount = null;
+    storeCheckoutDiscountCode("");
     refreshCheckoutDiscountSummary();
   });
+  const storedDiscountCode = readStoredCheckoutDiscountCode();
+  if (storedDiscountCode) applyCheckoutDiscountCode(storedDiscountCode, { showMessage: false });
 }
 
 setupCheckoutPayments();
@@ -5184,6 +5265,15 @@ function readChatProfile() {
 
 function appendChatMessage(messages, role, text) {
   messages.insertAdjacentHTML("beforeend", `<p class="site-chat-message site-chat-message-${role}">${escapeHtml(text)}</p>`);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+function appendChatCheckoutLink(messages) {
+  const link = document.createElement("a");
+  link.className = "site-chat-checkout-link";
+  link.href = "checkout.html";
+  link.textContent = "Apri checkout aggiornato";
+  messages.append(link);
   messages.scrollTop = messages.scrollHeight;
 }
 
@@ -5320,11 +5410,19 @@ function setupSiteChat() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
-        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1).slice(-chatHistoryLimit), language: siteLanguage }),
+        body: JSON.stringify({
+          profile,
+          message: text,
+          history: chatHistory.slice(0, -1).slice(-chatHistoryLimit),
+          checkout: auroraCheckoutState(),
+          language: siteLanguage,
+        }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || translate("chat-error"));
       pending.textContent = data.reply;
+      const checkoutUpdated = await applyAuroraCheckoutAction(data.checkout);
+      if (checkoutUpdated) appendChatCheckoutLink(messages);
       rememberChatMessage("assistant", data.reply);
     } catch (error) {
       const latestChatMessage = chatHistory[chatHistory.length - 1];

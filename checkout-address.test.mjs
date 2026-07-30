@@ -82,7 +82,7 @@ test("checkout markup and server expose required autocomplete flow", async () =>
   }
   assert.match(checkout, /Spendi oltre 399€ e ricevi automaticamente il 15% di sconto/);
   assert.match(checkout, /data-checkout-automatic-discount/);
-  assert.match(checkout, /\/assets-v\/chat-referral-auth-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/aurora-checkout-actions-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/checkout-discounts-1\/styles\.css/);
   assert.match(script, /function setupCheckoutAddressAutocomplete/);
   assert.match(script, /\/api\/address-suggestions\?q=/);
