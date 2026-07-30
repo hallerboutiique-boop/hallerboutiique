@@ -5481,6 +5481,7 @@ function setupSiteChat() {
           </form>
           <div class="site-chat-conversation" data-chat-conversation hidden>
             <div class="site-chat-voice-stage" data-chat-voice-stage hidden>
+              <audio data-chat-voice-audio src="/assets/aurora-silence.wav" preload="auto" playsinline></audio>
               <div class="site-chat-voice-avatar" aria-hidden="true">
                 <span class="site-chat-voice-portrait" data-chat-voice-portrait>
                   <img class="site-chat-voice-frame is-active" data-chat-face-frame="smile" src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false">
@@ -5530,9 +5531,12 @@ function setupSiteChat() {
   const voiceStopButton = root.querySelector("[data-chat-voice-stop]");
   const voicePortrait = root.querySelector("[data-chat-voice-portrait]");
   const voiceFaceFrames = [...root.querySelectorAll("[data-chat-face-frame]")];
+  const voiceAudio = root.querySelector("[data-chat-voice-audio]");
   const VoiceRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const recordedVoiceSupported = Boolean(navigator.mediaDevices?.getUserMedia && window.MediaRecorder);
+  const useRecordedVoice = recordedVoiceSupported && (!VoiceRecognition || /firefox/i.test(navigator.userAgent));
   const voiceConversationSupported = Boolean(
-    VoiceRecognition && window.speechSynthesis && window.SpeechSynthesisUtterance
+    (VoiceRecognition || useRecordedVoice) && voiceAudio
   );
   const voiceLocales = {
     it: "it-IT",
@@ -5556,14 +5560,16 @@ function setupSiteChat() {
   let voiceRecognitionTranscript = "";
   let discardRecognitionResult = false;
   let recognitionHadError = false;
+  let voiceMediaStream = null;
+  let voiceMediaRecorder = null;
+  let voiceMediaChunks = [];
+  let voiceRecordingTimer = 0;
+  let activeTranscriptionRequest = null;
   let auroraFaceAnimationFrame = 0;
   let auroraIdleBlinkTimer = 0;
   let auroraBlinkResetTimer = 0;
-  let auroraAudioContext = null;
-  let auroraAudioSource = null;
-  let auroraAudioAnalyser = null;
-  let auroraAudioSamples = null;
   let auroraCurrentFaceFrame = "smile";
+  let auroraAudioUnlocked = false;
   let sendMessage;
   input.value = readChatDraft();
   translatePage();
@@ -5589,18 +5595,6 @@ function setupSiteChat() {
     });
   };
 
-  const clearAuroraAudioGraph = () => {
-    try {
-      auroraAudioSource?.disconnect();
-      auroraAudioAnalyser?.disconnect();
-    } catch {
-      // The audio graph may already be disconnected.
-    }
-    auroraAudioSource = null;
-    auroraAudioAnalyser = null;
-    auroraAudioSamples = null;
-  };
-
   const scheduleAuroraIdleBlink = () => {
     window.clearTimeout(auroraIdleBlinkTimer);
     window.clearTimeout(auroraBlinkResetTimer);
@@ -5619,31 +5613,8 @@ function setupSiteChat() {
     if (auroraFaceAnimationFrame) window.cancelAnimationFrame(auroraFaceAnimationFrame);
     auroraFaceAnimationFrame = 0;
     voicePortrait.classList.remove("is-lip-syncing");
-    clearAuroraAudioGraph();
     if (reset) setAuroraFaceFrame("smile");
     scheduleAuroraIdleBlink();
-  };
-
-  const prepareAuroraAudioAnalyser = async (audio) => {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return false;
-    try {
-      if (!auroraAudioContext) auroraAudioContext = new AudioContext();
-      if (auroraAudioContext.state !== "running") await auroraAudioContext.resume();
-      if (auroraAudioContext.state !== "running") return false;
-      clearAuroraAudioGraph();
-      auroraAudioSource = auroraAudioContext.createMediaElementSource(audio);
-      auroraAudioAnalyser = auroraAudioContext.createAnalyser();
-      auroraAudioAnalyser.fftSize = 256;
-      auroraAudioAnalyser.smoothingTimeConstant = 0.58;
-      auroraAudioSamples = new Uint8Array(auroraAudioAnalyser.fftSize);
-      auroraAudioSource.connect(auroraAudioAnalyser);
-      auroraAudioAnalyser.connect(auroraAudioContext.destination);
-      return true;
-    } catch {
-      clearAuroraAudioGraph();
-      return false;
-    }
   };
 
   const startAuroraFaceAnimation = (audio = null) => {
@@ -5665,15 +5636,6 @@ function setupSiteChat() {
       }
       if (now < blinkUntil) {
         setAuroraFaceFrame("blink");
-      } else if (auroraAudioAnalyser && auroraAudioSamples) {
-        auroraAudioAnalyser.getByteTimeDomainData(auroraAudioSamples);
-        let energy = 0;
-        for (const sample of auroraAudioSamples) {
-          const normalized = (sample - 128) / 128;
-          energy += normalized * normalized;
-        }
-        const volume = Math.sqrt(energy / auroraAudioSamples.length);
-        setAuroraFaceFrame(volume > 0.16 ? "talk-wide" : volume > 0.045 ? "talk-small" : "smile");
       } else {
         const elapsed = audio ? audio.currentTime * 1000 : now - startedAt;
         const phase = Math.floor(elapsed / 105) % 9;
@@ -5705,6 +5667,30 @@ function setupSiteChat() {
     voiceToggle.classList.toggle("is-active", voiceConversationActive);
     voiceToggle.setAttribute("aria-pressed", voiceConversationActive ? "true" : "false");
     voiceToggleLabel.textContent = translate(voiceConversationActive ? "chat-voice-stop" : "chat-voice-start");
+  };
+
+  const unlockAuroraAudio = () => {
+    if (auroraAudioUnlocked) return;
+    voiceAudio.src = "/assets/aurora-silence.wav";
+    voiceAudio.muted = false;
+    voiceAudio.defaultMuted = false;
+    voiceAudio.volume = 1;
+    const unlockAttempt = voiceAudio.play();
+    if (!unlockAttempt?.then) {
+      auroraAudioUnlocked = true;
+      return;
+    }
+    unlockAttempt.then(() => {
+      if (voiceAudio.src.includes("/assets/aurora-silence.wav")) {
+        voiceAudio.pause();
+        voiceAudio.currentTime = 0;
+      }
+      auroraAudioUnlocked = true;
+    }).catch(() => {
+      voiceAudio.muted = false;
+      voiceAudio.defaultMuted = false;
+      voiceAudio.volume = 1;
+    });
   };
 
   const stopAuroraSpeech = () => {
@@ -5739,17 +5725,35 @@ function setupSiteChat() {
   const stopVoiceRecognition = ({ discard = true } = {}) => {
     discardRecognitionResult = discard;
     voiceRecognitionTranscript = "";
-    if (!voiceRecognition || !voiceRecognitionStarted) return;
-    try {
-      voiceRecognition.abort();
-    } catch {
-      voiceRecognitionStarted = false;
+    window.clearTimeout(voiceRecordingTimer);
+    voiceRecordingTimer = 0;
+    if (activeTranscriptionRequest) {
+      activeTranscriptionRequest.abort();
+      activeTranscriptionRequest = null;
     }
+    if (voiceMediaRecorder && voiceMediaRecorder.state !== "inactive") {
+      voiceMediaRecorder.stop();
+    }
+    if (voiceRecognition && voiceRecognitionStarted) {
+      try {
+        voiceRecognition.abort();
+      } catch {
+        voiceRecognitionStarted = false;
+      }
+    }
+  };
+
+  const releaseVoiceMediaStream = () => {
+    voiceMediaStream?.getTracks().forEach((track) => track.stop());
+    voiceMediaStream = null;
+    voiceMediaRecorder = null;
+    voiceMediaChunks = [];
   };
 
   const stopVoiceConversation = ({ hideStage = true } = {}) => {
     voiceConversationActive = false;
     stopVoiceRecognition();
+    releaseVoiceMediaStream();
     stopAuroraSpeech();
     setVoiceState("ready");
     updateVoiceToggle();
@@ -5811,10 +5815,15 @@ function setupSiteChat() {
       const audioBlob = await response.blob();
       if (!voiceConversationActive || controller.signal.aborted) return;
       activeAuroraAudioUrl = URL.createObjectURL(audioBlob);
-      const audio = new Audio(activeAuroraAudioUrl);
+      const audio = voiceAudio;
+      audio.pause();
+      audio.src = activeAuroraAudioUrl;
+      audio.muted = false;
+      audio.defaultMuted = false;
+      audio.volume = 1;
+      audio.load();
       activeAuroraAudio = audio;
       setVoiceState("speaking");
-      await prepareAuroraAudioAnalyser(audio);
       startAuroraFaceAnimation(audio);
       await new Promise((resolve, reject) => {
         activeAuroraAudioResolve = resolve;
@@ -5845,12 +5854,121 @@ function setupSiteChat() {
     }
   };
 
+  const transcribeRecordedVoice = async (audioBlob) => {
+    if (!voiceConversationActive || audioBlob.size < 200) return;
+    setVoiceState("processing");
+    const controller = new AbortController();
+    activeTranscriptionRequest = controller;
+    try {
+      const formData = new FormData();
+      const extension = audioBlob.type.includes("ogg") ? "ogg" : audioBlob.type.includes("mp4") ? "m4a" : "webm";
+      formData.append("audio", audioBlob, `aurora-recording.${extension}`);
+      formData.append("firstName", profile.firstName);
+      formData.append("lastName", profile.lastName);
+      formData.append("email", profile.email);
+      formData.append("language", siteLanguage);
+      const response = await fetch("/api/chat/transcribe", {
+        method: "POST",
+        body: formData,
+        signal: controller.signal,
+      });
+      const data = await response.json();
+      if (!response.ok || !data.ok) throw new Error(data.message || translate("chat-error"));
+      const transcript = String(data.text || "").trim();
+      if (!transcript) {
+        setVoiceState("error", translate("chat-voice-no-speech"));
+        window.setTimeout(startVoiceListening, 900);
+        return;
+      }
+      activeTranscriptionRequest = null;
+      await sendMessage(transcript, { fromVoice: true });
+    } catch (error) {
+      if (!voiceConversationActive || error.name === "AbortError") return;
+      setVoiceState("error", error.message || translate("chat-error"));
+      window.setTimeout(startVoiceListening, 1200);
+    } finally {
+      if (activeTranscriptionRequest === controller) activeTranscriptionRequest = null;
+    }
+  };
+
+  const startRecordedVoiceListening = async () => {
+    if (!voiceConversationActive || voiceRecognitionStarted || activeTranscriptionRequest) return;
+    voiceRecognitionStarted = true;
+    try {
+      if (!voiceMediaStream?.active) {
+        voiceMediaStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+          },
+        });
+      }
+      if (!voiceConversationActive) {
+        releaseVoiceMediaStream();
+        voiceRecognitionStarted = false;
+        return;
+      }
+      const preferredType = [
+        "audio/webm;codecs=opus",
+        "audio/ogg;codecs=opus",
+        "audio/webm",
+        "audio/ogg",
+      ].find((type) => window.MediaRecorder.isTypeSupported(type));
+      voiceMediaChunks = [];
+      voiceMediaRecorder = new window.MediaRecorder(
+        voiceMediaStream,
+        preferredType ? { mimeType: preferredType } : undefined
+      );
+      voiceMediaRecorder.addEventListener("dataavailable", (event) => {
+        if (event.data?.size) voiceMediaChunks.push(event.data);
+      });
+      voiceMediaRecorder.addEventListener("stop", () => {
+        window.clearTimeout(voiceRecordingTimer);
+        voiceRecordingTimer = 0;
+        voiceRecognitionStarted = false;
+        const shouldDiscard = discardRecognitionResult;
+        discardRecognitionResult = false;
+        const audioBlob = new Blob(voiceMediaChunks, {
+          type: voiceMediaRecorder?.mimeType || preferredType || "audio/webm",
+        });
+        voiceMediaChunks = [];
+        if (!shouldDiscard && voiceConversationActive) void transcribeRecordedVoice(audioBlob);
+      }, { once: true });
+      voiceMediaRecorder.addEventListener("error", () => {
+        voiceRecognitionStarted = false;
+        if (voiceConversationActive) setVoiceState("error", translate("chat-voice-no-speech"));
+      }, { once: true });
+      discardRecognitionResult = false;
+      setVoiceState("listening");
+      voiceMediaRecorder.start(250);
+      voiceRecordingTimer = window.setTimeout(() => {
+        if (voiceMediaRecorder?.state === "recording") voiceMediaRecorder.stop();
+      }, 8000);
+    } catch (error) {
+      voiceRecognitionStarted = false;
+      releaseVoiceMediaStream();
+      if (!voiceConversationActive) return;
+      if (error.name === "NotAllowedError" || error.name === "SecurityError") {
+        voiceConversationActive = false;
+        updateVoiceToggle();
+        setVoiceState("error", translate("chat-voice-permission"));
+        return;
+      }
+      setVoiceState("error", translate("chat-voice-unsupported"));
+    }
+  };
+
   const startVoiceListening = () => {
     if (!voiceConversationActive || activeChatRequest || activeSpeechRequest || activeAuroraAudio || voiceRecognitionStarted) return;
     if (!voiceConversationSupported) {
       voiceConversationActive = false;
       updateVoiceToggle();
       setVoiceState("error", translate("chat-voice-unsupported"));
+      return;
+    }
+    if (useRecordedVoice) {
+      void startRecordedVoiceListening();
       return;
     }
     if (!voiceRecognition) {
@@ -6051,6 +6169,7 @@ function setupSiteChat() {
       return;
     }
     voiceStage.hidden = false;
+    unlockAuroraAudio();
     if (!voiceConversationSupported) {
       setVoiceState("error", translate("chat-voice-unsupported"));
       return;

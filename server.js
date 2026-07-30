@@ -96,6 +96,7 @@ const openaiProductModel = process.env.OPENAI_PRODUCT_MODEL || "gpt-4.1-mini";
 const openaiTryOnModel = process.env.OPENAI_TRYON_MODEL || "gpt-image-2";
 const openaiTtsModel = process.env.OPENAI_TTS_MODEL || "gpt-4o-mini-tts";
 const openaiTtsVoice = process.env.OPENAI_TTS_VOICE || "shimmer";
+const openaiTranscribeModel = process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
 const openaiTimeoutMs = 45000;
 const openaiTryOnTimeoutMs = 180000;
 const tryOnRetentionMs = 30 * 24 * 60 * 60 * 1000;
@@ -164,6 +165,7 @@ const addressSuggestionRateLimits = new Map();
 const deliveryEstimateCache = new Map();
 const deliveryEstimateRateLimits = new Map();
 const auroraSpeechRateLimits = new Map();
+const auroraTranscriptionRateLimits = new Map();
 const tryOnJobs = new Map();
 const tryOnRequestJobs = new Map();
 
@@ -303,6 +305,10 @@ const versionedPublicFiles = new Map([
   ["/assets-v/aurora-live-1/styles.css", "/styles.css"],
   ["/assets-v/aurora-live-2/script.js", "/script.js"],
   ["/assets-v/aurora-live-2/styles.css", "/styles.css"],
+  ["/assets-v/aurora-audio-1/script.js", "/script.js"],
+  ["/assets-v/aurora-audio-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-audio-2/script.js", "/script.js"],
+  ["/assets-v/aurora-audio-2/styles.css", "/styles.css"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -3107,6 +3113,21 @@ function canRequestAuroraSpeech(ip) {
   return current.count <= 20;
 }
 
+function canRequestAuroraTranscription(ip) {
+  const key = cleanIp(ip) || "unknown";
+  const now = Date.now();
+  const current = auroraTranscriptionRateLimits.get(key);
+  if (!current || current.expiresAt <= now) {
+    auroraTranscriptionRateLimits.set(key, { count: 1, expiresAt: now + 60 * 1000 });
+    if (auroraTranscriptionRateLimits.size > 2000) {
+      auroraTranscriptionRateLimits.delete(auroraTranscriptionRateLimits.keys().next().value);
+    }
+    return true;
+  }
+  current.count += 1;
+  return current.count <= 12;
+}
+
 async function requestAuroraSpeech(text, language) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
@@ -3142,6 +3163,88 @@ async function requestAuroraSpeech(text, language) {
     return Buffer.from(await response.arrayBuffer());
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+async function requestAuroraTranscription(audio, contentType, filename, language) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), openaiTimeoutMs);
+  try {
+    const formData = new FormData();
+    formData.append("file", new Blob([audio], { type: contentType }), filename);
+    formData.append("model", openaiTranscribeModel);
+    formData.append("language", siteChatLanguages[language].locale.slice(0, 2));
+    formData.append("response_format", "json");
+    const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${openaiApiKey}`,
+      },
+      body: formData,
+      signal: controller.signal,
+    });
+    const responseBody = await response.text();
+    if (!response.ok) {
+      let message = responseBody || `OpenAI HTTP ${response.status}`;
+      try {
+        message = JSON.parse(responseBody)?.error?.message || message;
+      } catch {
+        // Keep the raw response message.
+      }
+      const error = new Error(message);
+      error.status = response.status;
+      throw error;
+    }
+    return cleanChatMessage(JSON.parse(responseBody)?.text);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function handleSiteChatTranscription(req, res) {
+  if (req.method !== "POST") return notFound(res);
+  const contentType = String(req.headers["content-type"] || "");
+  const boundary = contentType.match(/boundary=(?:"([^"]+)"|([^;]+))/i)?.slice(1).find(Boolean);
+  if (!boundary) return badRequest(res, "Registrazione vocale non valida.");
+  let parts;
+  try {
+    parts = parseMultipartBuffer(await readRequestBuffer(req, 12 * 1024 * 1024), boundary);
+  } catch {
+    return badRequest(res, "Registrazione vocale non valida.");
+  }
+  const value = (name) => parts.find((part) => part.name === name)?.data.toString("utf8").trim() || "";
+  const audioPart = parts.find((part) => part.name === "audio");
+  const firstName = cleanTrackingString(value("firstName"), 80);
+  const lastName = cleanTrackingString(value("lastName"), 80);
+  const email = cleanEmail(value("email"));
+  const language = siteChatLanguage(value("language"));
+  const audioType = String(audioPart?.contentType || "").toLowerCase();
+  if (
+    !firstName
+    || !lastName
+    || !/^\S+@\S+\.\S+$/.test(email)
+    || !audioPart
+    || !audioType.startsWith("audio/")
+    || audioPart.data.length < 200
+  ) {
+    return badRequest(res, "Profilo o registrazione vocale non validi.");
+  }
+  if (!openaiApiKey) return json(res, 503, { ok: false, message: "Trascrizione di Aurora non disponibile." });
+  if (!canRequestAuroraTranscription(clientIp(req))) {
+    return json(res, 429, { ok: false, message: "Troppe richieste vocali. Attendi qualche secondo." });
+  }
+  try {
+    const extension = audioType.includes("ogg") ? "ogg" : audioType.includes("mp4") ? "m4a" : "webm";
+    const text = await requestAuroraTranscription(
+      audioPart.data,
+      audioPart.contentType,
+      `aurora-recording.${extension}`,
+      language
+    );
+    return json(res, 200, { ok: true, text });
+  } catch (error) {
+    console.error(`[aurora-voice] Transcription failed: ${cleanTrackingString(error?.message, 220)}`);
+    return json(res, 502, { ok: false, message: "Trascrizione vocale temporaneamente non disponibile." });
   }
 }
 
@@ -5152,6 +5255,7 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/discounts/preview") return handleDiscountPreview(req, res);
   if (req.method === "POST" && url.pathname === "/api/orders") return handleCreateOrder(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat") return handleSiteChat(req, res);
+  if (req.method === "POST" && url.pathname === "/api/chat/transcribe") return handleSiteChatTranscription(req, res);
   if (req.method === "POST" && url.pathname === "/api/chat/speech") return handleSiteChatSpeech(req, res);
   const tryOnJobMatch = url.pathname.match(/^\/api\/try-on\/jobs\/(tryon-job-[a-f0-9]{36})$/);
   if (tryOnJobMatch) return handleTryOnJob(req, res, tryOnJobMatch[1]);
@@ -5229,7 +5333,7 @@ async function serveProductImage(req, res, url) {
       "Content-Type": object.ContentType || contentTypes[path.extname(name).toLowerCase()] || "application/octet-stream",
       "Cache-Control": "public, max-age=31536000, immutable",
       "X-Content-Type-Options": "nosniff",
-      "Permissions-Policy": "geolocation=(self)",
+      "Permissions-Policy": "geolocation=(self), microphone=(self)",
     };
     if (Number.isFinite(Number(object.ContentLength))) headers["Content-Length"] = Number(object.ContentLength);
     if (object.ETag) headers.ETag = object.ETag;
@@ -5258,7 +5362,7 @@ async function serveStatic(req, res, url) {
       "Content-Type": contentTypes[ext] || "application/octet-stream",
       "Content-Length": stat.size,
       "X-Content-Type-Options": "nosniff",
-      "Permissions-Policy": "geolocation=(self)",
+      "Permissions-Policy": "geolocation=(self), microphone=(self)",
       "Cache-Control": ext === ".html"
         ? "no-cache"
         : immutableAsset ? "public, max-age=31536000, immutable" : "public, max-age=604800",

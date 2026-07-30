@@ -3,7 +3,7 @@ import { readFile, stat } from "node:fs/promises";
 import test from "node:test";
 
 test("Aurora supports continuous voice conversation with animated feedback", async () => {
-  const [script, styles, server, smile, talkSmall, talkWide, blink] = await Promise.all([
+  const [script, styles, server, smile, talkSmall, talkWide, blink, silence] = await Promise.all([
     readFile("script.js", "utf8"),
     readFile("styles.css", "utf8"),
     readFile("server.js", "utf8"),
@@ -11,10 +11,16 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
     stat("assets/chat-assistant-avatar-live-talk-small.jpg"),
     stat("assets/chat-assistant-avatar-live-talk-wide.jpg"),
     stat("assets/chat-assistant-avatar-live-blink.jpg"),
+    stat("assets/aurora-silence.wav"),
   ]);
 
   [smile, talkSmall, talkWide, blink].forEach((frame) => assert.ok(frame.size > 20_000));
+  assert.ok(silence.size > 44);
   assert.match(script, /window\.SpeechRecognition \|\| window\.webkitSpeechRecognition/);
+  assert.match(script, /navigator\.mediaDevices\?\.getUserMedia/);
+  assert.match(script, /\/firefox\/i\.test\(navigator\.userAgent\)/);
+  assert.match(script, /new window\.MediaRecorder/);
+  assert.match(script, /fetch\("\/api\/chat\/transcribe"/);
   assert.match(script, /voiceRecognition\.continuous = false/);
   assert.match(script, /voiceRecognition\.interimResults = true/);
   assert.match(script, /fetch\("\/api\/chat\/speech"/);
@@ -26,8 +32,11 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(script, /data-chat-face-frame="talk-small"/);
   assert.match(script, /data-chat-face-frame="talk-wide"/);
   assert.match(script, /data-chat-face-frame="blink"/);
-  assert.match(script, /createMediaElementSource\(audio\)/);
-  assert.match(script, /getByteTimeDomainData\(auroraAudioSamples\)/);
+  assert.match(script, /data-chat-voice-audio/);
+  assert.match(script, /const unlockAuroraAudio = \(\) =>/);
+  assert.match(script, /const audio = voiceAudio/);
+  assert.match(script, /audio\.muted = false/);
+  assert.doesNotMatch(script, /createMediaElementSource/);
   assert.match(script, /window\.requestAnimationFrame\(renderFrame\)/);
   assert.match(script, /data-chat-voice-stage/);
   assert.match(script, /Voce generata con AI/);
@@ -43,6 +52,10 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(server, /OPENAI_TTS_MODEL \|\| "gpt-4o-mini-tts"/);
   assert.match(server, /OPENAI_TTS_VOICE \|\| "shimmer"/);
   assert.match(server, /https:\/\/api\.openai\.com\/v1\/audio\/speech/);
+  assert.match(server, /https:\/\/api\.openai\.com\/v1\/audio\/transcriptions/);
+  assert.match(server, /OPENAI_TRANSCRIBE_MODEL \|\| "gpt-4o-mini-transcribe"/);
+  assert.match(server, /url\.pathname === "\/api\/chat\/transcribe"/);
+  assert.match(server, /microphone=\(self\)/);
   assert.match(server, /instructions: auroraSpeechInstructions\[language\]/);
   assert.match(server, /speed: 0\.91/);
   assert.match(server, /function canRequestAuroraSpeech\(ip\)/);
@@ -55,7 +68,7 @@ test("all customer pages load the versioned Aurora voice assets", async () => {
   const pages = await Promise.all(pageNames.map((pageName) => readFile(pageName, "utf8")));
 
   pages.forEach((page, index) => {
-    assert.match(page, /\/assets-v\/aurora-live-2\/script\.js/, pageNames[index]);
-    assert.match(page, /\/assets-v\/aurora-live-2\/styles\.css/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-2\/script\.js/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-2\/styles\.css/, pageNames[index]);
   });
 });

@@ -5759,6 +5759,10 @@ body.motion-enabled .product-actions .buy-action:hover {
   display: none;
 }
 
+.site-chat-voice-stage > audio {
+  display: none;
+}
+
 .site-chat-voice-avatar {
   position: relative;
   display: grid;
