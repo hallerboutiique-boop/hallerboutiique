@@ -40,8 +40,14 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(script, /nextMouthChangeAt/);
   assert.match(script, /data-chat-voice-audio/);
   assert.match(script, /const unlockAuroraAudio = \(\) =>/);
+  assert.match(script, /const resetAuroraAudioElement = \(\{ clearSource = true \} = \{\}\) =>/);
+  assert.match(script, /voiceAudio\.defaultPlaybackRate = 1/);
+  assert.match(script, /voiceAudio\.playbackRate = 1/);
+  assert.match(script, /voiceMediaStream\?\.getTracks\(\)\.forEach\(\(track\) => track\.stop\(\)\)/);
+  assert.match(script, /voiceMediaChunks = \[\];\s+releaseVoiceMediaStream\(\);\s+if \(!shouldDiscard/);
+  assert.match(script, /stopVoiceRecognition\(\);\s+releaseVoiceMediaStream\(\);\s+setVoiceState\("processing"\)/);
   assert.match(script, /const audio = voiceAudio/);
-  assert.match(script, /audio\.muted = false/);
+  assert.match(script, /voiceAudio\.muted = false/);
   assert.doesNotMatch(script, /createMediaElementSource/);
   assert.match(script, /window\.requestAnimationFrame\(renderFrame\)/);
   assert.match(script, /data-chat-voice-stage/);
@@ -77,7 +83,7 @@ test("all customer pages load the versioned Aurora voice assets", async () => {
   const pages = await Promise.all(pageNames.map((pageName) => readFile(pageName, "utf8")));
 
   pages.forEach((page, index) => {
-    assert.match(page, /\/assets-v\/aurora-listen-1\/script\.js/, pageNames[index]);
-    assert.match(page, /\/assets-v\/aurora-listen-1\/styles\.css/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-clean-1\/script\.js/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-clean-1\/styles\.css/, pageNames[index]);
   });
 });

@@ -23,8 +23,8 @@ test("Aurora restores the active session across storefront pages", async () => {
   assert.match(script, /storeChatPanelOpen\(false\)/);
   assert.match(script, /input\.addEventListener\("input", \(\) => storeChatDraft\(input\.value\)\)/);
   assert.match(script, /localStorage\.getItem\(chatPanelOpenKey\) === "1"/);
-  assert.match(server, /"\/assets-v\/aurora-listen-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/aurora-audio-clean-1\/script\.js", "\/script\.js"/);
   pages.forEach((page, index) => {
-    assert.match(page, /\/assets-v\/aurora-listen-1\/script\.js/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-clean-1\/script\.js/, pageNames[index]);
   });
 });

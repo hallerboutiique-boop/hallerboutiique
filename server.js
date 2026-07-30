@@ -314,6 +314,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/aurora-audio-3/styles.css", "/styles.css"],
   ["/assets-v/aurora-listen-1/script.js", "/script.js"],
   ["/assets-v/aurora-listen-1/styles.css", "/styles.css"],
+  ["/assets-v/aurora-audio-clean-1/script.js", "/script.js"],
+  ["/assets-v/aurora-audio-clean-1/styles.css", "/styles.css"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],

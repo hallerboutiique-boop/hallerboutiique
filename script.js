@@ -5686,6 +5686,27 @@ function setupSiteChat() {
     voiceToggleLabel.textContent = translate(voiceConversationActive ? "chat-voice-stop" : "chat-voice-start");
   };
 
+  const resetAuroraAudioElement = ({ clearSource = true } = {}) => {
+    voiceAudio.pause();
+    voiceAudio.onended = null;
+    voiceAudio.onerror = null;
+    try {
+      voiceAudio.currentTime = 0;
+    } catch {
+      // The previous source may already be unavailable.
+    }
+    if (clearSource) {
+      voiceAudio.removeAttribute("src");
+      voiceAudio.load();
+    }
+    voiceAudio.muted = false;
+    voiceAudio.defaultMuted = false;
+    voiceAudio.volume = 1;
+    voiceAudio.defaultPlaybackRate = 1;
+    voiceAudio.playbackRate = 1;
+    if ("preservesPitch" in voiceAudio) voiceAudio.preservesPitch = true;
+  };
+
   const unlockAuroraAudio = () => {
     if (auroraAudioUnlocked) return;
     voiceAudio.src = "/assets/aurora-silence.wav";
@@ -5716,9 +5737,7 @@ function setupSiteChat() {
       activeSpeechRequest = null;
     }
     if (activeAuroraAudio) {
-      activeAuroraAudio.pause();
-      activeAuroraAudio.removeAttribute("src");
-      activeAuroraAudio.load();
+      resetAuroraAudioElement();
       activeAuroraAudio = null;
     }
     if (activeAuroraAudioUrl) {
@@ -5832,6 +5851,7 @@ function setupSiteChat() {
   const playAuroraSpeech = async (text) => {
     if (!voiceConversationActive) return;
     stopVoiceRecognition();
+    releaseVoiceMediaStream();
     setVoiceState("processing");
     const controller = new AbortController();
     activeSpeechRequest = controller;
@@ -5851,19 +5871,22 @@ function setupSiteChat() {
       if (!voiceConversationActive || controller.signal.aborted) return;
       activeAuroraAudioUrl = URL.createObjectURL(audioBlob);
       const audio = voiceAudio;
-      audio.pause();
+      resetAuroraAudioElement();
       audio.src = activeAuroraAudioUrl;
-      audio.muted = false;
-      audio.defaultMuted = false;
-      audio.volume = 1;
       audio.load();
       activeAuroraAudio = audio;
       setVoiceState("speaking");
       startAuroraFaceAnimation(audio);
       await new Promise((resolve, reject) => {
         activeAuroraAudioResolve = resolve;
-        audio.addEventListener("ended", resolve, { once: true });
-        audio.addEventListener("error", reject, { once: true });
+        const finishPlayback = (error = null) => {
+          audio.onended = null;
+          audio.onerror = null;
+          if (error) reject(error);
+          else resolve();
+        };
+        audio.onended = () => finishPlayback();
+        audio.onerror = () => finishPlayback(new Error(translate("chat-error")));
         audio.play().catch(reject);
       });
     } catch (error) {
@@ -5879,7 +5902,7 @@ function setupSiteChat() {
       if (activeSpeechRequest === controller) activeSpeechRequest = null;
       activeAuroraAudioResolve = null;
       if (activeAuroraAudio) {
-        activeAuroraAudio.pause();
+        resetAuroraAudioElement();
         activeAuroraAudio = null;
       }
       if (activeAuroraAudioUrl) {
@@ -6020,14 +6043,18 @@ function setupSiteChat() {
         voiceRecognitionStarted = false;
         const shouldDiscard = discardRecognitionResult;
         discardRecognitionResult = false;
+        const recordedType = voiceMediaRecorder?.mimeType || preferredType || "audio/webm";
         const audioBlob = new Blob(voiceMediaChunks, {
-          type: voiceMediaRecorder?.mimeType || preferredType || "audio/webm",
+          type: recordedType,
         });
         voiceMediaChunks = [];
+        releaseVoiceMediaStream();
         if (!shouldDiscard && voiceConversationActive) void transcribeRecordedVoice(audioBlob);
       }, { once: true });
       voiceMediaRecorder.addEventListener("error", () => {
         voiceRecognitionStarted = false;
+        discardRecognitionResult = true;
+        releaseVoiceMediaStream();
         if (voiceConversationActive) setVoiceState("error", translate("chat-voice-no-speech"));
       }, { once: true });
       discardRecognitionResult = false;
