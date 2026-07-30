@@ -32,6 +32,8 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(script, /data-chat-face-frame="talk-small"/);
   assert.match(script, /data-chat-face-frame="talk-wide"/);
   assert.match(script, /data-chat-face-frame="blink"/);
+  assert.match(script, /class="site-chat-voice-person"/);
+  assert.match(script, /nextMouthChangeAt/);
   assert.match(script, /data-chat-voice-audio/);
   assert.match(script, /const unlockAuroraAudio = \(\) =>/);
   assert.match(script, /const audio = voiceAudio/);
@@ -41,7 +43,8 @@ test("Aurora supports continuous voice conversation with animated feedback", asy
   assert.match(script, /data-chat-voice-stage/);
   assert.match(script, /Voce generata con AI/);
 
-  assert.match(styles, /\.site-chat-voice-stage\.is-speaking \.site-chat-voice-portrait/);
+  assert.match(styles, /\.site-chat-voice-stage\.is-speaking \.site-chat-voice-person/);
+  assert.doesNotMatch(styles, /\.site-chat-voice-stage\.is-speaking \.site-chat-voice-portrait/);
   assert.match(styles, /@keyframes aurora-speaking/);
   assert.match(styles, /@keyframes aurora-body-idle/);
   assert.match(styles, /@keyframes aurora-torso-breath/);
@@ -68,7 +71,7 @@ test("all customer pages load the versioned Aurora voice assets", async () => {
   const pages = await Promise.all(pageNames.map((pageName) => readFile(pageName, "utf8")));
 
   pages.forEach((page, index) => {
-    assert.match(page, /\/assets-v\/aurora-audio-2\/script\.js/, pageNames[index]);
-    assert.match(page, /\/assets-v\/aurora-audio-2\/styles\.css/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-3\/script\.js/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-audio-3\/styles\.css/, pageNames[index]);
   });
 });

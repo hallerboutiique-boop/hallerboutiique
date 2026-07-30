@@ -5484,11 +5484,13 @@ function setupSiteChat() {
               <audio data-chat-voice-audio src="/assets/aurora-silence.wav" preload="auto" playsinline></audio>
               <div class="site-chat-voice-avatar" aria-hidden="true">
                 <span class="site-chat-voice-portrait" data-chat-voice-portrait>
-                  <img class="site-chat-voice-frame is-active" data-chat-face-frame="smile" src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false">
-                  <img class="site-chat-voice-frame" data-chat-face-frame="talk-small" src="/assets/chat-assistant-avatar-live-talk-small.jpg" alt="" draggable="false">
-                  <img class="site-chat-voice-frame" data-chat-face-frame="talk-wide" src="/assets/chat-assistant-avatar-live-talk-wide.jpg" alt="" draggable="false">
-                  <img class="site-chat-voice-frame" data-chat-face-frame="blink" src="/assets/chat-assistant-avatar-live-blink.jpg" alt="" draggable="false">
-                  <span class="site-chat-voice-torso"><img src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false"></span>
+                  <span class="site-chat-voice-person">
+                    <img class="site-chat-voice-frame is-active" data-chat-face-frame="smile" src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false">
+                    <img class="site-chat-voice-frame" data-chat-face-frame="talk-small" src="/assets/chat-assistant-avatar-live-talk-small.jpg" alt="" draggable="false">
+                    <img class="site-chat-voice-frame" data-chat-face-frame="talk-wide" src="/assets/chat-assistant-avatar-live-talk-wide.jpg" alt="" draggable="false">
+                    <img class="site-chat-voice-frame" data-chat-face-frame="blink" src="/assets/chat-assistant-avatar-live-blink.jpg" alt="" draggable="false">
+                    <span class="site-chat-voice-torso"><img src="/assets/chat-assistant-avatar-live-smile.jpg" alt="" draggable="false"></span>
+                  </span>
                 </span>
                 <i class="site-chat-voice-ring"></i>
                 <span class="site-chat-voice-wave"><i></i><i></i><i></i><i></i></span>
@@ -5625,6 +5627,8 @@ function setupSiteChat() {
     const startedAt = window.performance.now();
     let nextBlinkAt = startedAt + 1900 + Math.random() * 2400;
     let blinkUntil = 0;
+    let nextMouthChangeAt = startedAt;
+    let mouthFrame = "smile";
     const renderFrame = (now) => {
       if (!voiceConversationActive || voiceStage.hidden || !voiceStage.classList.contains("is-speaking")) {
         stopAuroraFaceAnimation();
@@ -5637,9 +5641,17 @@ function setupSiteChat() {
       if (now < blinkUntil) {
         setAuroraFaceFrame("blink");
       } else {
-        const elapsed = audio ? audio.currentTime * 1000 : now - startedAt;
-        const phase = Math.floor(elapsed / 105) % 9;
-        setAuroraFaceFrame(["talk-small", "talk-wide", "talk-small", "smile", "talk-small", "talk-wide", "talk-small", "smile", "smile"][phase]);
+        if (now >= nextMouthChangeAt) {
+          const mouthChoices = mouthFrame === "talk-wide"
+            ? ["talk-small", "talk-small", "smile"]
+            : mouthFrame === "smile"
+              ? ["talk-small", "talk-small", "talk-wide"]
+              : ["talk-wide", "talk-small", "smile", "talk-small"];
+          mouthFrame = mouthChoices[Math.floor(Math.random() * mouthChoices.length)];
+          const pauseMultiplier = mouthFrame === "smile" ? 1.45 : 1;
+          nextMouthChangeAt = now + (72 + Math.random() * 96) * pauseMultiplier;
+        }
+        setAuroraFaceFrame(mouthFrame);
       }
       auroraFaceAnimationFrame = window.requestAnimationFrame(renderFrame);
     };

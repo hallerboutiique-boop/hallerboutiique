@@ -5781,8 +5781,15 @@ body.motion-enabled .product-actions .buy-action:hover {
   border: 2px solid var(--gold);
   border-radius: 16px;
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.48);
+}
+
+.site-chat-voice-person {
+  position: absolute;
+  inset: 0;
+  display: block;
   transform-origin: 50% 72%;
   animation: aurora-body-idle 5.8s ease-in-out infinite;
+  will-change: transform;
 }
 
 .site-chat-voice-frame,
@@ -5802,7 +5809,7 @@ body.motion-enabled .product-actions .buy-action:hover {
 .site-chat-voice-frame {
   z-index: 1;
   opacity: 0;
-  transition: opacity 85ms linear;
+  transition: opacity 55ms ease-out;
 }
 
 .site-chat-voice-frame.is-active {
@@ -5920,7 +5927,7 @@ body.motion-enabled .product-actions .buy-action:hover {
   animation-delay: 330ms;
 }
 
-.site-chat-voice-stage.is-speaking .site-chat-voice-portrait {
+.site-chat-voice-stage.is-speaking .site-chat-voice-person {
   animation: aurora-speaking 2.45s ease-in-out infinite;
 }
 
@@ -5928,7 +5935,7 @@ body.motion-enabled .product-actions .buy-action:hover {
   animation: aurora-torso-speaking 2.6s ease-in-out infinite;
 }
 
-.site-chat-voice-stage.is-listening .site-chat-voice-portrait {
+.site-chat-voice-stage.is-listening .site-chat-voice-person {
   animation-duration: 4.6s;
 }
 
@@ -5937,15 +5944,15 @@ body.motion-enabled .product-actions .buy-action:hover {
 }
 
 @keyframes aurora-speaking {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(-0.35deg); }
-  28% { transform: translate3d(0.7px, -0.9px, 0) scale(1.012) rotate(0.45deg); }
-  55% { transform: translate3d(-0.5px, -0.25px, 0) scale(1.006) rotate(-0.12deg); }
-  78% { transform: translate3d(0.35px, -0.65px, 0) scale(1.01) rotate(0.28deg); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  28% { transform: translate3d(0.35px, -0.45px, 0) scale(1.006); }
+  55% { transform: translate3d(-0.25px, -0.12px, 0) scale(1.003); }
+  78% { transform: translate3d(0.18px, -0.3px, 0) scale(1.005); }
 }
 
 @keyframes aurora-body-idle {
-  0%, 100% { transform: translate3d(0, 0, 0) scale(1) rotate(-0.18deg); }
-  50% { transform: translate3d(0, -0.7px, 0) scale(1.008) rotate(0.2deg); }
+  0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(0, -0.35px, 0) scale(1.004); }
 }
 
 @keyframes aurora-torso-breath {
@@ -6165,7 +6172,7 @@ body.motion-enabled .product-actions .buy-action:hover {
 @media (prefers-reduced-motion: reduce) {
   .site-chat-voice-stage .site-chat-voice-ring,
   .site-chat-voice-stage .site-chat-voice-wave i,
-  .site-chat-voice-stage .site-chat-voice-portrait,
+  .site-chat-voice-stage .site-chat-voice-person,
   .site-chat-voice-stage .site-chat-voice-torso {
     animation: none;
   }
