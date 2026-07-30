@@ -47,7 +47,7 @@ test("all pages use the cache-busted unified language script", async () => {
 test("checkout exposes a multilingual bundle try-on", async () => {
   const [checkout, script] = await Promise.all([readFile("checkout.html", "utf8"), readFile("script.js", "utf8")]);
   assert.match(checkout, /data-bundle-tryon/);
-  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/chat-referral-auth-1\/script\.js/);
   assert.match(script, /function prepareTryOnCustomerFile/);
   assert.doesNotMatch(script, /function createBundleTryOnReference/);
   assert.match(script, /formData\.append\("userImage", preparedCustomerFile/);
@@ -106,7 +106,7 @@ test("catalog navigation, stable visual search and private last-stock handling a
   const searchResultsStart = script.indexOf("function renderCatalogSearchResults(query = \"\")");
   const searchResultsEnd = script.indexOf("function loadDeferredProductImage", searchResultsStart);
   assert.match(script.slice(searchResultsStart, searchResultsEnd), /getAllProducts\(\)\.filter\(isNormalCatalogProduct\)/);
-  assert.match(index, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
+  assert.match(index, /\/assets-v\/chat-referral-auth-1\/script\.js/);
   const womanSlideStart = index.indexOf("hero-slide hero-slide-woman");
   const womanSlideEnd = index.indexOf("</article>", womanSlideStart);
   const womanSlide = index.slice(womanSlideStart, womanSlideEnd);
@@ -382,14 +382,11 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
     ...scriptPages.map((file) => readFile(file, "utf8")),
   ]);
   pages.forEach((html, pageIndex) => {
-    const expectedScript = scriptPages[pageIndex] === "account.html"
-      ? /\/assets-v\/hide-zero-stock-1\/script\.js/
-      : /\/assets-v\/catalog-last-shoes-1\/script\.js/;
-    assert.match(html, expectedScript);
+    assert.match(html, /\/assets-v\/chat-referral-auth-1\/script\.js/, scriptPages[pageIndex]);
   });
-  assert.match(index, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
+  assert.match(index, /\/assets-v\/chat-referral-auth-1\/script\.js/);
   assert.match(index, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
-  assert.match(checkout, /\/assets-v\/checkout-discounts-1\/script\.js/);
+  assert.match(checkout, /\/assets-v\/chat-referral-auth-1\/script\.js/);
   assert.match(checkout, /\/assets-v\/checkout-discounts-1\/styles\.css/);
   assert.match(server, /const versionedPublicFiles = new Map/);
   assert.match(server, /"\/assets-v\/catalog-controls-1\/script\.js", "\/script\.js"/);
@@ -403,6 +400,7 @@ test("Bunny receives immutable path-versioned storefront assets instead of ignor
   assert.match(server, /"\/assets-v\/hide-zero-stock-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-discounts-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/checkout-discounts-1\/styles\.css", "\/styles\.css"/);
+  assert.match(server, /"\/assets-v\/chat-referral-auth-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-last-shoes-1\/script\.js", "\/script\.js"/);
   assert.match(server, /"\/assets-v\/catalog-stock-variants-2\/styles\.css", "\/styles\.css"/);
   assert.match(server, /"\/assets-v\/tryon-no-shoes-1\/script\.js", "\/script\.js"/);
@@ -415,7 +413,7 @@ test("last-stock cards show available sizes with a visible pulse", async () => {
     readFile("script.js", "utf8"),
     readFile("styles.css", "utf8"),
   ]);
-  assert.match(page, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
+  assert.match(page, /\/assets-v\/chat-referral-auth-1\/script\.js/);
   assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   assert.match(script, /const visibleSizes = onlyAvailable && inventoryTrackedBySize[\s\S]*?sizes\.filter\(\(size\) => availableSizes\.has/);
   assert.match(script, /createProductCard\(product, \{ showOnlyAvailableSizes: true \}\)/);
@@ -435,7 +433,7 @@ test("every product can share its direct page through social and native apps", a
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
+    assert.match(page, /\/assets-v\/chat-referral-auth-1\/script\.js/);
     assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   }
   assert.match(script, /function productAbsoluteUrl\(product\)[\s\S]*?new URL\(productPageUrl\(product\), window\.location\.origin\)\.href/);
@@ -514,7 +512,7 @@ test("color variants stay grouped while preserving their own gallery, price and 
     readFile("server.js", "utf8"),
   ]);
   for (const page of [index, productPage, lastStock]) {
-    assert.match(page, /\/assets-v\/catalog-last-shoes-1\/script\.js/);
+    assert.match(page, /\/assets-v\/chat-referral-auth-1\/script\.js/);
     assert.match(page, /\/assets-v\/catalog-stock-variants-2\/styles\.css/);
   }
   assert.match(admin, /\/assets-v\/admin-discount-codes-1\/admin\.js/);

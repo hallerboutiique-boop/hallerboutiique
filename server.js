@@ -47,6 +47,7 @@ import {
   resolveProductSizeType,
 } from "./product-inventory.mjs";
 import { applyProductStockOverwrite } from "./product-stock-overwrite.mjs";
+import { findRegisteredReferrer } from "./chat-referrals.mjs";
 import {
   calculateOrderDiscounts,
   discountCodeIsUsable,
@@ -278,6 +279,7 @@ const versionedPublicFiles = new Map([
   ["/assets-v/hide-zero-stock-1/script.js", "/script.js"],
   ["/assets-v/checkout-discounts-1/script.js", "/script.js"],
   ["/assets-v/checkout-discounts-1/styles.css", "/styles.css"],
+  ["/assets-v/chat-referral-auth-1/script.js", "/script.js"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -2922,6 +2924,16 @@ const siteChatLanguages = {
   ro: { name: "română", locale: "ro-RO", invalidProfile: "Introdu prenumele, numele si o adresa de e-mail valida pentru a continua.", emptyMessage: "Scrie un mesaj pentru a incepe conversatia.", unavailable: "Asistenta virtuala este temporar indisponibila.", fallback: "Mi-a scapat un detaliu. Poti reformula?", referralRequired: "Pentru reducerea de 10%, spune-mi mai intai numele si prenumele prietenului care ti-a vorbit despre Haller Boutique.", referralCode: "Perfect: codul tau de reducere de 10% este {code}. Poate fi folosit o singura data; dupa confirmare devine inutilizabil, iar comanda expira dupa 24 de ore." },
 };
 
+const siteChatReferralMessages = {
+  it: { notRegistered: "Posso generare il 10% solo se la persona che ti ha presentato Haller Boutique è già registrata al sito con account email, Google o Microsoft. Verifica nome e cognome.", selfReferral: "Il codice referral deve essere associato a un altro cliente registrato." },
+  en: { notRegistered: "I can generate the 10% code only if the person who referred you is already registered with an email, Google or Microsoft account. Please check their full name.", selfReferral: "A referral code must be linked to another registered customer." },
+  fr: { notRegistered: "Je peux générer le code de 10 % seulement si la personne qui vous a recommandé Haller Boutique est déjà inscrite avec un compte e-mail, Google ou Microsoft. Vérifiez son nom complet.", selfReferral: "Un code de parrainage doit être associé à un autre client inscrit." },
+  de: { notRegistered: "Ich kann den 10%-Code nur erstellen, wenn die Person, die Sie empfohlen hat, bereits mit E-Mail, Google oder Microsoft registriert ist. Prüfen Sie bitte den vollständigen Namen.", selfReferral: "Ein Empfehlungs-Code muss einem anderen registrierten Kunden zugeordnet sein." },
+  es: { notRegistered: "Solo puedo generar el código del 10 % si la persona que te recomendó Haller Boutique ya está registrada con correo, Google o Microsoft. Comprueba su nombre completo.", selfReferral: "Un código de recomendación debe estar asociado a otro cliente registrado." },
+  sq: { notRegistered: "Mund ta gjeneroj kodin 10% vetëm nëse personi që ju rekomandoi Haller Boutique është tashmë i regjistruar me email, Google ose Microsoft. Kontrolloni emrin e plotë.", selfReferral: "Kodi i rekomandimit duhet t'i caktohet një klienti tjetër të regjistruar." },
+  ro: { notRegistered: "Pot genera codul de 10% doar dacă persoana care ți-a recomandat Haller Boutique este deja înregistrată cu e-mail, Google sau Microsoft. Verifică numele complet.", selfReferral: "Un cod de recomandare trebuie asociat unui alt client înregistrat." },
+};
+
 const tryOnLanguages = {
   it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", bundleRules: "Il try-on accetta tutti gli articoli, con massimo 2 prodotti.", billing: "Credito API OpenAI esaurito: ricarica il saldo o aumenta il limite di spesa per riattivare il try-on.", received: "Foto ricevuta", prepared: "Prodotto reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "I prodotti selezionati sono pronti", bundleGenerating: "Generazione try-on in corso", bundlePreview: "Try-on ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
   en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", bundleRules: "Try-on accepts every product, with a maximum of 2 products.", billing: "OpenAI API credit is exhausted. Add credit or raise the spending limit to reactivate try-on.", received: "Photo received", prepared: "Real catalog product prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "The selected products are ready", bundleGenerating: "Generating the try-on", bundlePreview: "Try-on received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
@@ -3080,6 +3092,14 @@ function cleanChatCatalog(catalog) {
     .filter((product) => product.name);
 }
 
+async function readChatCatalog() {
+  const [defaults, overrides] = await Promise.all([readDefaultProducts(), readProductOverrides()]);
+  return cleanChatCatalog([
+    ...defaults.map((product) => mergeProduct(product, overrides.items)),
+    ...overrides.custom.map(mergeCustomProduct),
+  ]);
+}
+
 async function handleSiteChat(req, res) {
   if (req.method !== "POST") return notFound(res);
   const body = await parseBody(req);
@@ -3096,7 +3116,6 @@ async function handleSiteChat(req, res) {
   }
   if (!message) return badRequest(res, languageConfig.emptyMessage);
 
-  const catalog = cleanChatCatalog(body.catalog);
   const history = Array.isArray(body.history)
     ? body.history
         .slice(-8)
@@ -3109,10 +3128,17 @@ async function handleSiteChat(req, res) {
       message,
     ]);
     if (!referralName) return json(res, 200, { ok: true, reply: languageConfig.referralRequired, language });
-    const code = await issueReferralDiscountCode({ firstName, lastName, email, referralName });
+    const referralUser = findRegisteredReferrer(await readUsers(), referralName);
+    if (!referralUser) {
+      return json(res, 200, { ok: true, reply: siteChatReferralMessages[language].notRegistered, language });
+    }
+    if (referralUser.email === email) {
+      return json(res, 200, { ok: true, reply: siteChatReferralMessages[language].selfReferral, language });
+    }
+    const code = await issueReferralDiscountCode({ firstName, lastName, email, referralUser });
     return json(res, 200, {
       ok: true,
-      reply: languageConfig.referralCode.replace("{code}", code),
+      reply: languageConfig.referralCode.replace("{code}", code).replace("{referral}", referralUser.name),
       language,
     });
   }
@@ -3126,6 +3152,7 @@ async function handleSiteChat(req, res) {
       : `Non e stato trovato un ordine ${orderCode} associato a questa email.`;
   }
 
+  const catalog = await readChatCatalog();
   const catalogText = catalog.length
     ? catalog.map((product) => `- ${product.name} | ${product.category} | ${product.collection} | ${product.price} | taglie: ${product.sizes.join(", ") || "da verificare"} | ${product.description}`).join("\n")
     : "Catalogo momentaneamente non disponibile.";
@@ -4148,7 +4175,7 @@ function generateReferralDiscountCode(discountCodes) {
   return code;
 }
 
-async function issueReferralDiscountCode({ firstName, lastName, email, referralName }) {
+async function issueReferralDiscountCode({ firstName, lastName, email, referralUser }) {
   return enqueueOrderMutation(async () => {
     const discountCodes = await readDiscountCodes();
     const code = generateReferralDiscountCode(discountCodes);
@@ -4160,7 +4187,9 @@ async function issueReferralDiscountCode({ firstName, lastName, email, referralN
       issuedAt: new Date().toISOString(),
       customerName: `${firstName} ${lastName}`,
       customerEmail: email,
-      referralName,
+      referralName: referralUser.name,
+      referrerUserId: referralUser.id,
+      referrerEmail: referralUser.email,
     });
     await writeDiscountCodes(discountCodes);
     return code;
@@ -4189,6 +4218,8 @@ function publicAdminDiscountCode(record, ordersById = new Map(), now = new Date(
     customerName: cleanTrackingString(record?.customerName, 120),
     customerEmail: cleanEmail(record?.customerEmail),
     referralName: cleanTrackingString(record?.referralName, 120),
+    referrerUserId: cleanTrackingString(record?.referrerUserId, 120),
+    referralEmail: cleanEmail(record?.referrerEmail),
     issuedAt: record?.issuedAt || "",
     expiresAt: record?.expiresAt || "",
     orderedAt: record?.orderedAt || "",

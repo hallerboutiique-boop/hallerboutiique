@@ -5170,6 +5170,7 @@ setupCheckoutAddressAutocomplete();
 setupBundleTryOn();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";
+const chatHistoryLimit = 8;
 let chatHistory = [];
 
 function readChatProfile() {
@@ -5179,17 +5180,6 @@ function readChatProfile() {
   } catch {
     return null;
   }
-}
-
-function getChatCatalog() {
-  return getAllProducts().map((product) => ({
-    name: product.name,
-    category: product.category,
-    collection: product.collection,
-    description: product.description,
-    finalPrice: product.finalPrice,
-    sizes: getSizes(product),
-  }));
 }
 
 function appendChatMessage(messages, role, text) {
@@ -5247,8 +5237,23 @@ function setupSiteChat() {
   const messages = root.querySelector("[data-chat-messages]");
   const composer = root.querySelector("[data-chat-composer]");
   const input = root.querySelector("[data-chat-input]");
+  const sendButton = composer.querySelector("button[type='submit']");
+  const promptButtons = [...root.querySelectorAll("[data-chat-prompt-key]")];
   let profile = readChatProfile();
+  let activeChatRequest = null;
   translatePage();
+
+  const rememberChatMessage = (role, content) => {
+    chatHistory = [...chatHistory, { role, content }].slice(-chatHistoryLimit);
+  };
+
+  const setChatBusy = (busy) => {
+    input.disabled = busy;
+    if (sendButton) sendButton.disabled = busy;
+    promptButtons.forEach((button) => {
+      button.disabled = busy;
+    });
+  };
 
   const showConversation = () => {
     profileForm.hidden = true;
@@ -5292,33 +5297,43 @@ function setupSiteChat() {
       phone: String(values.phone || "").trim(),
     };
     localStorage.setItem(chatProfileKey, JSON.stringify(profile));
+    chatHistory = [];
+    messages.replaceChildren();
     showConversation();
     input.focus();
   });
 
   const sendMessage = async (message) => {
     const text = String(message || "").trim();
-    if (!text || !profile) return;
+    if (!text || !profile || activeChatRequest) return;
     appendChatMessage(messages, "user", text);
-    chatHistory.push({ role: "user", content: text });
+    rememberChatMessage("user", text);
     input.value = "";
-    input.disabled = true;
+    setChatBusy(true);
     appendChatMessage(messages, "assistant", translate("chat-thinking"));
     const pending = messages.lastElementChild;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), 30000);
+    activeChatRequest = controller;
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1), catalog: getChatCatalog(), language: siteLanguage }),
+        signal: controller.signal,
+        body: JSON.stringify({ profile, message: text, history: chatHistory.slice(0, -1).slice(-chatHistoryLimit), language: siteLanguage }),
       });
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || translate("chat-error"));
       pending.textContent = data.reply;
-      chatHistory.push({ role: "assistant", content: data.reply });
+      rememberChatMessage("assistant", data.reply);
     } catch (error) {
+      const latestChatMessage = chatHistory[chatHistory.length - 1];
+      if (latestChatMessage?.role === "user" && latestChatMessage?.content === text) chatHistory.pop();
       pending.textContent = error.message || translate("chat-error");
     } finally {
-      input.disabled = false;
+      window.clearTimeout(timeout);
+      activeChatRequest = null;
+      setChatBusy(false);
       input.focus();
       messages.scrollTop = messages.scrollHeight;
     }

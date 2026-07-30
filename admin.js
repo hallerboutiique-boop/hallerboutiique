@@ -2178,6 +2178,10 @@ function renderAdminDiscountCodes(codes) {
         .filter(Boolean)
         .map(escapeHtml)
         .join("<br>") || "-";
+      const referrer = [discountCode.referralName || "Non indicato", discountCode.referralEmail]
+        .filter(Boolean)
+        .map(escapeHtml)
+        .join("<br>");
       const status = String(discountCode.status || "issued").toLowerCase();
       const expiry = discountCode.expiresAt ? formatDate(discountCode.expiresAt) : "Senza scadenza";
       const order = discountCode.orderCode || discountCode.orderId || "-";
@@ -2185,7 +2189,7 @@ function renderAdminDiscountCodes(codes) {
         <tr>
           <td><strong class="admin-discount-code">${escapeHtml(discountCode.code)}</strong><small>${escapeHtml(discountCode.percentage)}% di sconto</small></td>
           <td>${customer}</td>
-          <td>${escapeHtml(discountCode.referralName || "Non indicato")}</td>
+          <td>${referrer}</td>
           <td>${discountCode.source === "admin" ? "Admin" : "Aurora"}</td>
           <td>${escapeHtml(expiry)}<small>Creato ${escapeHtml(formatDate(discountCode.issuedAt))}</small></td>
           <td>${escapeHtml(order)}</td>
