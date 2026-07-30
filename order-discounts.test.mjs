@@ -5,6 +5,7 @@ import {
   calculateOrderDiscounts,
   discountCodeIsUsable,
   extractReferralName,
+  extractStandaloneReferralName,
   findUsableDiscountCodeInMessages,
   isDiscountApplicationRequest,
   isTenPercentDiscountRequest,
@@ -48,6 +49,8 @@ test("caps administrator-generated discount codes at one hundred percent", () =>
 
 test("recognizes a referral name supplied before a ten-percent request", () => {
   assert.equal(extractReferralName(["Il mio amico si chiama marco rossi.", "Vorrei il 10% di sconto."]), "Marco Rossi");
+  assert.equal(extractStandaloneReferralName("mario rossi"), "Mario Rossi");
+  assert.equal(extractStandaloneReferralName("Il mio amico è Mario Rossi"), "");
   assert.equal(isTenPercentDiscountRequest("Posso avere un codice sconto del 10%?"), true);
   assert.equal(isTenPercentDiscountRequest("Vorrei sapere le taglie."), false);
 });

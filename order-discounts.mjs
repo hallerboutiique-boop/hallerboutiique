@@ -84,6 +84,12 @@ function titleCase(value) {
     .join(" ");
 }
 
+export function extractStandaloneReferralName(message) {
+  const value = String(message || "").replace(/\s+/gu, " ").trim();
+  const match = value.match(/^([A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}(?:\s+[A-Za-zÀ-ÖØ-öø-ÿ'’-]{2,}){1,2})$/u);
+  return match?.[1] ? titleCase(match[1]) : "";
+}
+
 export function extractReferralName(messages) {
   const text = (Array.isArray(messages) ? messages : [])
     .map((message) => String(message || "").replace(/\s+/g, " ").trim())

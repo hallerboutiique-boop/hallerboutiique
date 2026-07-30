@@ -53,6 +53,7 @@ import {
   calculateOrderDiscounts,
   discountCodeIsUsable,
   extractReferralName,
+  extractStandaloneReferralName,
   findUsableDiscountCodeInMessages,
   isDiscountApplicationRequest,
   isTenPercentDiscountRequest,
@@ -3295,6 +3296,11 @@ async function handleSiteChat(req, res) {
         .map((item) => ({ role: item?.role === "assistant" ? "assistant" : "user", content: cleanChatMessage(item?.content) }))
         .filter((item) => item.content)
     : [];
+  const referralCopy = siteChatReferralMessages[language];
+  const referralFollowUpPending = history
+    .slice(-2)
+    .some((item) => item.role === "assistant"
+      && [languageConfig.referralRequired, referralCopy.notRegistered, referralCopy.selfReferral].includes(item.content));
   const discountApplicationRequested = isDiscountApplicationRequest(message);
   if (discountApplicationRequested) {
     const code = await usableChatDiscountCodeFromMessages([
@@ -3310,18 +3316,18 @@ async function handleSiteChat(req, res) {
       });
     }
   }
-  if (isTenPercentDiscountRequest(message)) {
-    const referralName = extractReferralName([
-      ...history.filter((item) => item.role === "user").map((item) => item.content),
-      message,
-    ]);
+  const referralName = extractReferralName([
+    ...history.filter((item) => item.role === "user").map((item) => item.content),
+    message,
+  ]) || (referralFollowUpPending ? extractStandaloneReferralName(message) : "");
+  if (isTenPercentDiscountRequest(message) || referralFollowUpPending) {
     if (!referralName) return json(res, 200, { ok: true, reply: languageConfig.referralRequired, language });
     const referralUser = findRegisteredReferrer(await readUsers(), referralName);
     if (!referralUser) {
-      return json(res, 200, { ok: true, reply: siteChatReferralMessages[language].notRegistered, language });
+      return json(res, 200, { ok: true, reply: referralCopy.notRegistered, language });
     }
     if (referralUser.email === email) {
-      return json(res, 200, { ok: true, reply: siteChatReferralMessages[language].selfReferral, language });
+      return json(res, 200, { ok: true, reply: referralCopy.selfReferral, language });
     }
     const code = await issueReferralDiscountCode({ firstName, lastName, email, referralUser });
     return json(res, 200, {
