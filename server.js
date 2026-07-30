@@ -287,6 +287,8 @@ const versionedPublicFiles = new Map([
   ["/assets-v/checkout-discount-visibility-1/script.js", "/script.js"],
   ["/assets-v/checkout-discount-visibility-1/styles.css", "/styles.css"],
   ["/assets-v/aurora-session-1/script.js", "/script.js"],
+  ["/assets-v/aurora-product-previews-1/script.js", "/script.js"],
+  ["/assets-v/aurora-product-previews-1/styles.css", "/styles.css"],
   ["/assets-v/admin-discount-codes-1/admin.js", "/admin.js"],
   ["/assets-v/admin-discount-codes-1/styles.css", "/styles.css"],
   ["/assets-v/product-share-2/script.js", "/script.js"],
@@ -3088,19 +3090,24 @@ function cleanChatCatalog(catalog) {
   if (!Array.isArray(catalog)) return [];
   return catalog
     .slice(0, 80)
-    .map((product) => ({
-      id: cleanTrackingString(product?.id, 120),
-      name: cleanTrackingString(product?.name, 120),
-      category: cleanTrackingString(product?.category, 80),
-      collection: cleanTrackingString(product?.collection, 100),
-      description: cleanTrackingString(product?.description, 300),
-      price: cleanTrackingString(product?.finalPrice, 40),
-      sizes: Array.isArray(product?.sizes) ? product.sizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12) : [],
-      availableSizes: Array.isArray(product?.availableSizes)
-        ? product.availableSizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12)
-        : [],
-      isSoldOut: product?.isSoldOut === true,
-    }))
+    .map((product) => {
+      const name = cleanTrackingString(product?.name, 120);
+      const variantColor = cleanTrackingString(product?.variantColor, 80);
+      return {
+        id: cleanTrackingString(product?.id, 120),
+        name: variantColor ? `${name} – ${variantColor}` : name,
+        category: cleanTrackingString(product?.category, 80),
+        collection: cleanTrackingString(product?.collection, 100),
+        description: cleanTrackingString(product?.description, 300),
+        price: cleanTrackingString(product?.finalPrice, 40),
+        image: cleanProductImages(product?.images)[0] || "",
+        sizes: Array.isArray(product?.sizes) ? product.sizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12) : [],
+        availableSizes: Array.isArray(product?.availableSizes)
+          ? product.availableSizes.map((size) => cleanTrackingString(size, 12)).filter(Boolean).slice(0, 12)
+          : [],
+        isSoldOut: product?.isSoldOut === true,
+      };
+    })
     .filter((product) => product.id && product.name);
 }
 
@@ -3135,9 +3142,13 @@ async function readChatCatalog() {
 const auroraCheckoutResponseSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["reply", "checkout"],
+  required: ["reply", "productIds", "checkout"],
   properties: {
     reply: { type: "string" },
+    productIds: {
+      type: "array",
+      items: { type: "string" },
+    },
     checkout: {
       type: "object",
       additionalProperties: false,
@@ -3165,6 +3176,45 @@ const auroraCheckoutResponseSchema = {
 function cleanChatCheckoutItems(items, catalog) {
   const normalized = normalizeAuroraCheckoutAction({ mode: "replace", items }, catalog);
   return normalized?.items || [];
+}
+
+function normalizeChatProductReference(value) {
+  return cleanTrackingString(value, 240)
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("it")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
+function chatProductPreviews(productIds, reply, catalog) {
+  const productsById = new Map(catalog.map((product) => [product.id, product]));
+  const selectedIds = [];
+  const addProductId = (value) => {
+    const productId = cleanTrackingString(value, 120);
+    if (productsById.has(productId) && !selectedIds.includes(productId)) selectedIds.push(productId);
+  };
+  if (Array.isArray(productIds)) productIds.slice(0, 8).forEach(addProductId);
+
+  if (!selectedIds.length) {
+    const normalizedReply = normalizeChatProductReference(reply);
+    catalog.forEach((product) => {
+      const normalizedName = normalizeChatProductReference(product.name);
+      if (normalizedName.length >= 4 && normalizedReply.includes(normalizedName)) addProductId(product.id);
+    });
+  }
+
+  return selectedIds.slice(0, 4).map((productId) => {
+    const product = productsById.get(productId);
+    return {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      image: product.image,
+      sizes: product.availableSizes.length ? product.availableSizes : product.sizes,
+      isSoldOut: product.isSoldOut,
+    };
+  });
 }
 
 function chatDiscountApplicationRequested(message) {
@@ -3204,7 +3254,11 @@ async function generateAuroraChatResponse(input) {
     const structuredOutputUnreadable = error?.message === "Risposta AI non leggibile.";
     if (!structuredOutputUnsupported && !structuredOutputUnreadable) throw error;
     const data = await callOpenAiResponse({ model: openaiProductModel, input, max_output_tokens: 350 });
-    return { reply: responseOutputText(data), checkout: { mode: "unchanged", items: [], discountCode: "" } };
+    return {
+      reply: responseOutputText(data),
+      productIds: [],
+      checkout: { mode: "unchanged", items: [], discountCode: "" },
+    };
   }
 }
 
@@ -3282,6 +3336,7 @@ async function handleSiteChat(req, res) {
           "Sei Aurora, assistente virtuale di Haller Boutique. Dichiara in modo naturale che sei l'assistente virtuale se ti viene chiesto chi sei; non fingere mai di essere una persona.",
           `Rispondi esclusivamente in ${languageConfig.name}, anche se il catalogo o il contesto ordine sono scritti in italiano. Mantieni un tono caldo, brillante e leggermente spiritoso, senza errori volontari. Risposte molto concise e concrete: massimo 2 frasi brevi, salvo richiesta esplicita di dettagli.`,
           "Usa esclusivamente le informazioni del catalogo e dell'ordine qui sotto. Non inventare disponibilita, spedizioni, promesse o sconti. Per le taglie dai indicazioni generali e invita a contattare WhatsApp quando serve conferma.",
+          "Ogni volta che citi, mostri o consigli uno o piu prodotti del catalogo, inserisci i loro ID esatti in productIds nello stesso ordine in cui li presenti. Se non citi prodotti, usa un array vuoto. Non inserire mai ID inventati.",
           "Puoi aggiornare il checkout soltanto se il cliente chiede esplicitamente di aggiungere, rimuovere, sostituire o cambiare prodotti/taglie. In quel caso imposta checkout.mode a replace e inserisci l'intero carrello desiderato, usando esclusivamente gli ID e le taglie disponibili indicati nel catalogo. Se manca la taglia, chiedila e lascia unchanged. Non aggiornare mai il checkout per una semplice richiesta informativa.",
           "Puoi applicare un codice sconto soltanto se il cliente chiede esplicitamente di usare un codice e lo comunica nel messaggio. Riporta quel codice in checkout.discountCode; altrimenti usa una stringa vuota. Non dire mai che un codice e valido prima della verifica del sito.",
           `Cliente: ${firstName} ${lastName}; email: ${email}; telefono facoltativo: ${phone || "non fornito"}.`,
@@ -3297,7 +3352,8 @@ async function handleSiteChat(req, res) {
     const discountCode = await usableChatDiscountCode(response.checkout?.discountCode);
     if (discountCode) checkout.discountCode = discountCode;
     const reply = cleanChatMessage(response.reply) || languageConfig.fallback;
-    json(res, 200, { ok: true, reply, checkout, language });
+    const products = chatProductPreviews(response.productIds, reply, catalog);
+    json(res, 200, { ok: true, reply, products, checkout, language });
   } catch (error) {
     json(res, 502, { ok: false, message: languageConfig.unavailable, language });
   }

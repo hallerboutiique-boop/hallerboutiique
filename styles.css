@@ -5787,6 +5787,74 @@ body.motion-enabled .product-actions .buy-action:hover {
   background: var(--gold);
 }
 
+.site-chat-product-previews {
+  display: grid;
+  width: 100%;
+  gap: 8px;
+}
+
+.site-chat-product-card {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-strong);
+  border: 1px solid rgba(var(--gold-rgb), 0.38);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  text-decoration: none;
+}
+
+.site-chat-product-card:hover,
+.site-chat-product-card:focus-visible {
+  border-color: var(--gold);
+  background: rgba(var(--gold-rgb), 0.12);
+}
+
+.site-chat-product-media {
+  display: grid;
+  width: 72px;
+  height: 82px;
+  place-items: center;
+  overflow: hidden;
+  background: #080808;
+}
+
+.site-chat-product-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.site-chat-product-copy {
+  display: grid;
+  min-width: 0;
+  align-content: center;
+  gap: 3px;
+  padding: 8px 10px;
+}
+
+.site-chat-product-copy strong {
+  overflow: hidden;
+  font-size: 12px;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-chat-product-copy b {
+  color: var(--gold);
+  font-size: 12px;
+}
+
+.site-chat-product-copy small {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .site-chat-checkout-link {
   justify-self: start;
   padding: 8px 10px;

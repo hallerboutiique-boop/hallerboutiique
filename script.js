@@ -5294,6 +5294,7 @@ function readStoredChatHistory() {
       .map((item) => ({
         role: item?.role === "assistant" ? "assistant" : "user",
         content: String(item?.content || "").trim().slice(0, 900),
+        products: cleanChatPreviewProducts(item?.products),
       }))
       .filter((item) => item.content)
       .slice(-chatHistoryLimit);
@@ -5322,6 +5323,26 @@ function storeChatDraft(value) {
 
 let chatHistory = readStoredChatHistory();
 
+function cleanChatPreviewProducts(products) {
+  if (!Array.isArray(products)) return [];
+  return products
+    .slice(0, 4)
+    .map((product) => {
+      const image = String(product?.image || "").trim().slice(0, 300);
+      return {
+        id: String(product?.id || "").trim().slice(0, 120),
+        name: String(product?.name || "").trim().slice(0, 160),
+        price: String(product?.price || "").trim().slice(0, 40),
+        image: /^(?:https?:\/\/|\/|assets\/)/i.test(image) ? image : "",
+        sizes: Array.isArray(product?.sizes)
+          ? product.sizes.map((size) => String(size || "").trim().slice(0, 12)).filter(Boolean).slice(0, 12)
+          : [],
+        isSoldOut: product?.isSoldOut === true,
+      };
+    })
+    .filter((product) => product.id && product.name);
+}
+
 function scrollChatMessages(messages) {
   window.requestAnimationFrame(() => {
     messages.scrollTop = messages.scrollHeight;
@@ -5334,6 +5355,33 @@ function trimVisibleChatMessages(messages) {
 
 function appendChatMessage(messages, role, text) {
   messages.insertAdjacentHTML("beforeend", `<p class="site-chat-message site-chat-message-${role}">${escapeHtml(text)}</p>`);
+  trimVisibleChatMessages(messages);
+  scrollChatMessages(messages);
+}
+
+function appendChatProductPreviews(messages, products) {
+  const previews = cleanChatPreviewProducts(products);
+  if (!previews.length) return;
+  const cards = previews.map((product) => {
+    const availability = product.isSoldOut
+      ? "Esaurito"
+      : product.sizes.length
+        ? `Taglie: ${product.sizes.join(", ")}`
+        : "Disponibile";
+    return `
+      <a class="site-chat-product-card" href="product.html?id=${encodeURIComponent(product.id)}">
+        <span class="site-chat-product-media">
+          ${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" loading="lazy" decoding="async">` : ""}
+        </span>
+        <span class="site-chat-product-copy">
+          <strong>${escapeHtml(product.name)}</strong>
+          <b>${escapeHtml(product.price)}</b>
+          <small>${escapeHtml(availability)}</small>
+        </span>
+      </a>
+    `;
+  }).join("");
+  messages.insertAdjacentHTML("beforeend", `<div class="site-chat-product-previews">${cards}</div>`);
   trimVisibleChatMessages(messages);
   scrollChatMessages(messages);
 }
@@ -5405,8 +5453,8 @@ function setupSiteChat() {
   input.value = readChatDraft();
   translatePage();
 
-  const rememberChatMessage = (role, content) => {
-    chatHistory = [...chatHistory, { role, content }].slice(-chatHistoryLimit);
+  const rememberChatMessage = (role, content, products = []) => {
+    chatHistory = [...chatHistory, { role, content, products: cleanChatPreviewProducts(products) }].slice(-chatHistoryLimit);
     storeChatHistory(chatHistory);
   };
 
@@ -5423,7 +5471,10 @@ function setupSiteChat() {
     conversation.hidden = false;
     if (!messages.children.length) {
       if (chatHistory.length > 0) {
-        chatHistory.forEach((item) => appendChatMessage(messages, item.role, item.content));
+        chatHistory.forEach((item) => {
+          appendChatMessage(messages, item.role, item.content);
+          if (item.role === "assistant") appendChatProductPreviews(messages, item.products);
+        });
       } else {
         appendChatMessage(messages, "assistant", translate("chat-greeting").replace("{name}", profile.firstName));
       }
@@ -5505,9 +5556,11 @@ function setupSiteChat() {
       const data = await response.json();
       if (!response.ok || !data.ok) throw new Error(data.message || translate("chat-error"));
       pending.textContent = data.reply;
+      const previewProducts = cleanChatPreviewProducts(data.products);
+      appendChatProductPreviews(messages, previewProducts);
       const checkoutUpdated = await applyAuroraCheckoutAction(data.checkout);
       if (checkoutUpdated) appendChatCheckoutLink(messages);
-      rememberChatMessage("assistant", data.reply);
+      rememberChatMessage("assistant", data.reply, previewProducts);
     } catch (error) {
       const latestChatMessage = chatHistory[chatHistory.length - 1];
       if (latestChatMessage?.role === "user" && latestChatMessage?.content === text) {

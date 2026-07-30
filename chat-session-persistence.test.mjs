@@ -15,13 +15,16 @@ test("Aurora restores the active session across storefront pages", async () => {
   assert.match(script, /const chatDraftKey = "hallerBoutiqueChatDraft"/);
   assert.match(script, /let chatHistory = readStoredChatHistory\(\)/);
   assert.match(script, /storeChatHistory\(chatHistory\)/);
-  assert.match(script, /chatHistory\.forEach\(\(item\) => appendChatMessage\(messages, item\.role, item\.content\)\)/);
+  assert.match(
+    script,
+    /chatHistory\.forEach\(\(item\) => \{[\s\S]*?appendChatMessage\(messages, item\.role, item\.content\);[\s\S]*?appendChatProductPreviews\(messages, item\.products\)/,
+  );
   assert.match(script, /storeChatPanelOpen\(true\)/);
   assert.match(script, /storeChatPanelOpen\(false\)/);
   assert.match(script, /input\.addEventListener\("input", \(\) => storeChatDraft\(input\.value\)\)/);
   assert.match(script, /localStorage\.getItem\(chatPanelOpenKey\) === "1"/);
-  assert.match(server, /"\/assets-v\/aurora-session-1\/script\.js", "\/script\.js"/);
+  assert.match(server, /"\/assets-v\/aurora-product-previews-1\/script\.js", "\/script\.js"/);
   pages.forEach((page, index) => {
-    assert.match(page, /\/assets-v\/aurora-session-1\/script\.js/, pageNames[index]);
+    assert.match(page, /\/assets-v\/aurora-product-previews-1\/script\.js/, pageNames[index]);
   });
 });
