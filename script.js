@@ -5252,6 +5252,7 @@ setupBundleTryOn();
 
 const chatProfileKey = "hallerBoutiqueChatProfile";
 const chatHistoryLimit = 8;
+const chatVisibleMessageLimit = 40;
 let chatHistory = [];
 
 function readChatProfile() {
@@ -5263,9 +5264,20 @@ function readChatProfile() {
   }
 }
 
+function scrollChatMessages(messages) {
+  window.requestAnimationFrame(() => {
+    messages.scrollTop = messages.scrollHeight;
+  });
+}
+
+function trimVisibleChatMessages(messages) {
+  while (messages.children.length > chatVisibleMessageLimit) messages.firstElementChild?.remove();
+}
+
 function appendChatMessage(messages, role, text) {
   messages.insertAdjacentHTML("beforeend", `<p class="site-chat-message site-chat-message-${role}">${escapeHtml(text)}</p>`);
-  messages.scrollTop = messages.scrollHeight;
+  trimVisibleChatMessages(messages);
+  scrollChatMessages(messages);
 }
 
 function appendChatCheckoutLink(messages) {
@@ -5274,7 +5286,8 @@ function appendChatCheckoutLink(messages) {
   link.href = "checkout.html";
   link.textContent = "Apri checkout aggiornato";
   messages.append(link);
-  messages.scrollTop = messages.scrollHeight;
+  trimVisibleChatMessages(messages);
+  scrollChatMessages(messages);
 }
 
 function setupSiteChat() {
@@ -5351,12 +5364,15 @@ function setupSiteChat() {
     if (!messages.children.length) {
       appendChatMessage(messages, "assistant", translate("chat-greeting").replace("{name}", profile.firstName));
     }
+    scrollChatMessages(messages);
   };
 
   const openChat = () => {
     panel.hidden = false;
     root.querySelector(".site-chat-launcher").setAttribute("aria-expanded", "true");
     if (profile) showConversation();
+    if (!activeChatRequest) setChatBusy(false);
+    scrollChatMessages(messages);
   };
 
   root.querySelectorAll("[data-chat-toggle]").forEach((button) => {
@@ -5433,7 +5449,7 @@ function setupSiteChat() {
       activeChatRequest = null;
       setChatBusy(false);
       input.focus();
-      messages.scrollTop = messages.scrollHeight;
+      scrollChatMessages(messages);
     }
   };
 
@@ -5448,6 +5464,9 @@ function setupSiteChat() {
     event.preventDefault();
     openChat();
   }));
+  window.addEventListener("resize", () => {
+    if (!panel.hidden) scrollChatMessages(messages);
+  });
   if (new URLSearchParams(window.location.search).get("chat") === "1") openChat();
   if (window.lucide) window.lucide.createIcons();
 }
