@@ -14,6 +14,11 @@ test("Aurora checkout actions are validated server-side and applied client-side"
   assert.match(server, /const currentCheckoutItems = cleanChatCheckoutItems\(body\.checkout\?\.items, catalog\)/);
   assert.match(server, /const checkout = normalizeAuroraCheckoutAction\(response\.checkout, catalog\)/);
   assert.match(server, /const discountCode = await usableChatDiscountCode\(response\.checkout\?\.discountCode\)/);
+  assert.match(server, /const discountApplicationRequested = isDiscountApplicationRequest\(message\)/);
+  assert.match(server, /const code = await usableChatDiscountCodeFromMessages\(\[/);
+  assert.match(server, /if \(isTenPercentDiscountRequest\(message\)\) \{/);
+  assert.doesNotMatch(server, /isTenPercentDiscountRequest\(message\) && !chatDiscountApplicationRequested\(message\)/);
+  assert.match(server, /reply: siteChatDiscountMessages\[language\]\.applied\.replace\("\{code\}", code\)/);
   assert.match(server, /checkout: \{ mode: "unchanged", items: \[\], discountCode: code \}/);
   assert.match(script, /function auroraCheckoutState\(\)/);
   assert.match(script, /function replaceCheckoutItems\(items\)/);

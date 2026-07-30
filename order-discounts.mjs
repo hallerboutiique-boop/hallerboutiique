@@ -35,8 +35,45 @@ export function calculateOrderDiscounts(subtotal, referralPercentage = 0) {
 }
 
 export function isTenPercentDiscountRequest(message) {
-  const text = String(message || "").toLocaleLowerCase("it");
-  return /(?:10\s*%|diecis*percento)/u.test(text) && /(?:scont|codic|promo|riduz|discount)/u.test(text);
+  const text = String(message || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("it");
+  const tenPercentMentioned = /(?:10\s*%|dieci\s*percento|ten\s*percent|dix\s*pour\s*cent|zehn\s*prozent|diez\s*por\s*ciento)/u.test(text);
+  const discountMentioned = /(?:scont|codic|promo|riduz|discount|remise|rabatt|descuento|ulje|reducere)/u.test(text);
+  return tenPercentMentioned && (discountMentioned || isDiscountApplicationRequest(message));
+}
+
+export function isDiscountApplicationRequest(message) {
+  const text = String(message || "")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLocaleLowerCase("it");
+  const actionRequested = /\b(?:applica|applicalo|applicamelo|applicami|applicarmelo|usa|usalo|metti|inserisci|inseriscilo|attiva|attivalo|apply|use|enter|activate|appliquer|utiliser|inserer|activer|anwenden|benutzen|eingeben|aktivieren|aplica|usar|introduce|activar|aplico|perdor|introdu|foloseste|activeaza)\b/u.test(text);
+  const discountMentioned = /(?:\b(?:codic\w*|coupon|promo|scont\w*|code|discount|remise|rabatt|descuento|ulje|reducere)\b|10\s*%)/u.test(text);
+  const refersToPreviousCode = /\b(?:applicalo|applicamelo|applicarmelo|usalo|inseriscilo|attivalo)\b/u.test(text);
+  return actionRequested && (discountMentioned || refersToPreviousCode);
+}
+
+export function findUsableDiscountCodeInMessages(records, messages, now = new Date()) {
+  const usableCodes = (Array.isArray(records) ? records : [])
+    .filter((record) => discountCodeIsUsable(record, now))
+    .map((record) => normalizeDiscountCode(record?.code))
+    .filter(Boolean);
+
+  for (const message of Array.isArray(messages) ? messages : []) {
+    const text = String(message || "").toUpperCase();
+    for (const code of usableCodes) {
+      let index = text.indexOf(code);
+      while (index !== -1) {
+        const before = index > 0 ? text[index - 1] : "";
+        const after = text[index + code.length] || "";
+        if (!/[A-Z0-9]/u.test(before) && !/[A-Z0-9]/u.test(after)) return code;
+        index = text.indexOf(code, index + 1);
+      }
+    }
+  }
+  return "";
 }
 
 function titleCase(value) {

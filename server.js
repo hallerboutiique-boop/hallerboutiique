@@ -53,6 +53,8 @@ import {
   calculateOrderDiscounts,
   discountCodeIsUsable,
   extractReferralName,
+  findUsableDiscountCodeInMessages,
+  isDiscountApplicationRequest,
   isTenPercentDiscountRequest,
   maximumDiscountCodePercentage,
   normalizeDiscountCode,
@@ -2943,6 +2945,16 @@ const siteChatReferralMessages = {
   ro: { notRegistered: "Pot genera codul de 10% doar dacă persoana care ți-a recomandat Haller Boutique este deja înregistrată cu e-mail, Google sau Microsoft. Verifică numele complet.", selfReferral: "Un cod de recomandare trebuie asociat unui alt client înregistrat." },
 };
 
+const siteChatDiscountMessages = {
+  it: { applied: "Fatto: ho applicato il codice {code} al checkout.", unavailable: "Non trovo un codice sconto valido da applicare. Inviami il codice di 7 caratteri oppure chiedimi il 10% indicando nome e cognome del referente." },
+  en: { applied: "Done: I applied code {code} to your checkout.", unavailable: "I cannot find a valid discount code to apply. Send me the 7-character code, or request 10% off with the referrer's full name." },
+  fr: { applied: "C'est fait : j'ai appliqué le code {code} au checkout.", unavailable: "Je ne trouve aucun code valide à appliquer. Envoyez le code à 7 caractères ou demandez 10 % avec le nom complet du parrain." },
+  de: { applied: "Erledigt: Ich habe den Code {code} im Checkout angewendet.", unavailable: "Ich finde keinen gültigen Rabattcode. Senden Sie den 7-stelligen Code oder fragen Sie mit dem vollständigen Namen der Empfehlung nach 10 %." },
+  es: { applied: "Listo: he aplicado el código {code} al checkout.", unavailable: "No encuentro un código válido para aplicar. Envíame el código de 7 caracteres o solicita el 10 % indicando el nombre completo del referente." },
+  sq: { applied: "U krye: aplikova kodin {code} në checkout.", unavailable: "Nuk gjeta një kod të vlefshëm për ta aplikuar. Dërgo kodin me 7 karaktere ose kërko uljen 10% me emrin e plotë të referuesit." },
+  ro: { applied: "Gata: am aplicat codul {code} la checkout.", unavailable: "Nu găsesc un cod valid de aplicat. Trimite codul de 7 caractere sau cere reducerea de 10% cu numele complet al persoanei care te-a recomandat." },
+};
+
 const tryOnLanguages = {
   it: { notConfigured: "Try-on AI non configurato.", upload: "Carica una tua foto.", format: "Formato immagine non supportato. Usa JPG, PNG o WebP.", bundleImages: "Servono le foto originali di tutti i prodotti del bundle.", bundleRules: "Il try-on accetta tutti gli articoli, con massimo 2 prodotti.", billing: "Credito API OpenAI esaurito: ricarica il saldo o aumenta il limite di spesa per riattivare il try-on.", received: "Foto ricevuta", prepared: "Prodotto reale del catalogo preparato", generating: "Generazione try-on AI in corso", preview: "Anteprima ricevuta", bundlePrepared: "I prodotti selezionati sono pronti", bundleGenerating: "Generazione try-on in corso", bundlePreview: "Try-on ricevuto", timeout: "La generazione ha impiegato troppo tempo. Riprova.", busy: "Il servizio try-on e momentaneamente occupato. Riprova tra poco.", rejected: "Una delle immagini non puo essere elaborata. Usa foto JPG, PNG o WebP nitide.", unavailable: "Try-on non disponibile." },
   en: { notConfigured: "AI try-on is not configured.", upload: "Upload your photo.", format: "Unsupported image format. Use JPG, PNG or WebP.", bundleImages: "The original photos for every bundle product are required.", bundleRules: "Try-on accepts every product, with a maximum of 2 products.", billing: "OpenAI API credit is exhausted. Add credit or raise the spending limit to reactivate try-on.", received: "Photo received", prepared: "Real catalog product prepared", generating: "Generating the AI try-on", preview: "Preview received", bundlePrepared: "The selected products are ready", bundleGenerating: "Generating the try-on", bundlePreview: "Try-on received", timeout: "Generation took too long. Please try again.", busy: "The try-on service is temporarily busy. Please try again shortly.", rejected: "One of the images cannot be processed. Use a clear JPG, PNG or WebP photo.", unavailable: "Try-on is unavailable." },
@@ -3217,12 +3229,6 @@ function chatProductPreviews(productIds, reply, catalog) {
   });
 }
 
-function chatDiscountApplicationRequested(message) {
-  const text = String(message || "").toLocaleLowerCase("it");
-  return /\b(?:applica|usa|inserisci|attiva)\b/u.test(text)
-    && /\b(?:codice|coupon|promo|sconto)\b/u.test(text);
-}
-
 async function usableChatDiscountCode(value) {
   const discountCode = normalizeDiscountCode(value);
   if (!discountCode) return "";
@@ -3230,6 +3236,11 @@ async function usableChatDiscountCode(value) {
   return discountCodes.codes.some((record) => normalizeDiscountCode(record?.code) === discountCode && discountCodeIsUsable(record))
     ? discountCode
     : "";
+}
+
+async function usableChatDiscountCodeFromMessages(messages) {
+  const discountCodes = await readDiscountCodes();
+  return findUsableDiscountCodeInMessages(discountCodes.codes, messages);
 }
 
 async function generateAuroraChatResponse(input) {
@@ -3284,7 +3295,22 @@ async function handleSiteChat(req, res) {
         .map((item) => ({ role: item?.role === "assistant" ? "assistant" : "user", content: cleanChatMessage(item?.content) }))
         .filter((item) => item.content)
     : [];
-  if (isTenPercentDiscountRequest(message) && !chatDiscountApplicationRequested(message)) {
+  const discountApplicationRequested = isDiscountApplicationRequest(message);
+  if (discountApplicationRequested) {
+    const code = await usableChatDiscountCodeFromMessages([
+      message,
+      ...history.slice().reverse().map((item) => item.content),
+    ]);
+    if (code) {
+      return json(res, 200, {
+        ok: true,
+        reply: siteChatDiscountMessages[language].applied.replace("{code}", code),
+        checkout: { mode: "unchanged", items: [], discountCode: code },
+        language,
+      });
+    }
+  }
+  if (isTenPercentDiscountRequest(message)) {
     const referralName = extractReferralName([
       ...history.filter((item) => item.role === "user").map((item) => item.content),
       message,
@@ -3302,6 +3328,14 @@ async function handleSiteChat(req, res) {
       ok: true,
       reply: languageConfig.referralCode.replace("{code}", code).replace("{referral}", referralUser.name),
       checkout: { mode: "unchanged", items: [], discountCode: code },
+      language,
+    });
+  }
+  if (discountApplicationRequested) {
+    return json(res, 200, {
+      ok: true,
+      reply: siteChatDiscountMessages[language].unavailable,
+      checkout: { mode: "unchanged", items: [], discountCode: "" },
       language,
     });
   }

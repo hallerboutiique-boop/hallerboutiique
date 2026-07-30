@@ -5,6 +5,8 @@ import {
   calculateOrderDiscounts,
   discountCodeIsUsable,
   extractReferralName,
+  findUsableDiscountCodeInMessages,
+  isDiscountApplicationRequest,
   isTenPercentDiscountRequest,
   maximumDiscountCodePercentage,
   normalizeDiscountCode,
@@ -56,4 +58,24 @@ test("normalizes and invalidates one-time referral codes", () => {
   assert.equal(discountCodeIsUsable({ status: "issued", code: "AB12CD3", expiresAt: expiry }, new Date("2026-07-31T11:59:59.000Z")), true);
   assert.equal(discountCodeIsUsable({ status: "reserved", code: "AB12CD3", expiresAt: expiry }, new Date("2026-07-31T11:00:00.000Z")), false);
   assert.equal(discountCodeIsUsable({ status: "issued", code: "AB12CD3", expiresAt: expiry }, new Date("2026-07-31T12:00:00.000Z")), false);
+});
+
+test("recognizes discount application requests and reuses Aurora's latest usable code", () => {
+  const now = new Date("2026-07-31T11:00:00.000Z");
+  const records = [
+    { status: "issued", code: "AB12CD3", expiresAt: "2026-07-31T12:00:00.000Z" },
+    { status: "reserved", code: "ZZ99YY8", expiresAt: "2026-07-31T12:00:00.000Z" },
+  ];
+
+  assert.equal(isDiscountApplicationRequest("Applica il codice AB12CD3"), true);
+  assert.equal(isDiscountApplicationRequest("Applicalo"), true);
+  assert.equal(isDiscountApplicationRequest("Applicami il 10%"), true);
+  assert.equal(isTenPercentDiscountRequest("Applicami il 10%"), true);
+  assert.equal(isTenPercentDiscountRequest("Appliquer la remise de 10 %"), true);
+  assert.equal(isDiscountApplicationRequest("Vorrei uno sconto"), false);
+  assert.equal(findUsableDiscountCodeInMessages(records, [
+    "Applicalo",
+    "Perfetto: il tuo codice sconto è AB12CD3.",
+  ], now), "AB12CD3");
+  assert.equal(findUsableDiscountCodeInMessages(records, ["Usa ZZ99YY8"], now), "");
 });
